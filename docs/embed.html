@@ -131,14 +131,14 @@
   <body>
     <main>
       <section class="panel">
-        <h1>Simple Browser Integration Sample</h1>
+        <h1>Browser Integration Paths</h1>
         <p>
-          This page shows a small browser-side integration for this repository.
+          This page shows a small browser-side integration sample for this repository.
           It is intentionally simpler than <code>vgm.html</code>.
         </p>
         <p>
-          The goal here is to show the minimum flow for app or game embedding:
-          create the audio engine, trigger one-shot SFX, then load and play a VGM file.
+          The goal here is to show two separate browser-side paths:
+          direct chip control for experiments or programmatic audio, and VGM playback for prepared music data.
         </p>
 
         <div class="actions">
@@ -157,7 +157,7 @@
           <section class="card">
             <h2>What this sample covers</h2>
             <p>
-              One-shot YM2612 SFX, one-shot PSG SFX, and simple VGM streaming playback.
+              One-shot YM2612 direct control, one-shot PSG direct control, and simple VGM streaming playback.
             </p>
             <p>
               It uses <code>GenesisAudioEngine</code> and <code>VgmPlayer</code> directly,
@@ -167,8 +167,8 @@
           <section class="card">
             <h2>What it does not try to solve</h2>
             <p>
-              This sample does not handle advanced game mixing, shared SFX/BGM state, or
-              full VGM compatibility. It is a small starting point.
+              This sample does not solve advanced game mixing, shared SFX/BGM state, or
+              automatic coexistence between DefleMask-style BGM and free-form SFX.
             </p>
           </section>
         </div>
@@ -188,8 +188,13 @@ const player = new VgmPlayer(engine);
 player.load(vgmArrayBuffer);
 player.play();</pre>
 
+        <h2>Why the paths are separated</h2>
+        <pre>- VGM playback is good for prepared BGM data.
+- Direct chip control is good for experiments, realtime input, and programmatic composition.
+- If a song already uses YM2612 / PSG resources tightly, layering arbitrary SFX on top is not guaranteed to work.</pre>
+
         <h2>Notes</h2>
-        <pre>- One-shot SFX uses AudioBufferSourceNode for readability.
+        <pre>- One-shot direct-control examples use AudioBufferSourceNode for readability.
 - VGM playback here uses ScriptProcessorNode because it is smaller to read.
 - The more advanced AudioWorklet-oriented path still lives in docs/vgm.html.</pre>
       </section>

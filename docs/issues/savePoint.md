@@ -14,7 +14,7 @@ Last updated: 2026-08-14
   `Play`, `Pause`, `Resume`, `Replay`, `Stop`, and basic `Loop` controls now exist.
   `AudioWorklet` is now used when available, with `ScriptProcessorNode` fallback.
 - `docs/embed.html`
-  A small browser integration sample now exists for FM SFX, PSG SFX, and simple VGM playback.
+  A small browser integration sample now exists to show both the VGM playback path and the direct chip control path.
 - `docs/ym2612vgm.js`
   Minimal VGM support was expanded to reduce `SKIP`.
 
@@ -49,7 +49,8 @@ Last updated: 2026-08-14
   The page now uses `GenesisAudioEngine` + `VgmPlayer`.
   Browser audio output now prefers `AudioWorklet`.
 - `docs/embed.html`
-  Added a smaller app/game-oriented sample that uses `GenesisAudioEngine` and `VgmPlayer` with a simpler UI.
+  Added a smaller sample that uses `GenesisAudioEngine` and `VgmPlayer` with a simpler UI.
+  It now documents the decision to keep VGM playback and direct chip control as separate paths.
 
 ## What we observed
 
@@ -81,6 +82,10 @@ Last updated: 2026-08-14
 - After switching to `AudioWorklet`, the progress text may feel a little less smooth.
   - This looks like a UI update timing difference, not an audio stability problem.
   - `queuedFrames` still stays healthy and scrolling does not become heavy.
+- For practical browser/game design, VGM playback and direct chip control should be treated as separate paths for now.
+  - VGM is good for prepared BGM.
+  - direct chip control is good for experiments, realtime input, and future programmatic composition.
+  - automatic coexistence is not guaranteed when the song already uses YM2612 / PSG resources tightly.
 
 ## Still not fully supported
 

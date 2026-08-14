@@ -9,7 +9,7 @@ This repository has three goals:
 Demo:
 
 - https://kyorohiro.github.io/hello_ymfm_wasm/
-- `docs/embed.html`: small browser integration sample for FM SFX, PSG SFX, and simple VGM playback.
+- `docs/embed.html`: small browser integration sample that shows both the VGM playback path and the direct chip control path.
 
 This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
 See `LICENSE` for the license text included with this repository.
@@ -21,10 +21,21 @@ See `LICENSE` for the license text included with this repository.
 - `ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
 - `ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
 - `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
-- `docs/embed.html`: a small browser-side integration sample that shows one possible app/game embedding path.
+- `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
+  VGM playback and direct chip control.
 
 This repository may also be useful for replaying VGM exported from DefleMask for Sega Mega Drive / Genesis projects.
 The current browser demo can already parse and stream-play a practical YM2612 + PSG + DAC-stream subset, though full VGM compatibility is not the goal yet.
+
+For practical game use, it is better to think about two separate paths:
+
+- VGM playback path
+  Replay prepared music data, such as VGM exported from DefleMask.
+- Direct chip control path
+  Drive YM2612 / PSG registers directly for experiments, realtime control, or a programmatic music/SFX engine.
+
+These paths are intentionally kept separate for now.
+If a song already uses YM2612 / PSG resources tightly, adding free-form SFX on top later is not guaranteed to work.
 
 ## build/test ym2612 wasm
 Build:
