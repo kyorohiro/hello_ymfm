@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simple Browser Integration Sample</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.25rem;
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 18px 0;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 10px 24px rgba(126, 56, 28, 0.25);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: #2b241d;
+        color: #f6ead7;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.92rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Simple Browser Integration Sample</h1>
+        <p>
+          This page shows a small browser-side integration for this repository.
+          It is intentionally simpler than <code>vgm.html</code>.
+        </p>
+        <p>
+          The goal here is to show the minimum flow for app or game embedding:
+          create the audio engine, trigger one-shot SFX, then load and play a VGM file.
+        </p>
+
+        <div class="actions">
+          <button id="initButton" type="button">Init Audio</button>
+          <button id="fmButton" type="button" disabled>Play FM SFX</button>
+          <button id="psgButton" type="button" disabled>Play PSG SFX</button>
+          <input id="fileInput" type="file" accept=".vgm,application/octet-stream">
+          <button id="playVgmButton" type="button" disabled>Play VGM</button>
+          <button id="stopVgmButton" type="button" disabled>Stop VGM</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+
+        <div class="status" id="status">Press "Init Audio" first.</div>
+
+        <div class="grid">
+          <section class="card">
+            <h2>What this sample covers</h2>
+            <p>
+              One-shot YM2612 SFX, one-shot PSG SFX, and simple VGM streaming playback.
+            </p>
+            <p>
+              It uses <code>GenesisAudioEngine</code> and <code>VgmPlayer</code> directly,
+              without the bigger debug UI from <code>vgm.html</code>.
+            </p>
+          </section>
+          <section class="card">
+            <h2>What it does not try to solve</h2>
+            <p>
+              This sample does not handle advanced game mixing, shared SFX/BGM state, or
+              full VGM compatibility. It is a small starting point.
+            </p>
+          </section>
+        </div>
+
+        <h2>Minimal flow</h2>
+        <pre>import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
+import { createGenesisAudioEngine } from "./genesisaudioengine.js";
+import { VgmPlayer } from "./vgmplayer.js";
+
+const engine = await createGenesisAudioEngine({
+  ym2612ModuleFactory,
+  segaPsgModuleFactory,
+});
+
+const player = new VgmPlayer(engine);
+player.load(vgmArrayBuffer);
+player.play();</pre>
+
+        <h2>Notes</h2>
+        <pre>- One-shot SFX uses AudioBufferSourceNode for readability.
+- VGM playback here uses ScriptProcessorNode because it is smaller to read.
+- The more advanced AudioWorklet-oriented path still lives in docs/vgm.html.</pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+      import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
+      import { createGenesisAudioEngine } from "./genesisaudioengine.js";
+      import { VgmPlayer } from "./vgmplayer.js";
+
+      const initButton = document.getElementById("initButton");
+      const fmButton = document.getElementById("fmButton");
+      const psgButton = document.getElementById("psgButton");
+      const fileInput = document.getElementById("fileInput");
+      const playVgmButton = document.getElementById("playVgmButton");
+      const stopVgmButton = document.getElementById("stopVgmButton");
+      const status = document.getElementById("status");
+
+      let audioContext = null;
+      let engine = null;
+      let player = null;
+      let currentBuffer = null;
+      let currentVgmNode = null;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function updateButtons() {
+        const ready = Boolean(audioContext && engine && player);
+        fmButton.disabled = !ready;
+        psgButton.disabled = !ready;
+        playVgmButton.disabled = !ready || !currentBuffer;
+        stopVgmButton.disabled = !currentVgmNode;
+      }
+
+      async function ensureAudioReady() {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
+        if (!engine) {
+          setStatus("Loading YM2612 + PSG WASM...");
+          engine = await createGenesisAudioEngine({
+            ym2612ModuleFactory,
+            segaPsgModuleFactory,
+          });
+          player = new VgmPlayer(engine);
+        }
+        updateButtons();
+      }
+
+      function configureFmBeep() {
+        engine.reset();
+
+        engine.writeYm2612(0, 0x30, 0x01);
+        engine.writeYm2612(0, 0x34, 0x01);
+        engine.writeYm2612(0, 0x38, 0x01);
+        engine.writeYm2612(0, 0x3c, 0x01);
+
+        engine.writeYm2612(0, 0x40, 0x7f);
+        engine.writeYm2612(0, 0x44, 0x7f);
+        engine.writeYm2612(0, 0x48, 0x7f);
+        engine.writeYm2612(0, 0x4c, 0x00);
+
+        engine.writeYm2612(0, 0x50, 0x1f);
+        engine.writeYm2612(0, 0x54, 0x1f);
+        engine.writeYm2612(0, 0x58, 0x1f);
+        engine.writeYm2612(0, 0x5c, 0x1f);
+
+        engine.writeYm2612(0, 0x80, 0x0f);
+        engine.writeYm2612(0, 0x84, 0x0f);
+        engine.writeYm2612(0, 0x88, 0x0f);
+        engine.writeYm2612(0, 0x8c, 0x0f);
+
+        engine.writeYm2612(0, 0xb0, 0x07);
+        engine.writeYm2612(0, 0xb4, 0xc0);
+        engine.writeYm2612(0, 0xa4, 0x22);
+        engine.writeYm2612(0, 0xa0, 0x69);
+        engine.writeYm2612(0, 0x28, 0xf0);
+      }
+
+      function configurePsgTone() {
+        const period = 254;
+        engine.reset();
+        engine.writePsg(0x9f);
+        engine.writePsg(0xbf);
+        engine.writePsg(0xdf);
+        engine.writePsg(0xff);
+        engine.writePsg(0x80 | (period & 0x0f));
+        engine.writePsg((period >> 4) & 0x3f);
+        engine.writePsg(0x90 | 0x00);
+      }
+
+      function playOneShot(renderer, seconds, label) {
+        renderer();
+        const sampleRate = engine.sampleRate();
+        const frames = Math.max(1, Math.floor(sampleRate * seconds));
+        const { left, right } = engine.processFrames(frames);
+
+        const buffer = audioContext.createBuffer(2, frames, sampleRate);
+        buffer.copyToChannel(left, 0);
+        buffer.copyToChannel(right, 1);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start();
+        setStatus(`Playing ${label}...`);
+        source.addEventListener("ended", () => {
+          setStatus("Ready.");
+        }, { once: true });
+      }
+
+      function stopVgmPlayback() {
+        if (currentVgmNode) {
+          currentVgmNode.onaudioprocess = null;
+          currentVgmNode.disconnect();
+          currentVgmNode = null;
+        }
+        if (player) {
+          player.stop();
+        }
+        updateButtons();
+      }
+
+      function startSimpleVgmPlayback() {
+        stopVgmPlayback();
+        engine.reset();
+        player.load(currentBuffer);
+        player.setLoopEnabled(true);
+        player.play();
+
+        const bufferSize = 2048;
+        const node = audioContext.createScriptProcessor(bufferSize, 0, 2);
+        currentVgmNode = node;
+        node.onaudioprocess = (event) => {
+          const left = event.outputBuffer.getChannelData(0);
+          const right = event.outputBuffer.getChannelData(1);
+          player.process(left, right, bufferSize);
+          const stats = player.stats();
+          setStatus(
+            `Playing VGM... commands=${stats.processedEvents} queued=${stats.queuedFrames} audio=${stats.audioProgress.toFixed(1)}%`,
+          );
+
+          if (!stats.playing && !stats.paused && stats.queuedFrames === 0) {
+            stopVgmPlayback();
+            setStatus("Ready.");
+          }
+        };
+        node.connect(audioContext.destination);
+        updateButtons();
+      }
+
+      initButton.addEventListener("click", async () => {
+        initButton.disabled = true;
+        try {
+          await ensureAudioReady();
+          setStatus(`Audio ready at ${engine.sampleRate()} Hz.`);
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        } finally {
+          initButton.disabled = false;
+          updateButtons();
+        }
+      });
+
+      fmButton.addEventListener("click", async () => {
+        try {
+          await ensureAudioReady();
+          playOneShot(configureFmBeep, 1.5, "FM SFX");
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        }
+      });
+
+      psgButton.addEventListener("click", async () => {
+        try {
+          await ensureAudioReady();
+          playOneShot(configurePsgTone, 1.0, "PSG SFX");
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        }
+      });
+
+      fileInput.addEventListener("change", async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+        try {
+          if (!file.name.toLowerCase().endsWith(".vgm")) {
+            setStatus("This simple sample expects a plain .vgm file.");
+            return;
+          }
+          currentBuffer = await file.arrayBuffer();
+          updateButtons();
+          setStatus(`Loaded ${file.name}.`);
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        }
+      });
+
+      playVgmButton.addEventListener("click", async () => {
+        try {
+          await ensureAudioReady();
+          if (!currentBuffer) {
+            setStatus("Choose a VGM file first.");
+            return;
+          }
+          startSimpleVgmPlayback();
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        }
+      });
+
+      stopVgmButton.addEventListener("click", () => {
+        stopVgmPlayback();
+        setStatus("Stopped.");
+      });
+    </script>
+  </body>
+</html>

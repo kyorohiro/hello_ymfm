@@ -13,6 +13,8 @@ Last updated: 2026-08-14
   Streaming playback now works in the browser.
   `Play`, `Pause`, `Resume`, `Replay`, `Stop`, and basic `Loop` controls now exist.
   `AudioWorklet` is now used when available, with `ScriptProcessorNode` fallback.
+- `docs/embed.html`
+  A small browser integration sample now exists for FM SFX, PSG SFX, and simple VGM playback.
 - `docs/ym2612vgm.js`
   Minimal VGM support was expanded to reduce `SKIP`.
 
@@ -46,6 +48,8 @@ Last updated: 2026-08-14
   Playback was moved from full offline rendering to chunked streaming playback.
   The page now uses `GenesisAudioEngine` + `VgmPlayer`.
   Browser audio output now prefers `AudioWorklet`.
+- `docs/embed.html`
+  Added a smaller app/game-oriented sample that uses `GenesisAudioEngine` and `VgmPlayer` with a simpler UI.
 
 ## What we observed
 

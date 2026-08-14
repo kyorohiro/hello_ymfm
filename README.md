@@ -9,6 +9,7 @@ This repository has three goals:
 Demo:
 
 - https://kyorohiro.github.io/hello_ymfm_wasm/
+- `docs/embed.html`: small browser integration sample for FM SFX, PSG SFX, and simple VGM playback.
 
 This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
 See `LICENSE` for the license text included with this repository.
@@ -20,6 +21,7 @@ See `LICENSE` for the license text included with this repository.
 - `ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
 - `ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
 - `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
+- `docs/embed.html`: a small browser-side integration sample that shows one possible app/game embedding path.
 
 This repository may also be useful for replaying VGM exported from DefleMask for Sega Mega Drive / Genesis projects.
 The current browser demo can already parse and stream-play a practical YM2612 + PSG + DAC-stream subset, though full VGM compatibility is not the goal yet.
