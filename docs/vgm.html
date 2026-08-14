@@ -117,6 +117,9 @@
         <div class="actions">
           <input id="fileInput" type="file" accept=".vgm,.vgz,application/octet-stream">
           <button id="playButton" type="button" disabled>Play VGM</button>
+          <button id="pauseButton" type="button" disabled>Pause</button>
+          <button id="resumeButton" type="button" disabled>Resume</button>
+          <button id="replayButton" type="button" disabled>Replay</button>
           <button id="stopButton" type="button" disabled>Stop</button>
           <label><input id="loopCheckbox" type="checkbox"> Loop</label>
           <a class="link-button" href="./index.html">Back</a>
@@ -152,6 +155,9 @@
 
       const fileInput = document.getElementById("fileInput");
       const playButton = document.getElementById("playButton");
+      const pauseButton = document.getElementById("pauseButton");
+      const resumeButton = document.getElementById("resumeButton");
+      const replayButton = document.getElementById("replayButton");
       const stopButton = document.getElementById("stopButton");
       const loopCheckbox = document.getElementById("loopCheckbox");
       const status = document.getElementById("status");
@@ -260,6 +266,17 @@
         activeStream = null;
       }
 
+      function updatePlaybackButtons(state = {}) {
+        const hasBuffer = Boolean(currentBuffer);
+        const playing = Boolean(state.playing);
+        const paused = Boolean(state.paused);
+        playButton.disabled = !hasBuffer || playing;
+        replayButton.disabled = !hasBuffer;
+        pauseButton.disabled = !playing;
+        resumeButton.disabled = !paused;
+        stopButton.disabled = !hasBuffer || (!playing && !paused);
+      }
+
       async function playCurrentVgm() {
         if (!currentBuffer) {
           return;
@@ -284,25 +301,26 @@
             const right = event.outputBuffer.getChannelData(1);
             player.process(left, right, bufferSize);
             const stats = player.stats();
+            updatePlaybackButtons(stats);
             setStatus(
               `Streaming VGM... commands=${stats.processedEvents} queued=${stats.queuedFrames} audio=${stats.audioProgress.toFixed(1)}% loop=${loopCheckbox.checked ? "on" : "off"}`,
             );
 
-            if (!stats.playing && stats.queuedFrames === 0) {
+            if (!stats.playing && !stats.paused && stats.queuedFrames === 0) {
               stopActiveStream();
-              stopButton.disabled = true;
+              updatePlaybackButtons(stats);
               setStatus("Ready.");
             }
           };
           node.connect(audioContext.destination);
 
-          stopButton.disabled = false;
+          updatePlaybackButtons(player.stats());
           setStatus(`Streaming VGM at ${sampleRate} Hz...`);
         } catch (error) {
           console.error(error);
           setStatus(`Error: ${error.message}`);
         } finally {
-          playButton.disabled = false;
+          updatePlaybackButtons(player ? player.stats() : {});
         }
       }
 
@@ -315,6 +333,10 @@
         if (looksLikeGzip(buffer)) {
           headerOutput.textContent = "Compressed VGZ is not supported yet in this demo.";
           commandsOutput.textContent = "Please use a plain .vgm file for now.";
+          pauseButton.disabled = true;
+          resumeButton.disabled = true;
+          replayButton.disabled = true;
+          stopButton.disabled = true;
           setStatus("VGZ is not supported yet.");
           return;
         }
@@ -326,6 +348,10 @@
           console.error(error);
           headerOutput.textContent = "Failed to parse VGM header.";
           commandsOutput.textContent = error.message;
+          pauseButton.disabled = true;
+          resumeButton.disabled = true;
+          replayButton.disabled = true;
+          stopButton.disabled = true;
           setStatus(`Error: ${error.message}`);
           return;
         }
@@ -353,8 +379,7 @@
 
         commandsOutput.textContent = events.join("\n");
         currentBuffer = buffer;
-        playButton.disabled = false;
-        stopButton.disabled = true;
+        updatePlaybackButtons({});
         setStatus(`Parsed ${file.name}.`);
       }
 
@@ -370,12 +395,37 @@
         await playCurrentVgm();
       });
 
+      pauseButton.addEventListener("click", () => {
+        if (!player) {
+          return;
+        }
+        player.pause();
+        updatePlaybackButtons(player.stats());
+        setStatus("Paused.");
+      });
+
+      resumeButton.addEventListener("click", () => {
+        if (!player) {
+          return;
+        }
+        player.resume();
+        updatePlaybackButtons(player.stats());
+        setStatus("Resumed.");
+      });
+
+      replayButton.addEventListener("click", async () => {
+        if (!currentBuffer) {
+          return;
+        }
+        await playCurrentVgm();
+      });
+
       stopButton.addEventListener("click", () => {
         stopActiveStream();
         if (player) {
           player.stop();
+          updatePlaybackButtons(player.stats());
         }
-        stopButton.disabled = true;
         setStatus("Stopped.");
       });
 

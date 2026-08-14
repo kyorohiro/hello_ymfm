@@ -11,6 +11,7 @@ Last updated: 2026-08-14
 - `docs/vgm.html`
   VGM file can be parsed and played with YM2612 + PSG.
   Streaming playback now works in the browser.
+  `Play`, `Pause`, `Resume`, `Replay`, `Stop`, and basic `Loop` controls now exist.
 - `docs/ym2612vgm.js`
   Minimal VGM support was expanded to reduce `SKIP`.
 
@@ -42,6 +43,7 @@ Last updated: 2026-08-14
 - `docs/vgm.html`
   Wait rendering was split so DAC stream writes can happen during playback timing.
   Playback was moved from full offline rendering to chunked streaming playback.
+  The page now uses `GenesisAudioEngine` + `VgmPlayer`.
 
 ## What we observed
 
@@ -61,6 +63,15 @@ Last updated: 2026-08-14
   - DAC-heavy intro
 - The old "wait until 100% render" behavior was also a playback-model issue.
 - After switching to streaming playback, audio starts before full rendering finishes.
+- `Loop` now works both for:
+  - VGM files with a loop offset
+  - VGM files without a loop offset by restarting from the beginning
+- queue draining after playback end needed a bug fix
+  - audio must continue until `queuedFrames === 0`
+- `Stop` is now distinct from `Pause`
+  - `Pause` keeps the current position
+  - `Resume` continues from that position
+  - `Stop` resets to the beginning
 
 ## Still not fully supported
 
@@ -222,7 +233,7 @@ Last updated: 2026-08-14
 ## Practical next steps toward game use
 
 1. Keep the current streaming demo stable.
-2. Add stop / replay / loop controls.
+2. Keep `play / pause / resume / replay / stop / loop` behavior stable.
 3. Confirm YM2612 + PSG + target DAC stream subset work during streaming.
 4. Move audio generation toward an `AudioWorklet` model when needed.
 5. Add a small game-like sample after streaming becomes stable.

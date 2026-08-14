@@ -6,6 +6,7 @@ export class VgmPlayer {
     this.parser = null;
     this.loopEnabled = false;
     this.playing = false;
+    this.paused = false;
     this.waitAccumulator = 0;
     this.chunkQueue = [];
     this.queuedFrames = 0;
@@ -21,6 +22,7 @@ export class VgmPlayer {
     this.processedEvents = 0;
     this.processedWaitSamples = 0;
     this.playing = false;
+    this.paused = false;
   }
 
   reset() {
@@ -35,6 +37,7 @@ export class VgmPlayer {
     this.processedEvents = 0;
     this.processedWaitSamples = 0;
     this.playing = false;
+    this.paused = false;
   }
 
   play() {
@@ -42,12 +45,38 @@ export class VgmPlayer {
       throw new Error("No VGM buffer is loaded");
     }
     this.playing = true;
+    this.paused = false;
+  }
+
+  pause() {
+    if (!this.parser) {
+      return;
+    }
+    this.playing = false;
+    this.paused = true;
+  }
+
+  resume() {
+    if (!this.parser) {
+      throw new Error("No VGM buffer is loaded");
+    }
+    this.playing = true;
+    this.paused = false;
   }
 
   stop() {
+    if (!this.parser) {
+      return;
+    }
+    this.parser.reset();
+    this.engine.reset();
+    this.waitAccumulator = 0;
     this.playing = false;
+    this.paused = false;
     this.chunkQueue = [];
     this.queuedFrames = 0;
+    this.processedEvents = 0;
+    this.processedWaitSamples = 0;
   }
 
   setLoopEnabled(enabled) {
@@ -58,6 +87,10 @@ export class VgmPlayer {
     return this.playing;
   }
 
+  isPaused() {
+    return this.paused;
+  }
+
   sampleRate() {
     return this.engine.sampleRate();
   }
@@ -66,6 +99,7 @@ export class VgmPlayer {
     const totalSamples = this.parser ? this.parser.header.totalSamples : 0;
     return {
       playing: this.playing,
+      paused: this.paused,
       queuedFrames: this.queuedFrames,
       processedEvents: this.processedEvents,
       processedWaitSamples: this.processedWaitSamples,
@@ -87,7 +121,7 @@ export class VgmPlayer {
       this.#fillQueue(frames * 2);
     }
 
-    if (!this.playing && this.queuedFrames === 0) {
+    if (!this.playing && !this.paused && this.queuedFrames === 0) {
       left.fill(0, 0, frames);
       right.fill(0, 0, frames);
       return;
