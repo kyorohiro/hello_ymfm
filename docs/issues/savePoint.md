@@ -65,6 +65,109 @@ Last updated: 2026-08-14
 - DAC stream handling is minimal.
 - Real hardware accuracy is not the goal yet.
 
+## Scope risk
+
+- Building a serious "full VGM player" could easily consume 2-4 months.
+- The expensive part is not only implementation.
+- It also includes:
+  - command coverage
+  - DAC / PCM correctness
+  - testing assets
+  - result verification
+  - compatibility differences between VGM files
+
+## Practical scope for this repository
+
+- This repository does not need to become a complete VGM player first.
+- A more realistic target is:
+  - a YM2612 + PSG learning-oriented VGM player
+  - browser / WASM playback
+  - support for a practical subset of Genesis / DefleMask-oriented VGM data
+  - clear documentation about what is supported and what is not
+
+## Important reminder
+
+- "Achieve this repository's goals" is not the same as "support all VGM files".
+- Avoid accidentally turning this repository into a full compatibility project too early.
+
+## Genesis-oriented work list
+
+- Phase 1: keep the current base stable
+  - keep `docs/beep.html` working
+  - keep `docs/psg.html` working
+  - keep `docs/vgm.html` working for the current sample VGMs
+- Phase 2: clarify the Genesis audio model in docs
+  - explain that Mega Drive / Genesis audio is mainly `YM2612 + PSG`
+  - explain which part is FM and which part is PSG
+  - explain where DAC / PCM belongs in YM2612
+- Phase 3: strengthen VGM parsing for Genesis use
+  - confirm handling for `0x50`
+  - confirm handling for `0x52` / `0x53`
+  - confirm handling for waits and loop-related behavior
+  - document which DAC / PCM commands are supported now
+  - inspect whether `0x68` matters for target Genesis VGM files
+- Phase 4: prepare small test assets
+  - one short FM-only Genesis VGM
+  - one short PSG-including Genesis VGM
+  - one short DAC / PCM-including Genesis VGM
+  - keep them short enough for easy debugging
+- Phase 5: improve debug visibility
+  - show accumulated VGM time while parsing
+  - show first YM2612 key-on timing
+  - show first PSG write timing
+  - show first DAC activity timing
+  - show unsupported commands clearly
+- Phase 6: define the practical compatibility target
+  - write "supported Genesis VGM subset"
+  - write "known unsupported patterns"
+  - avoid claiming full VGM compatibility
+- Phase 7: browser embedding path
+  - keep the WASM build instructions simple
+  - keep the JavaScript API simple
+  - show the minimum code needed to connect to Web Audio
+  - keep the demo pages as small reference implementations
+- Phase 8: learning examples
+  - add an example for YM2612 FM note playback
+  - add an example for PSG tone playback
+  - add an example for YM2612 DAC playback
+  - add an example for mixed YM2612 + PSG playback
+- Phase 9: optional later work
+  - add better loop handling
+  - add stricter DAC stream behavior
+  - add more Genesis-focused VGM compatibility
+  - consider DefleMask-oriented workflow notes
+
+## Priority view
+
+### Must
+
+- keep `docs/beep.html`, `docs/psg.html`, and `docs/vgm.html` working
+- document the Genesis audio model as `YM2612 + PSG`
+- keep YM2612 / PSG / basic VGM playback understandable
+- clarify the current supported VGM subset
+- prepare short Genesis-focused VGM test assets
+- keep the WASM + JavaScript browser path simple and reproducible
+- add learning examples for:
+  - YM2612 FM
+  - PSG tone
+  - YM2612 DAC
+  - mixed YM2612 + PSG
+
+### Nice to have
+
+- improve debug visibility in `docs/vgm.html`
+- show first key-on / first PSG / first DAC timing
+- add better loop handling
+- add clearer DefleMask-oriented workflow notes
+- support more Genesis VGM command patterns as needed by real samples
+
+### Not now
+
+- full VGM compatibility
+- real hardware accuracy tuning
+- broad support for many non-Genesis chip targets
+- turning this repository into a general-purpose VGM player project
+
 ## Good next steps
 
 1. In `docs/vgm.html`, show more timing information:
