@@ -173,6 +173,7 @@
       let engine = null;
       let player = null;
       let activeStream = null;
+      let workletModuleReady = false;
 
       function setStatus(message) {
         status.textContent = message;
@@ -261,7 +262,11 @@
         if (!activeStream) {
           return;
         }
-        activeStream.node.onaudioprocess = null;
+        if (activeStream.mode === "script") {
+          activeStream.node.onaudioprocess = null;
+        } else if (activeStream.mode === "worklet") {
+          activeStream.node.port.onmessage = null;
+        }
         activeStream.node.disconnect();
         activeStream = null;
       }
@@ -292,27 +297,10 @@
           player.reset();
           player.setLoopEnabled(loopCheckbox.checked);
           player.play();
-
-          const bufferSize = 2048;
-          const node = audioContext.createScriptProcessor(bufferSize, 0, 2);
-          activeStream = { node };
-          node.onaudioprocess = (event) => {
-            const left = event.outputBuffer.getChannelData(0);
-            const right = event.outputBuffer.getChannelData(1);
-            player.process(left, right, bufferSize);
-            const stats = player.stats();
-            updatePlaybackButtons(stats);
-            setStatus(
-              `Streaming VGM... commands=${stats.processedEvents} queued=${stats.queuedFrames} audio=${stats.audioProgress.toFixed(1)}% loop=${loopCheckbox.checked ? "on" : "off"}`,
-            );
-
-            if (!stats.playing && !stats.paused && stats.queuedFrames === 0) {
-              stopActiveStream();
-              updatePlaybackButtons(stats);
-              setStatus("Ready.");
-            }
-          };
-          node.connect(audioContext.destination);
+          const started = await startWorkletStream(sampleRate) || startScriptProcessorStream();
+          if (!started) {
+            throw new Error("Failed to create an audio output stream");
+          }
 
           updatePlaybackButtons(player.stats());
           setStatus(`Streaming VGM at ${sampleRate} Hz...`);
@@ -322,6 +310,111 @@
         } finally {
           updatePlaybackButtons(player ? player.stats() : {});
         }
+      }
+
+      function updateStreamingStatus(extra = "") {
+        const stats = player.stats();
+        const suffix = extra === "" ? "" : ` ${extra}`;
+        setStatus(
+          `Streaming VGM... commands=${stats.processedEvents} queued=${stats.queuedFrames} audio=${stats.audioProgress.toFixed(1)}% loop=${loopCheckbox.checked ? "on" : "off"}${suffix}`,
+        );
+      }
+
+      function pumpWorkletChunks(targetFrames = 4096) {
+        if (!activeStream || activeStream.mode !== "worklet") {
+          return;
+        }
+
+        while (activeStream.workletQueuedFrames < targetFrames) {
+          const statsBefore = player.stats();
+          if (!statsBefore.playing && !statsBefore.paused && statsBefore.queuedFrames === 0) {
+            if (!activeStream.endSent) {
+              activeStream.node.port.postMessage({ type: "end" });
+              activeStream.endSent = true;
+            }
+            break;
+          }
+
+          const frames = activeStream.chunkFrames;
+          const left = new Float32Array(frames);
+          const right = new Float32Array(frames);
+          player.process(left, right, frames);
+          activeStream.workletQueuedFrames += frames;
+          activeStream.node.port.postMessage(
+            { type: "enqueue", left: left.buffer, right: right.buffer },
+            [left.buffer, right.buffer],
+          );
+        }
+
+        updatePlaybackButtons(player.stats());
+        updateStreamingStatus("(AudioWorklet)");
+      }
+
+      async function startWorkletStream(sampleRate) {
+        if (!audioContext.audioWorklet) {
+          return false;
+        }
+        if (!workletModuleReady) {
+          try {
+            await audioContext.audioWorklet.addModule("./vgm-output-worklet.js");
+            workletModuleReady = true;
+          } catch (error) {
+            console.warn("AudioWorklet module load failed; falling back to ScriptProcessorNode.", error);
+            return false;
+          }
+        }
+
+        const chunkFrames = 2048;
+        const node = new AudioWorkletNode(audioContext, "vgm-output-processor", {
+          numberOfInputs: 0,
+          numberOfOutputs: 1,
+          outputChannelCount: [2],
+        });
+        activeStream = {
+          mode: "worklet",
+          node,
+          chunkFrames,
+          workletQueuedFrames: 0,
+          endSent: false,
+        };
+        node.port.onmessage = (event) => {
+          const data = event.data || {};
+          if (typeof data.queuedFrames === "number") {
+            activeStream.workletQueuedFrames = data.queuedFrames;
+          }
+          if (data.ended) {
+            stopActiveStream();
+            updatePlaybackButtons(player.stats());
+            setStatus("Ready.");
+            return;
+          }
+          pumpWorkletChunks(chunkFrames * 2);
+        };
+        node.connect(audioContext.destination);
+        pumpWorkletChunks(chunkFrames * 2);
+        return true;
+      }
+
+      function startScriptProcessorStream() {
+        const bufferSize = 2048;
+        const node = audioContext.createScriptProcessor(bufferSize, 0, 2);
+        activeStream = { mode: "script", node };
+        node.onaudioprocess = (event) => {
+          const left = event.outputBuffer.getChannelData(0);
+          const right = event.outputBuffer.getChannelData(1);
+          player.process(left, right, bufferSize);
+          const stats = player.stats();
+          updatePlaybackButtons(stats);
+          updateStreamingStatus("(ScriptProcessor)");
+
+          if (!stats.playing && !stats.paused && stats.queuedFrames === 0) {
+            stopActiveStream();
+            updatePlaybackButtons(stats);
+            setStatus("Ready.");
+          }
+        };
+        node.connect(audioContext.destination);
+        return true;
       }
 
       async function handleFile(file) {
