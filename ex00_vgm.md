@@ -62,6 +62,55 @@ That means:
 - a YM2612 VGM player would also write registers directly
 - the big difference is that VGM automates the sequence and timing
 
+## FM and PCM are different
+
+It is useful to separate these two ideas early:
+
+- `FM`
+  create a sound by configuring YM2612 registers
+- `PCM / DAC`
+  create a sound by sending waveform sample bytes to the chip
+
+For FM, we usually think in terms of:
+
+- algorithm
+- operator settings
+- frequency
+- key on / key off
+
+For PCM / DAC, the mental model is different.
+
+We do not select "instrument 3" or "sample 5" inside the YM2612.
+Instead, we send 8-bit sample values to the chip over time.
+
+That is why PCM playback is closer to:
+
+- prepare sample data
+- enable DAC mode
+- send bytes at the correct timing
+
+than to:
+
+- configure operators and key-on a note
+
+## YM2612 registers for PCM / DAC
+
+Two YM2612 registers are especially important here:
+
+- `0x2A`
+  DAC data
+- `0x2B`
+  DAC enable
+
+The rough idea is:
+
+1. Enable DAC playback with `0x2B`.
+2. Write 8-bit sample values to `0x2A`.
+3. Keep writing data at the correct timing.
+
+So for PCM, the "sound source" is not a built-in preset.
+The sound source is the byte stream that we feed into `0x2A`.
+
 ## What we will need later
 
 To support VGM playback, we will eventually need to understand:
@@ -183,6 +232,19 @@ For YM2612 playback, the most important commands are:
 - `0x66`
   end of sound data
 
+For YM2612 DAC / PCM playback, these are also important:
+
+- `0x67`
+  data block
+- `0x68`
+  PCM RAM write
+- `0x80-0x8F`
+  YM2612 DAC write with short wait
+- `0x90-0x95`
+  DAC stream control
+- `0xE0`
+  data bank seek
+
 ## First commands to care about
 
 For a first YM2612-only implementation, these commands are enough:
@@ -211,6 +273,96 @@ These commands map very naturally to the YM2612 interface we already have.
   means `chip.write(2, aa)` then `chip.write(3, dd)`
 
 This is one of the main reasons VGM fits well with YM2612 emulation.
+
+## How PCM is described in VGM
+
+For PCM, VGM usually does not mean:
+
+- "select PCM instrument number 7"
+
+Instead, it usually means something closer to:
+
+- here is a block of PCM bytes
+- move to this position in that data
+- send bytes to the YM2612 DAC
+- wait between writes
+
+That is why commands such as `0x67`, `0x80-0x8F`, `0x90-0x95`, and `0xE0` matter.
+
+## `0x67` and `0x68` are different
+
+These two commands are easy to mix up.
+
+- `0x67`
+  stores PCM-related data inside the VGM stream
+- `0x68`
+  writes PCM data into a chip-side PCM RAM area
+
+So the rough distinction is:
+
+- `0x67`
+  "here is the source data"
+- `0x68`
+  "copy data into chip memory"
+
+For YM2612 DAC playback, the most common mental model is still:
+
+1. enable DAC with register `0x2B`
+2. send bytes to register `0x2A`
+3. wait between writes
+
+That is why some YM2612 VGM files can still play even if `0x68` is not implemented.
+
+## Mental model for YM2612 PCM in VGM
+
+A simple mental model is:
+
+1. A VGM data block stores PCM bytes.
+2. The player remembers that byte array.
+3. A DAC-related command selects where to read from.
+4. The player writes bytes to YM2612 register `0x2A`.
+5. Wait timing controls the playback speed.
+
+So the PCM "instrument" is really:
+
+- a byte sequence
+- plus timing
+- plus DAC enable state
+
+## Practical mapping
+
+This is the important connection:
+
+- YM2612 register `0x2B`
+  enable DAC mode
+- YM2612 register `0x2A`
+  receive one PCM sample byte
+- VGM `0x67`
+  provide PCM data bytes
+- VGM `0xE0`
+  move the current read position in a data bank
+- VGM `0x80-0x8F`
+  write one DAC byte and wait a small amount
+- VGM `0x90-0x95`
+  describe DAC stream playback
+
+In other words:
+
+- YM2612 itself only sees register writes
+- VGM helps organize where the PCM bytes come from and when to send them
+
+## Small example
+
+The playback idea is roughly:
+
+1. Write `0x2B` to enable DAC.
+2. Load or point to PCM sample data.
+3. Send one byte to `0x2A`.
+4. Wait a little.
+5. Send the next byte to `0x2A`.
+6. Repeat until the sample ends.
+
+That is the basic PCM / DAC model for YM2612.
 
 ## Wait commands
 
@@ -256,6 +408,30 @@ If we keep the scope small, the first YM2612 VGM player can be:
 6. Optionally handle looping with the loop offset.
 
 This is a good first target.
+
+## What this repository supports now
+
+At the current stage of this repository:
+
+- YM2612 register writes are supported
+- PSG writes are supported
+- basic wait / end commands are supported
+- YM2612 DAC data-block / stream playback is partially supported
+
+More specifically:
+
+- `0x67`
+  basic data-block loading is supported
+- `0x80-0x8F`
+  basic DAC write + wait is supported
+- `0x90-0x95`
+  minimal DAC stream support exists
+- `0xE0`
+  basic data-bank seek is supported
+- `0x68`
+  not implemented yet
+
+So PCM / DAC playback is not "fully done", but it is also no longer "all skipped".
 
 ## References
 
