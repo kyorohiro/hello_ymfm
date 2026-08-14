@@ -6,6 +6,33 @@ This repository has three goals:
 - To create documentation that helps anyone understand the YM2612 chip.
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
 
+## tutorials
+- [ex00.md](/Users/kyorohiro/development8/wfm/hello_ymfm/ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
+- [ex00_ja.md](/Users/kyorohiro/development8/wfm/hello_ymfm/ex00_ja.md): Japanese notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
+- `ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
+- `ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
+- `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
+
+## build/test ym2612 wasm
+Build:
+
+```sh
+sh scripts/build_ym2612_wasm.sh
+```
+
+This generates:
+
+- `docs/generated/ym2612_wasm.js`
+- `docs/generated/ym2612_wasm.wasm`
+
+Test:
+
+- Import `docs/generated/ym2612_wasm.js` in browser-side JavaScript.
+- Use [web/ym2612.js](/Users/kyorohiro/development8/wfm/hello_ymfm/web/ym2612.js:1) as the thin JavaScript interface.
+- Create a `Ym2612` instance, call `reset()`, send register writes, and call `generateStereo(frames)`.
+
+See [web/README.md](/Users/kyorohiro/development8/wfm/hello_ymfm/web/README.md:1) for a minimal usage example.
+
 
 # ymfm
 
