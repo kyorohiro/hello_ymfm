@@ -238,22 +238,26 @@
           let outputOffset = 0;
           let waitAccumulator = 0;
 
+          function renderWaitSegment(vgmSamples) {
+            waitAccumulator += vgmSamples * ymSampleRate;
+            const frames = Math.floor(waitAccumulator / 44100);
+            waitAccumulator -= frames * 44100;
+
+            if (frames > 0) {
+              const ym = ym2612.generateStereo(frames);
+              const psgBlock = psg.generateStereo(frames);
+              mixInto(left, right, outputOffset, ym, 0.9);
+              mixInto(left, right, outputOffset, psgBlock, 0.35);
+              outputOffset += frames;
+            }
+          }
+
           setStatus("Rendering VGM...");
 
           while (true) {
             const event = parser.playStep({ ym2612, psg });
             if (event.type === "wait") {
-              waitAccumulator += event.samples * ymSampleRate;
-              const frames = Math.floor(waitAccumulator / 44100);
-              waitAccumulator -= frames * 44100;
-
-              if (frames > 0) {
-                const ym = ym2612.generateStereo(frames);
-                const psgBlock = psg.generateStereo(frames);
-                mixInto(left, right, outputOffset, ym, 0.9);
-                mixInto(left, right, outputOffset, psgBlock, 0.35);
-                outputOffset += frames;
-              }
+              parser.consumeWait({ ym2612, psg }, event.samples, renderWaitSegment);
               continue;
             }
 

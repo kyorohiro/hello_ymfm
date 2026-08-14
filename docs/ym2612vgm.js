@@ -96,6 +96,31 @@ export class Ym2612VGM {
     this.ended = false;
     /** @type {Pick<Console, "warn"> | null} */
     this.logger = options.logger === undefined ? console : options.logger;
+    /** @type {Map<number, Uint8Array>} */
+    this.dataBanks = new Map();
+    /** @type {Uint8Array[]} */
+    this.dataBlocks = [];
+    /** @type {Map<number, {
+     *   chipType: number,
+     *   port: number,
+     *   register: number,
+     *   dataBankId: number,
+     *   stepSize: number,
+     *   stepBase: number,
+     *   frequency: number,
+     *   active: boolean,
+     *   loop: boolean,
+     *   data: Uint8Array | null,
+     *   dataOffset: number,
+     *   dataLength: number,
+     *   cursor: number,
+     *   sampleRemainder: number
+     * }>} */
+    this.streams = new Map();
+    /** @type {number} */
+    this.dataBankCursor = 0;
+    /** @type {{ port: number, value: number } | null} */
+    this.pendingYm2612DataBankWrite = null;
   }
 
   /**
@@ -137,6 +162,17 @@ export class Ym2612VGM {
   reset() {
     this.position = this.header.dataOffset;
     this.ended = false;
+    this.dataBankCursor = 0;
+    this.pendingYm2612DataBankWrite = null;
+    for (const stream of this.streams.values()) {
+      stream.active = false;
+      stream.loop = false;
+      stream.data = null;
+      stream.dataOffset = 0;
+      stream.dataLength = 0;
+      stream.cursor = 0;
+      stream.sampleRemainder = 0;
+    }
   }
 
   /**
@@ -181,12 +217,13 @@ export class Ym2612VGM {
       }
       case 0x67: {
         this.#ensureAvailable(7);
+        if (this.bytes[this.position + 1] !== 0x66) {
+          throw new Error("Invalid VGM data block header");
+        }
         const dataType = this.bytes[this.position + 2];
         const size = readUint32LE(this.view, this.position + 3);
         this.#ensureAvailable(7 + size);
-        this.#warn(
-          `Skipping VGM data block command 0x67 (type=0x${dataType.toString(16).padStart(2, "0")}, size=${size})`,
-        );
+        this.#storeDataBlock(dataType, this.position + 7, size);
         this.position += 7 + size;
         return this.step();
       }
@@ -224,31 +261,18 @@ export class Ym2612VGM {
 
     if (command >= 0x80 && command <= 0x8f) {
       this.position += 1;
-      this.#warn(
-        `Skipping YM2612 DAC write in command 0x${command.toString(16).padStart(2, "0")} and preserving wait timing only`,
-      );
+      this.#writeYm2612DataBankByte(0);
       return { type: "wait", samples: command & 0x0f };
     }
 
     if (command >= 0x90 && command <= 0x95) {
-      const lengths = {
-        0x90: 5,
-        0x91: 5,
-        0x92: 6,
-        0x93: 11,
-        0x94: 2,
-        0x95: 5,
-      };
-      const length = lengths[command];
-      this.#ensureAvailable(length);
-      this.#warn(`Skipping unsupported DAC stream command 0x${command.toString(16).padStart(2, "0")}`);
-      this.position += length;
+      this.#handleDacStreamCommand(command);
       return this.step();
     }
 
     if (command === 0xe0) {
       this.#ensureAvailable(5);
-      this.#warn("Skipping unsupported PCM data bank seek command 0xE0");
+      this.dataBankCursor = readUint32LE(this.view, this.position + 1);
       this.position += 5;
       return this.step();
     }
@@ -266,6 +290,13 @@ export class Ym2612VGM {
    */
   playStep(targets) {
     const event = this.step();
+    if (this.pendingYm2612DataBankWrite) {
+      const ym2612 = targets.ym2612 || targets;
+      if (ym2612 && typeof ym2612.writeRegister === "function") {
+        ym2612.writeRegister(0x2a, this.pendingYm2612DataBankWrite.value, this.pendingYm2612DataBankWrite.port);
+      }
+      this.pendingYm2612DataBankWrite = null;
+    }
     if (event.type === "ym2612-write") {
       const ym2612 = targets.ym2612 || targets;
       if (ym2612 && typeof ym2612.writeRegister === "function") {
@@ -279,6 +310,31 @@ export class Ym2612VGM {
       }
     }
     return event;
+  }
+
+  /**
+   * @param {{
+   *   ym2612?: { writeRegister(register: number, value: number, port?: number): void },
+   *   psg?: { write(data: number): void },
+   *   writeRegister?: (register: number, value: number, port?: number) => void
+   * }} targets
+   * @param {number} vgmSamples
+   * @param {(segmentSamples: number) => void} onSegment
+   * @returns {void}
+   */
+  consumeWait(targets, vgmSamples, onSegment) {
+    let remaining = vgmSamples;
+    while (remaining > 0) {
+      const distance = this.#nextStreamWriteDistance();
+      const segment = distance === null ? remaining : Math.min(remaining, distance);
+      if (segment > 0) {
+        onSegment(segment);
+        this.#advanceStreams(segment);
+        remaining -= segment;
+      } else {
+        this.#flushDueStreamWrites(targets);
+      }
+    }
   }
 
   /**
@@ -299,5 +355,287 @@ export class Ym2612VGM {
     if (this.logger && typeof this.logger.warn === "function") {
       this.logger.warn(message);
     }
+  }
+
+  /**
+   * @param {number} streamId
+   * @returns {{
+   *   chipType: number,
+   *   port: number,
+   *   register: number,
+   *   dataBankId: number,
+   *   stepSize: number,
+   *   stepBase: number,
+   *   frequency: number,
+   *   active: boolean,
+   *   loop: boolean,
+   *   data: Uint8Array | null,
+   *   dataOffset: number,
+   *   dataLength: number,
+   *   cursor: number,
+   *   sampleRemainder: number
+   * }}
+   */
+  #streamState(streamId) {
+    if (!this.streams.has(streamId)) {
+      this.streams.set(streamId, {
+        chipType: 0,
+        port: 0,
+        register: 0x2a,
+        dataBankId: 0,
+        stepSize: 1,
+        stepBase: 0,
+        frequency: 0,
+        active: false,
+        loop: false,
+        data: null,
+        dataOffset: 0,
+        dataLength: 0,
+        cursor: 0,
+        sampleRemainder: 0,
+      });
+    }
+    return this.streams.get(streamId);
+  }
+
+  /**
+   * @param {number} command
+   * @returns {void}
+   */
+  #handleDacStreamCommand(command) {
+    if (command === 0x90) {
+      this.#ensureAvailable(5);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      stream.chipType = this.bytes[this.position + 2];
+      stream.port = this.bytes[this.position + 3];
+      stream.register = this.bytes[this.position + 4];
+      this.position += 5;
+      return;
+    }
+    if (command === 0x91) {
+      this.#ensureAvailable(5);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      stream.dataBankId = this.bytes[this.position + 2];
+      stream.stepSize = Math.max(1, this.bytes[this.position + 3]);
+      stream.stepBase = this.bytes[this.position + 4];
+      this.position += 5;
+      return;
+    }
+    if (command === 0x92) {
+      this.#ensureAvailable(6);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      stream.frequency = readUint32LE(this.view, this.position + 2);
+      this.position += 6;
+      return;
+    }
+    if (command === 0x93) {
+      this.#ensureAvailable(11);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      const start = readUint32LE(this.view, this.position + 2);
+      const mode = this.bytes[this.position + 6];
+      const length = readUint32LE(this.view, this.position + 7);
+      const bank = this.dataBanks.get(stream.dataBankId) || null;
+      this.#startStream(stream, bank, start, mode, length);
+      this.position += 11;
+      return;
+    }
+    if (command === 0x94) {
+      this.#ensureAvailable(2);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      stream.active = false;
+      this.position += 2;
+      return;
+    }
+    if (command === 0x95) {
+      this.#ensureAvailable(5);
+      const stream = this.#streamState(this.bytes[this.position + 1]);
+      const blockId = readUint16LE(this.view, this.position + 2);
+      const flags = this.bytes[this.position + 4];
+      const block = this.dataBlocks[blockId] || null;
+      this.#startStream(stream, block, 0, flags, block ? block.length : 0);
+      this.position += 5;
+      return;
+    }
+  }
+
+  /**
+   * @param {{
+   *   chipType: number,
+   *   port: number,
+   *   register: number,
+   *   dataBankId: number,
+   *   stepSize: number,
+   *   stepBase: number,
+   *   frequency: number,
+   *   active: boolean,
+   *   loop: boolean,
+   *   data: Uint8Array | null,
+   *   dataOffset: number,
+   *   dataLength: number,
+   *   cursor: number,
+   *   sampleRemainder: number
+   * }} stream
+   * @param {Uint8Array | null} data
+   * @param {number} start
+   * @param {number} mode
+   * @param {number} length
+   * @returns {void}
+   */
+  #startStream(stream, data, start, mode, length) {
+    if (!data || start >= data.length) {
+      stream.active = false;
+      this.#warn("Skipping DAC stream start because no matching data block was loaded");
+      return;
+    }
+    const requestedLength = length === 0 ? data.length - start : length;
+    const availableLength = Math.max(0, Math.min(requestedLength, data.length - start));
+    stream.data = data;
+    stream.dataOffset = start;
+    stream.dataLength = availableLength;
+    stream.cursor = 0;
+    stream.sampleRemainder = 0;
+    stream.loop = (mode & 0x80) !== 0;
+    stream.active = availableLength > 0 && stream.frequency > 0;
+    if (stream.frequency <= 0) {
+      this.#warn("Skipping DAC stream start because frequency was not configured");
+    }
+  }
+
+  /**
+   * @returns {number | null}
+   */
+  #nextStreamWriteDistance() {
+    let distance = null;
+    for (const stream of this.streams.values()) {
+      if (!stream.active || !stream.data || stream.frequency <= 0) {
+        continue;
+      }
+      const remaining = Math.max(0, 44100 - stream.sampleRemainder);
+      const next = Math.max(0, Math.ceil(remaining / stream.frequency));
+      if (distance === null || next < distance) {
+        distance = next;
+      }
+    }
+    return distance;
+  }
+
+  /**
+   * @param {number} vgmSamples
+   * @returns {void}
+   */
+  #advanceStreams(vgmSamples) {
+    for (const stream of this.streams.values()) {
+      if (!stream.active || !stream.data || stream.frequency <= 0) {
+        continue;
+      }
+      stream.sampleRemainder += vgmSamples * stream.frequency;
+    }
+  }
+
+  /**
+   * @param {{
+   *   ym2612?: { writeRegister(register: number, value: number, port?: number): void },
+   *   psg?: { write(data: number): void },
+   *   writeRegister?: (register: number, value: number, port?: number) => void
+   * }} targets
+   * @returns {void}
+   */
+  #flushDueStreamWrites(targets) {
+    while (true) {
+      let flushed = false;
+      for (const stream of this.streams.values()) {
+        while (stream.active && stream.data && stream.frequency > 0 && stream.sampleRemainder >= 44100) {
+          stream.sampleRemainder -= 44100;
+          this.#performStreamWrite(stream, targets);
+          flushed = true;
+        }
+      }
+      if (!flushed) {
+        return;
+      }
+    }
+  }
+
+  /**
+   * @param {{
+   *   chipType: number,
+   *   port: number,
+   *   register: number,
+   *   dataBankId: number,
+   *   stepSize: number,
+   *   stepBase: number,
+   *   frequency: number,
+   *   active: boolean,
+   *   loop: boolean,
+   *   data: Uint8Array | null,
+   *   dataOffset: number,
+   *   dataLength: number,
+   *   cursor: number,
+   *   sampleRemainder: number
+   * }} stream
+   * @param {{
+   *   ym2612?: { writeRegister(register: number, value: number, port?: number): void },
+   *   psg?: { write(data: number): void },
+   *   writeRegister?: (register: number, value: number, port?: number) => void
+   * }} targets
+   * @returns {void}
+   */
+  #performStreamWrite(stream, targets) {
+    if (!stream.data || !stream.active) {
+      return;
+    }
+    if (stream.cursor >= stream.dataLength) {
+      if (stream.loop) {
+        stream.cursor = 0;
+      } else {
+        stream.active = false;
+        return;
+      }
+    }
+    const dataIndex = stream.dataOffset + stream.cursor;
+    const value = stream.data[dataIndex];
+    const ym2612 = targets.ym2612 || targets;
+    if (ym2612 && typeof ym2612.writeRegister === "function") {
+      ym2612.writeRegister(stream.register, value, stream.port);
+    }
+    stream.cursor += stream.stepSize;
+    if (stream.cursor >= stream.dataLength && !stream.loop) {
+      stream.active = false;
+    }
+  }
+
+  /**
+   * @param {number} port
+   * @returns {void}
+   */
+  #writeYm2612DataBankByte(port) {
+    const bank = this.dataBanks.get(0);
+    if (!bank || this.dataBankCursor >= bank.length) {
+      this.#warn("Skipping YM2612 DAC write because data bank 0 is not available");
+      return;
+    }
+    this.pendingYm2612DataBankWrite = {
+      port,
+      value: bank[this.dataBankCursor],
+    };
+    this.dataBankCursor += 1;
+  }
+
+  /**
+   * @param {number} dataType
+   * @param {number} dataOffset
+   * @param {number} size
+   * @returns {void}
+   */
+  #storeDataBlock(dataType, dataOffset, size) {
+    const data = this.bytes.slice(dataOffset, dataOffset + size);
+    if (dataType <= 0x3f) {
+      this.dataBanks.set(dataType, data);
+      this.dataBlocks.push(data);
+      return;
+    }
+    this.#warn(
+      `Skipping unsupported VGM data block 0x${dataType.toString(16).padStart(2, "0")} (size=${size})`,
+    );
   }
 }
