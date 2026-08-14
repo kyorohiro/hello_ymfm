@@ -105,6 +105,11 @@
         font-size: 0.92rem;
         overflow-x: auto;
       }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
     </style>
   </head>
   <body>
@@ -114,6 +119,14 @@
         <p>
           This page loads a minimal Sega PSG / SN76489-compatible WebAssembly wrapper
           and plays a simple tone through the browser.
+        </p>
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/psg.html">docs/psg.html</a>
+          |
+          Related code:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/src/segapsg.cpp">src/segapsg.cpp</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/segapsg.js">web/segapsg.js</a>
         </p>
         <div class="actions">
           <button id="playButton" type="button">Play PSG Tone</button>

@@ -102,6 +102,11 @@
         white-space: pre-wrap;
         word-break: break-word;
       }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
     </style>
   </head>
   <body>
@@ -113,6 +118,15 @@
         </p>
         <p>
           It can preview parsed commands and render a first-pass playback using YM2612 plus Mega Drive PSG.
+        </p>
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgm.html">docs/vgm.html</a>
+          |
+          Related code:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612vgm.js">docs/ym2612vgm.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgmplayer.js">docs/vgmplayer.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgm-output-worklet.js">docs/vgm-output-worklet.js</a>
         </p>
         <div class="actions">
           <input id="fileInput" type="file" accept=".vgm,.vgz,application/octet-stream">
