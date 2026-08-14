@@ -6,23 +6,12 @@ This repository has three goals:
 - To create documentation that helps anyone understand the YM2612 chip.
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
 
-In practice, this repository is also growing into:
+Current repository status:
 
-- a learning hub for YM2612, ymfm, and Sega Genesis / Mega Drive audio
-- a practical information source for embedding ymfm-based chip sound into retro-style browser apps or games
-- one possible entry point into chip sound culture through code, docs, and browser demos
-
-This repository focuses on the Sega Genesis / Mega Drive side of YM2612 usage.
-That scope makes it easier to connect:
-
-- YM2612 chip learning
-- ymfm source code reading
-- browser / WASM playback
-- VGM exported from tools such as DefleMask
-- direct chip control experiments
-
-The goal is not to document every possible Yamaha chip workflow.
-The goal is to make the Genesis / YM2612 path rich enough that both people and AI tools can learn from it and build on top of it.
+- Provides a WebAssembly build and JavaScript interface for YM2612.
+- Provides a Sega Genesis / Mega Drive oriented VGM player for the browser.
+- Provides demos for browser playback and direct YM2612 control from JavaScript.
+- Includes some checks with DefleMask-generated sound data.
 
 Demo:
 
@@ -31,9 +20,6 @@ Demo:
 
 This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
 See `LICENSE` for the license text included with this repository.
-
-This repository may also be useful as a bridge between DefleMask-oriented workflows and ymfm-based browser playback for Sega Mega Drive / Genesis projects.
-The current browser demo can already parse and stream-play a practical YM2612 + PSG + DAC-stream subset, though full VGM compatibility is not the goal yet.
 
 ## tutorials
 - [ex00.md](./ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
@@ -44,16 +30,6 @@ The current browser demo can already parse and stream-play a practical YM2612 + 
 - `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
 - `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
   VGM playback and direct chip control.
-
-For practical game use, it is better to think about two separate paths:
-
-- VGM playback path
-  Replay prepared music data, such as VGM exported from DefleMask.
-- Direct chip control path
-  Drive YM2612 / PSG registers directly for experiments, realtime control, or a programmatic music/SFX engine.
-
-These paths are intentionally kept separate for now.
-If a song already uses YM2612 / PSG resources tightly, adding free-form SFX on top later is not guaranteed to work.
 
 ## build/test ym2612 wasm
 Build:
