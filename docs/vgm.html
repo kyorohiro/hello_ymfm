@@ -126,6 +126,18 @@
 
         <h2>First Parsed Commands</h2>
         <pre id="commandsOutput">No commands parsed yet.</pre>
+
+        <h2>Command Usage</h2>
+        <pre id="commandUsageOutput">No analysis yet.</pre>
+
+        <h2>Data Blocks</h2>
+        <pre id="dataBlocksOutput">No data blocks inspected yet.</pre>
+
+        <h2>Special Command Details</h2>
+        <pre id="specialCommandsOutput">No special command details yet.</pre>
+
+        <h2>0x92 Context</h2>
+        <pre id="command92ContextOutput">No 0x92 context yet.</pre>
       </section>
     </main>
 
@@ -141,6 +153,10 @@
       const status = document.getElementById("status");
       const headerOutput = document.getElementById("headerOutput");
       const commandsOutput = document.getElementById("commandsOutput");
+      const commandUsageOutput = document.getElementById("commandUsageOutput");
+      const dataBlocksOutput = document.getElementById("dataBlocksOutput");
+      const specialCommandsOutput = document.getElementById("specialCommandsOutput");
+      const command92ContextOutput = document.getElementById("command92ContextOutput");
 
       let currentBuffer = null;
       let audioContext = null;
@@ -178,6 +194,23 @@
           return `${String(index).padStart(3, " ")}: wait ${event.samples} samples`;
         }
         return `${String(index).padStart(3, " ")}: end`;
+      }
+
+      function renderCommandUsage(counts) {
+        return Array.from(counts.entries())
+          .sort((left, right) => left[0].localeCompare(right[0]))
+          .map(([command, count]) => `${command}: ${count}`)
+          .join("\n");
+      }
+
+      function renderDataBlocks(blocks) {
+        if (blocks.length === 0) {
+          return "No stored data blocks were found.";
+        }
+        return blocks.map((block) => {
+          const preview = block.preview === "" ? "(empty)" : block.preview;
+          return `block ${block.index}: offset=0x${block.offset.toString(16).padStart(8, "0")} type=${formatHex(block.type)} size=${block.size} preview=${preview}`;
+        }).join("\n");
       }
 
       function looksLikeGzip(buffer) {
@@ -219,6 +252,12 @@
         }
       }
 
+      function nextFrame() {
+        return new Promise((resolve) => {
+          requestAnimationFrame(() => resolve());
+        });
+      }
+
       async function playCurrentVgm() {
         if (!currentBuffer) {
           return;
@@ -237,8 +276,11 @@
 
           let outputOffset = 0;
           let waitAccumulator = 0;
+          let processedEvents = 0;
+          let processedWaitSamples = 0;
 
           function renderWaitSegment(vgmSamples) {
+            processedWaitSamples += vgmSamples;
             waitAccumulator += vgmSamples * ymSampleRate;
             const frames = Math.floor(waitAccumulator / 44100);
             waitAccumulator -= frames * 44100;
@@ -256,13 +298,24 @@
 
           while (true) {
             const event = parser.playStep({ ym2612, psg });
+            processedEvents += 1;
             if (event.type === "wait") {
               parser.consumeWait({ ym2612, psg }, event.samples, renderWaitSegment);
-              continue;
+            } else if (event.type === "end") {
+              break;
             }
 
-            if (event.type === "end") {
-              break;
+            if ((processedEvents % 512) === 0) {
+              const commandProgress = currentBuffer.byteLength > 0
+                ? Math.min(100, (parser.position / currentBuffer.byteLength) * 100)
+                : 0;
+              const timeProgress = parser.header.totalSamples > 0
+                ? Math.min(100, (processedWaitSamples / parser.header.totalSamples) * 100)
+                : 0;
+              setStatus(
+                `Rendering VGM... commands=${processedEvents} file=${commandProgress.toFixed(1)}% audio=${timeProgress.toFixed(1)}%`,
+              );
+              await nextFrame();
             }
           }
 
@@ -312,6 +365,11 @@
         }
 
         headerOutput.textContent = renderHeader(vgm.header);
+        commandUsageOutput.textContent = renderCommandUsage(vgm.analyzeCommandUsage());
+        commandUsageOutput.textContent += "\n";
+        dataBlocksOutput.textContent = renderDataBlocks(vgm.dataBlockSummary());
+        specialCommandsOutput.textContent = vgm.analyzeSpecialCommands().join("\n");
+        command92ContextOutput.textContent = vgm.analyzeCommandContext(0x92).join("\n");
 
         const events = [];
         try {

@@ -100,6 +100,8 @@ export class Ym2612VGM {
     this.dataBanks = new Map();
     /** @type {Uint8Array[]} */
     this.dataBlocks = [];
+    /** @type {Array<{ type: number, size: number, preview: string }>} */
+    this.dataBlockInfo = [];
     /** @type {Map<number, {
      *   chipType: number,
      *   port: number,
@@ -180,6 +182,122 @@ export class Ym2612VGM {
    */
   hasLoop() {
     return this.header.loopOffset !== 0;
+  }
+
+  /**
+   * @returns {Array<{ type: number, size: number, preview: string, index: number }>}
+   */
+  dataBlockSummary() {
+    /** @type {Array<{ type: number, size: number, preview: string, index: number, offset: number }>} */
+    const blocks = [];
+    this.#scanRawCommands((command, position) => {
+      if (command !== 0x67) {
+        return;
+      }
+      const dataType = this.bytes[position + 2];
+      const size = readUint32LE(this.view, position + 3);
+      const dataStart = position + 7;
+      const data = this.bytes.slice(dataStart, dataStart + size);
+      blocks.push({
+        type: dataType,
+        size,
+        preview: Array.from(data.subarray(0, Math.min(8, data.length)))
+          .map((value) => value.toString(16).padStart(2, "0"))
+          .join(" "),
+        index: blocks.length,
+        offset: position,
+      });
+    });
+    return blocks;
+  }
+
+  /**
+   * @returns {Map<string, number>}
+   */
+  analyzeCommandUsage() {
+    const counts = new Map();
+    this.#scanRawCommands((command) => {
+      const key = `0x${command.toString(16).padStart(2, "0")}`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }
+
+  /**
+   * @returns {Array<string>}
+   */
+  analyzeSpecialCommands() {
+    /** @type {Array<string>} */
+    const lines = [];
+    this.#scanRawCommands((command, position, index) => {
+      if (command === 0x67) {
+        const dataType = this.bytes[position + 2];
+        const size = readUint32LE(this.view, position + 3);
+        lines.push(
+          `${String(index).padStart(4, " ")} @${formatOffset(position)} cmd=0x67 type=0x${dataType.toString(16).padStart(2, "0")} size=${size}`,
+        );
+      } else if (command === 0x68) {
+        const dataType = this.bytes[position + 2];
+        const readOffset = readUint24LE(this.bytes, position + 3);
+        const writeOffset = readUint24LE(this.bytes, position + 6);
+        const size = readUint24LE(this.bytes, position + 9);
+        lines.push(
+          `${String(index).padStart(4, " ")} @${formatOffset(position)} cmd=0x68 type=0x${dataType.toString(16).padStart(2, "0")} readOffset=${formatHexNumber(readOffset, 6)} writeOffset=${formatHexNumber(writeOffset, 6)} size=${size}`,
+        );
+      } else if (command >= 0x90 && command <= 0x95) {
+        lines.push(this.#describeDacStreamCommand(position, index));
+      } else if (command === 0xe0) {
+        const seek = readUint32LE(this.view, position + 1);
+        lines.push(
+          `${String(index).padStart(4, " ")} @${formatOffset(position)} cmd=0xe0 seek=${formatHexNumber(seek, 8)}`,
+        );
+      }
+    });
+
+    if (lines.length === 0) {
+      lines.push("No 0x68 / 0x90-0x95 / 0xE0 details were found.");
+    }
+    return lines;
+  }
+
+  /**
+   * @param {number} targetCommand
+   * @param {number} [contextRadius]
+   * @returns {Array<string>}
+   */
+  analyzeCommandContext(targetCommand, contextRadius = 2) {
+    /** @type {Array<{ index: number, position: number, command: number, detail: string }>} */
+    const entries = [];
+    this.#scanRawCommands((command, position, index) => {
+      entries.push({
+        index,
+        position,
+        command,
+        detail: this.#describeRawCommand(command, position),
+      });
+    });
+
+    /** @type {Array<string>} */
+    const lines = [];
+    for (let i = 0; i < entries.length; i += 1) {
+      if (entries[i].command !== targetCommand) {
+        continue;
+      }
+      lines.push(`target 0x${targetCommand.toString(16).padStart(2, "0")} around event ${entries[i].index}`);
+      const start = Math.max(0, i - contextRadius);
+      const end = Math.min(entries.length - 1, i + contextRadius);
+      for (let j = start; j <= end; j += 1) {
+        const marker = j === i ? ">" : " ";
+        const entry = entries[j];
+        lines.push(`${marker} ${String(entry.index).padStart(4, " ")} @${formatOffset(entry.position)} ${entry.detail}`);
+      }
+      lines.push("");
+    }
+
+    if (lines.length === 0) {
+      lines.push(`No 0x${targetCommand.toString(16).padStart(2, "0")} commands were found.`);
+    }
+    return lines;
   }
 
   /**
@@ -354,6 +472,96 @@ export class Ym2612VGM {
   #warn(message) {
     if (this.logger && typeof this.logger.warn === "function") {
       this.logger.warn(message);
+    }
+  }
+
+  /**
+   * @param {number} position
+   * @param {number} index
+   * @returns {string}
+   */
+  #describeDacStreamCommand(position, index) {
+    const command = this.bytes[position];
+    const prefix = `${String(index).padStart(4, " ")} @${formatOffset(position)} cmd=0x${command.toString(16).padStart(2, "0")}`;
+
+    if (command === 0x90) {
+      return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} chipType=${formatHexNumber(this.bytes[position + 2])} port=${this.bytes[position + 3]} register=${formatHexNumber(this.bytes[position + 4])}`;
+    }
+    if (command === 0x91) {
+      return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} dataBank=${formatHexNumber(this.bytes[position + 2])} stepSize=${this.bytes[position + 3]} stepBase=${this.bytes[position + 4]}`;
+    }
+    if (command === 0x92) {
+      const frequency = readUint32LE(this.view, position + 2);
+      return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} frequency=${frequency}`;
+    }
+    if (command === 0x93) {
+      const start = readUint32LE(this.view, position + 2);
+      const mode = this.bytes[position + 6];
+      const length = readUint32LE(this.view, position + 7);
+      return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} start=${formatHexNumber(start, 8)} mode=${formatHexNumber(mode)} length=${length}`;
+    }
+    if (command === 0x94) {
+      return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} stop`;
+    }
+    const blockId = readUint16LE(this.view, position + 2);
+    const flags = this.bytes[position + 4];
+    return `${prefix} stream=${formatHexNumber(this.bytes[position + 1])} blockId=${formatHexNumber(blockId, 4)} flags=${formatHexNumber(flags)}`;
+  }
+
+  /**
+   * @param {number} command
+   * @param {number} position
+   * @returns {string}
+   */
+  #describeRawCommand(command, position) {
+    if (command === 0x50) {
+      return `cmd=0x50 psg value=${formatHexNumber(this.bytes[position + 1])}`;
+    }
+    if (command === 0x52 || command === 0x53) {
+      return `cmd=0x${command.toString(16)} ym2612 port=${command === 0x52 ? 0 : 1} register=${formatHexNumber(this.bytes[position + 1])} value=${formatHexNumber(this.bytes[position + 2])}`;
+    }
+    if (command === 0x61) {
+      return `cmd=0x61 wait=${readUint16LE(this.view, position + 1)}`;
+    }
+    if (command === 0x62 || command === 0x63 || command === 0x66) {
+      return `cmd=0x${command.toString(16)}`;
+    }
+    if (command === 0x67) {
+      return `cmd=0x67 type=${formatHexNumber(this.bytes[position + 2])} size=${readUint32LE(this.view, position + 3)}`;
+    }
+    if (command === 0x68) {
+      return `cmd=0x68 type=${formatHexNumber(this.bytes[position + 2])}`;
+    }
+    if (command >= 0x70 && command <= 0x7f) {
+      return `cmd=0x${command.toString(16)} wait=${(command & 0x0f) + 1}`;
+    }
+    if (command >= 0x80 && command <= 0x8f) {
+      return `cmd=0x${command.toString(16)} dac+wait=${command & 0x0f}`;
+    }
+    if (command >= 0x90 && command <= 0x95) {
+      return this.#describeDacStreamCommand(position, 0).replace(/^0+\s*@?[0-9a-f]*\s*/, "").replace(/^@\S+\s*/, "");
+    }
+    if (command === 0xe0) {
+      return `cmd=0xe0 seek=${formatHexNumber(readUint32LE(this.view, position + 1), 8)}`;
+    }
+    return `cmd=0x${command.toString(16)}`;
+  }
+
+  /**
+   * @param {(command: number, position: number, index: number) => void} visitor
+   * @returns {void}
+   */
+  #scanRawCommands(visitor) {
+    let position = this.header.dataOffset;
+    let index = 0;
+    while (position < this.bytes.length) {
+      const command = this.bytes[position];
+      visitor(command, position, index);
+      if (command === 0x66) {
+        return;
+      }
+      position += rawCommandLength(this.bytes, this.view, position);
+      index += 1;
     }
   }
 
@@ -632,10 +840,96 @@ export class Ym2612VGM {
     if (dataType <= 0x3f) {
       this.dataBanks.set(dataType, data);
       this.dataBlocks.push(data);
+      this.dataBlockInfo.push({
+        type: dataType,
+        size,
+        preview: Array.from(data.subarray(0, Math.min(8, data.length)))
+          .map((value) => value.toString(16).padStart(2, "0"))
+          .join(" "),
+      });
       return;
     }
     this.#warn(
       `Skipping unsupported VGM data block 0x${dataType.toString(16).padStart(2, "0")} (size=${size})`,
     );
   }
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @param {number} offset
+ * @returns {number}
+ */
+function readUint24LE(bytes, offset) {
+  return bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16);
+}
+
+/**
+ * @param {number} value
+ * @param {number} [width]
+ * @returns {string}
+ */
+function formatHexNumber(value, width = 2) {
+  return `0x${value.toString(16).padStart(width, "0")}`;
+}
+
+/**
+ * @param {number} value
+ * @returns {string}
+ */
+function formatOffset(value) {
+  return value.toString(16).padStart(8, "0");
+}
+
+/**
+ * @param {Uint8Array} bytes
+ * @param {DataView} view
+ * @param {number} position
+ * @returns {number}
+ */
+function rawCommandLength(bytes, view, position) {
+  const command = bytes[position];
+  if (command === 0x50) {
+    return 2;
+  }
+  if (command === 0x52 || command === 0x53) {
+    return 3;
+  }
+  if (command === 0x61) {
+    return 3;
+  }
+  if (command === 0x62 || command === 0x63 || command === 0x66) {
+    return 1;
+  }
+  if (command === 0x67) {
+    return 7 + readUint32LE(view, position + 3);
+  }
+  if (command === 0x68) {
+    return 12;
+  }
+  if (command >= 0x70 && command <= 0x7f) {
+    return 1;
+  }
+  if (command >= 0x80 && command <= 0x8f) {
+    return 1;
+  }
+  if (command === 0x90 || command === 0x91) {
+    return 5;
+  }
+  if (command === 0x92) {
+    return 6;
+  }
+  if (command === 0x93) {
+    return 11;
+  }
+  if (command === 0x94) {
+    return 2;
+  }
+  if (command === 0x95) {
+    return 5;
+  }
+  if (command === 0xe0) {
+    return 5;
+  }
+  throw new Error(`Unsupported raw VGM command 0x${command.toString(16).padStart(2, "0")}`);
 }
