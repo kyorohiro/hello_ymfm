@@ -1,0 +1,91 @@
+# Save Point
+
+Last updated: 2026-08-14
+
+## Current status
+
+- `docs/beep.html`
+  YM2612 beep demo works in the browser.
+- `docs/psg.html`
+  Sega PSG demo works in the browser.
+- `docs/vgm.html`
+  VGM file can be parsed and played with YM2612 + PSG.
+- `docs/ym2612vgm.js`
+  Minimal VGM support was expanded to reduce `SKIP`.
+
+## VGM support added today
+
+- YM2612 register write
+  - `0x52`
+  - `0x53`
+- PSG write
+  - `0x50`
+- Wait / end
+  - `0x61`
+  - `0x62`
+  - `0x63`
+  - `0x66`
+  - `0x70-0x7f`
+- YM2612 DAC / stream related
+  - `0x67` data block: store block data
+  - `0x80-0x8f`: DAC write + wait
+  - `0x90-0x95`: minimal DAC stream handling
+  - `0xe0`: data bank seek
+
+## What changed
+
+- `docs/ym2612vgm.js`
+  Added data block loading, YM2612 DAC handling, and minimal DAC stream playback.
+- `web/ym2612vgm.js`
+  Synced with `docs/ym2612vgm.js`.
+- `docs/vgm.html`
+  Wait rendering was split so DAC stream writes can happen during playback timing.
+
+## What we observed
+
+- The second VGM plays without `SKIP`.
+- The first VGM also has no `SKIP` now, but sound starts after a long delay.
+- That likely means:
+  - the song has a long silent intro, or
+  - the interesting part starts later, or
+  - the track structure depends on data that is not ideal for this minimal player yet.
+
+## Important interpretation
+
+- "No sound at first" is not automatically a parser bug now.
+- If there is no `SKIP`, the next thing to inspect is the VGM content itself:
+  - long wait before first key-on
+  - long wait before audible FM/PSG part
+  - DAC-heavy intro
+
+## Still not fully supported
+
+- `0x68` PCM RAM write is still skipped.
+- Special / uncommon `0x67` block types are still skipped.
+- DAC stream handling is minimal.
+- Real hardware accuracy is not the goal yet.
+
+## Good next steps
+
+1. In `docs/vgm.html`, show more timing information:
+   - total wait before first audible section
+   - first key-on timing
+   - first YM2612 DAC activity timing
+2. Add a simple debug view:
+   - command index
+   - accumulated VGM samples
+   - accumulated seconds
+3. If the first VGM still feels suspicious, inspect which command appears just before the first audible sound.
+4. Only after that, decide whether `0x68` or stricter DAC stream behavior is worth implementing.
+
+## Files to reopen next time
+
+- `docs/vgm.html`
+- `docs/ym2612vgm.js`
+- `web/ym2612vgm.js`
+
+## Short reminder for future me
+
+- The project is already past the "can browser/WASM make sound?" phase.
+- The next work is mostly about VGM behavior, timing visibility, and incremental compatibility.
+- Do not overreact to silence if `SKIP` is already gone.
