@@ -227,6 +227,69 @@ Last updated: 2026-08-14
 4. Move audio generation toward an `AudioWorklet` model when needed.
 5. Add a small game-like sample after streaming becomes stable.
 
+## Proposed interface split
+
+- Prefer a 3-layer structure for easier embedding:
+  - chip layer
+  - player layer
+  - audio output layer
+
+### 1. Chip layer
+
+- Purpose:
+  - keep YM2612 / PSG handling low level
+  - expose register writes and sample generation only
+- Examples:
+  - `Ym2612`
+  - `SegaPSG`
+  - optional combined `GenesisAudioEngine`
+
+### 2. Player layer
+
+- Purpose:
+  - parse and drive VGM playback
+  - hide chip-specific details from app / game code
+- Candidate class:
+  - `VgmPlayer`
+- Candidate responsibilities:
+  - `load(buffer)`
+  - `reset()`
+  - `play()`
+  - `stop()`
+  - `setLoopEnabled(enabled)`
+  - `isPlaying()`
+  - `sampleRate()`
+  - `process(left, right, frames)`
+
+### 3. Audio output layer
+
+- Purpose:
+  - connect the player to browser audio output
+  - keep Web Audio details separate from VGM / chip logic
+- Candidate implementations:
+  - current demo-oriented streaming path
+  - future `AudioWorklet` path
+
+## Why `process(left, right, frames)` is important
+
+- It fits browser audio callback style well.
+- It is reusable for:
+  - streaming playback
+  - offline rendering
+  - future game-engine integration
+- It gives a cleaner boundary than exposing raw register writes to app code.
+
+## Interface direction for game use
+
+- Avoid making game code talk directly to YM2612 / PSG register writes.
+- Prefer:
+  - `load`
+  - `play`
+  - `stop`
+  - `loop`
+  - `process`
+- This should make later `AudioWorklet` integration easier too.
+
 ## Good next steps
 
 1. In `docs/vgm.html`, show more timing information:
