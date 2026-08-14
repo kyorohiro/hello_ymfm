@@ -6,6 +6,24 @@ This repository has three goals:
 - To create documentation that helps anyone understand the YM2612 chip.
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
 
+In practice, this repository is also growing into:
+
+- a learning hub for YM2612, ymfm, and Sega Genesis / Mega Drive audio
+- a practical information source for embedding ymfm-based chip sound into retro-style browser apps or games
+- one possible entry point into chip sound culture through code, docs, and browser demos
+
+This repository focuses on the Sega Genesis / Mega Drive side of YM2612 usage.
+That scope makes it easier to connect:
+
+- YM2612 chip learning
+- ymfm source code reading
+- browser / WASM playback
+- VGM exported from tools such as DefleMask
+- direct chip control experiments
+
+The goal is not to document every possible Yamaha chip workflow.
+The goal is to make the Genesis / YM2612 path rich enough that both people and AI tools can learn from it and build on top of it.
+
 Demo:
 
 - https://kyorohiro.github.io/hello_ymfm_wasm/
@@ -13,6 +31,9 @@ Demo:
 
 This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
 See `LICENSE` for the license text included with this repository.
+
+This repository may also be useful as a bridge between DefleMask-oriented workflows and ymfm-based browser playback for Sega Mega Drive / Genesis projects.
+The current browser demo can already parse and stream-play a practical YM2612 + PSG + DAC-stream subset, though full VGM compatibility is not the goal yet.
 
 ## tutorials
 - [ex00.md](./ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
@@ -23,9 +44,6 @@ See `LICENSE` for the license text included with this repository.
 - `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
 - `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
   VGM playback and direct chip control.
-
-This repository may also be useful for replaying VGM exported from DefleMask for Sega Mega Drive / Genesis projects.
-The current browser demo can already parse and stream-play a practical YM2612 + PSG + DAC-stream subset, though full VGM compatibility is not the goal yet.
 
 For practical game use, it is better to think about two separate paths:
 
