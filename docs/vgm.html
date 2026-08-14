@@ -117,6 +117,8 @@
         <div class="actions">
           <input id="fileInput" type="file" accept=".vgm,.vgz,application/octet-stream">
           <button id="playButton" type="button" disabled>Play VGM</button>
+          <button id="stopButton" type="button" disabled>Stop</button>
+          <label><input id="loopCheckbox" type="checkbox"> Loop</label>
           <a class="link-button" href="./index.html">Back</a>
         </div>
         <div class="status" id="status">Choose a .vgm file.</div>
@@ -145,11 +147,13 @@
       import { Ym2612VGM } from "./ym2612vgm.js";
       import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
       import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
-      import { createYm2612 } from "./ym2612.js";
-      import { SegaPSG, SEGAPSG_CLOCK } from "./segapsg.js";
+      import { createGenesisAudioEngine } from "./genesisaudioengine.js";
+      import { VgmPlayer } from "./vgmplayer.js";
 
       const fileInput = document.getElementById("fileInput");
       const playButton = document.getElementById("playButton");
+      const stopButton = document.getElementById("stopButton");
+      const loopCheckbox = document.getElementById("loopCheckbox");
       const status = document.getElementById("status");
       const headerOutput = document.getElementById("headerOutput");
       const commandsOutput = document.getElementById("commandsOutput");
@@ -160,8 +164,8 @@
 
       let currentBuffer = null;
       let audioContext = null;
-      let ym2612 = null;
-      let psg = null;
+      let engine = null;
+      let player = null;
       let activeStream = null;
 
       function setStatus(message) {
@@ -220,47 +224,38 @@
       }
 
       async function ensurePlaybackReady(vgm) {
-        if (!ym2612) {
-          ym2612 = await createYm2612(ym2612ModuleFactory);
+        if (!engine) {
+          engine = await createGenesisAudioEngine({
+            ym2612ModuleFactory,
+            segaPsgModuleFactory,
+          });
+        }
+        if (!player) {
+          player = new VgmPlayer(engine);
         }
 
-        const ymSampleRate = ym2612.sampleRate(vgm.header.ym2612Clock || 7670454);
+        const sampleRate = engine.sampleRate();
 
-        if (!audioContext || audioContext.sampleRate !== ymSampleRate) {
+        if (!audioContext || audioContext.sampleRate !== sampleRate) {
           if (audioContext) {
             await audioContext.close();
           }
-          audioContext = new AudioContext({ sampleRate: ymSampleRate });
+          audioContext = new AudioContext({ sampleRate });
         }
         if (audioContext.state !== "running") {
           await audioContext.resume();
         }
 
-        if (!psg || psg.sampleRate() !== ymSampleRate) {
-          if (psg) {
-            psg.dispose();
-          }
-          psg = await SegaPSG.create({
-            moduleFactory: segaPsgModuleFactory,
-            sampleRate: ymSampleRate,
-            clock: SEGAPSG_CLOCK,
-          });
-        }
-
-        return { ymSampleRate };
-      }
-
-      function mixInto(targetLeft, targetRight, offset, source, gain = 1) {
-        for (let index = 0; index < source.left.length; index += 1) {
-          targetLeft[offset + index] += source.left[index] * gain;
-          targetRight[offset + index] += source.right[index] * gain;
-        }
+        player.setLoopEnabled(loopCheckbox.checked);
+        player.load(currentBuffer);
+        return { sampleRate };
       }
 
       function stopActiveStream() {
         if (!activeStream) {
           return;
         }
+        activeStream.node.onaudioprocess = null;
         activeStream.node.disconnect();
         activeStream = null;
       }
@@ -275,106 +270,34 @@
           stopActiveStream();
 
           const parser = new Ym2612VGM(currentBuffer);
-          const { ymSampleRate } = await ensurePlaybackReady(parser);
-
-          ym2612.reset();
-          psg.reset();
-
-          /** @type {Array<{ left: Float32Array, right: Float32Array, offset: number }>} */
-          const chunkQueue = [];
-          let queuedFrames = 0;
-          let waitAccumulator = 0;
-          let processedEvents = 0;
-          let processedWaitSamples = 0;
-          let ended = false;
-
-          function queueChunk(left, right) {
-            chunkQueue.push({ left, right, offset: 0 });
-            queuedFrames += left.length;
-          }
-
-          function renderWaitSegment(vgmSamples) {
-            processedWaitSamples += vgmSamples;
-            waitAccumulator += vgmSamples * ymSampleRate;
-            const frames = Math.floor(waitAccumulator / 44100);
-            waitAccumulator -= frames * 44100;
-
-            if (frames > 0) {
-              const ym = ym2612.generateStereo(frames);
-              const psgBlock = psg.generateStereo(frames);
-              mixInto(ym.left, ym.right, 0, psgBlock, 0.35);
-              for (let index = 0; index < ym.left.length; index += 1) {
-                ym.left[index] *= 0.9;
-                ym.right[index] *= 0.9;
-              }
-              queueChunk(ym.left, ym.right);
-            }
-          }
-
-          function fillQueue(targetFrames) {
-            while (!ended && queuedFrames < targetFrames) {
-              const event = parser.playStep({ ym2612, psg });
-              processedEvents += 1;
-
-              if (event.type === "wait") {
-                parser.consumeWait({ ym2612, psg }, event.samples, renderWaitSegment);
-              } else if (event.type === "end") {
-                ended = true;
-              }
-            }
-          }
-
-          function copyQueuedFrames(left, right) {
-            let writeOffset = 0;
-            while (writeOffset < left.length) {
-              if (chunkQueue.length === 0) {
-                left.fill(0, writeOffset);
-                right.fill(0, writeOffset);
-                return;
-              }
-
-              const chunk = chunkQueue[0];
-              const available = chunk.left.length - chunk.offset;
-              const frames = Math.min(left.length - writeOffset, available);
-              left.set(chunk.left.subarray(chunk.offset, chunk.offset + frames), writeOffset);
-              right.set(chunk.right.subarray(chunk.offset, chunk.offset + frames), writeOffset);
-              chunk.offset += frames;
-              writeOffset += frames;
-              queuedFrames -= frames;
-
-              if (chunk.offset >= chunk.left.length) {
-                chunkQueue.shift();
-              }
-            }
-          }
+          const { sampleRate } = await ensurePlaybackReady(parser);
+          engine.reset();
+          player.reset();
+          player.setLoopEnabled(loopCheckbox.checked);
+          player.play();
 
           const bufferSize = 2048;
-          fillQueue(bufferSize * 3);
-
           const node = audioContext.createScriptProcessor(bufferSize, 0, 2);
           activeStream = { node };
           node.onaudioprocess = (event) => {
             const left = event.outputBuffer.getChannelData(0);
             const right = event.outputBuffer.getChannelData(1);
-
-            fillQueue(bufferSize * 3);
-            copyQueuedFrames(left, right);
-
-            const timeProgress = parser.header.totalSamples > 0
-              ? Math.min(100, (processedWaitSamples / parser.header.totalSamples) * 100)
-              : 0;
+            player.process(left, right, bufferSize);
+            const stats = player.stats();
             setStatus(
-              `Streaming VGM... commands=${processedEvents} queued=${queuedFrames} audio=${timeProgress.toFixed(1)}%`,
+              `Streaming VGM... commands=${stats.processedEvents} queued=${stats.queuedFrames} audio=${stats.audioProgress.toFixed(1)}% loop=${loopCheckbox.checked ? "on" : "off"}`,
             );
 
-            if (ended && queuedFrames === 0) {
+            if (!stats.playing && stats.queuedFrames === 0) {
               stopActiveStream();
+              stopButton.disabled = true;
               setStatus("Ready.");
             }
           };
           node.connect(audioContext.destination);
 
-          setStatus(`Streaming VGM at ${ymSampleRate} Hz...`);
+          stopButton.disabled = false;
+          setStatus(`Streaming VGM at ${sampleRate} Hz...`);
         } catch (error) {
           console.error(error);
           setStatus(`Error: ${error.message}`);
@@ -431,6 +354,7 @@
         commandsOutput.textContent = events.join("\n");
         currentBuffer = buffer;
         playButton.disabled = false;
+        stopButton.disabled = true;
         setStatus(`Parsed ${file.name}.`);
       }
 
@@ -444,6 +368,21 @@
 
       playButton.addEventListener("click", async () => {
         await playCurrentVgm();
+      });
+
+      stopButton.addEventListener("click", () => {
+        stopActiveStream();
+        if (player) {
+          player.stop();
+        }
+        stopButton.disabled = true;
+        setStatus("Stopped.");
+      });
+
+      loopCheckbox.addEventListener("change", () => {
+        if (player) {
+          player.setLoopEnabled(loopCheckbox.checked);
+        }
       });
     </script>
   </body>

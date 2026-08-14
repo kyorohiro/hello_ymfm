@@ -9,6 +9,8 @@ export class VgmPlayer {
     this.waitAccumulator = 0;
     this.chunkQueue = [];
     this.queuedFrames = 0;
+    this.processedEvents = 0;
+    this.processedWaitSamples = 0;
   }
 
   load(buffer, options = {}) {
@@ -16,6 +18,8 @@ export class VgmPlayer {
     this.waitAccumulator = 0;
     this.chunkQueue = [];
     this.queuedFrames = 0;
+    this.processedEvents = 0;
+    this.processedWaitSamples = 0;
     this.playing = false;
   }
 
@@ -28,6 +32,8 @@ export class VgmPlayer {
     this.waitAccumulator = 0;
     this.chunkQueue = [];
     this.queuedFrames = 0;
+    this.processedEvents = 0;
+    this.processedWaitSamples = 0;
     this.playing = false;
   }
 
@@ -56,14 +62,37 @@ export class VgmPlayer {
     return this.engine.sampleRate();
   }
 
+  stats() {
+    const totalSamples = this.parser ? this.parser.header.totalSamples : 0;
+    return {
+      playing: this.playing,
+      queuedFrames: this.queuedFrames,
+      processedEvents: this.processedEvents,
+      processedWaitSamples: this.processedWaitSamples,
+      totalSamples,
+      audioProgress: totalSamples > 0
+        ? Math.min(100, (this.processedWaitSamples / totalSamples) * 100)
+        : 0,
+    };
+  }
+
   process(left, right, frames) {
-    if (!this.playing || !this.parser) {
+    if (!this.parser) {
       left.fill(0, 0, frames);
       right.fill(0, 0, frames);
       return;
     }
 
-    this.#fillQueue(frames * 2);
+    if (this.playing) {
+      this.#fillQueue(frames * 2);
+    }
+
+    if (!this.playing && this.queuedFrames === 0) {
+      left.fill(0, 0, frames);
+      right.fill(0, 0, frames);
+      return;
+    }
+
     this.#copyQueuedFrames(left, right, frames);
   }
 
@@ -73,6 +102,7 @@ export class VgmPlayer {
         ym2612: { writeRegister: (register, value, port = 0) => this.engine.writeYm2612(port, register, value) },
         psg: { write: (value) => this.engine.writePsg(value) },
       });
+      this.processedEvents += 1;
 
       if (event.type === "wait") {
         this.parser.consumeWait(
@@ -87,9 +117,19 @@ export class VgmPlayer {
       }
 
       if (event.type === "end") {
-        if (this.loopEnabled && this.parser.hasLoop()) {
-          this.parser.position = this.parser.header.loopOffset;
-          this.parser.ended = false;
+        if (this.loopEnabled) {
+          if (this.parser.hasLoop()) {
+            this.parser.position = this.parser.header.loopOffset;
+            this.parser.ended = false;
+          } else {
+            this.parser.reset();
+            this.engine.reset();
+            this.waitAccumulator = 0;
+            this.chunkQueue = [];
+            this.queuedFrames = 0;
+            this.processedEvents = 0;
+            this.processedWaitSamples = 0;
+          }
           continue;
         }
         this.playing = false;
@@ -99,6 +139,7 @@ export class VgmPlayer {
   }
 
   #renderWaitSegment(vgmSamples) {
+    this.processedWaitSamples += vgmSamples;
     this.waitAccumulator += vgmSamples * this.sampleRate();
     const frames = Math.floor(this.waitAccumulator / 44100);
     this.waitAccumulator -= frames * 44100;
