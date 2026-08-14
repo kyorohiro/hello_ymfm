@@ -10,6 +10,7 @@ Last updated: 2026-08-14
   Sega PSG demo works in the browser.
 - `docs/vgm.html`
   VGM file can be parsed and played with YM2612 + PSG.
+  Streaming playback now works in the browser.
 - `docs/ym2612vgm.js`
   Minimal VGM support was expanded to reduce `SKIP`.
 
@@ -40,6 +41,7 @@ Last updated: 2026-08-14
   Synced with `docs/ym2612vgm.js`.
 - `docs/vgm.html`
   Wait rendering was split so DAC stream writes can happen during playback timing.
+  Playback was moved from full offline rendering to chunked streaming playback.
 
 ## What we observed
 
@@ -57,6 +59,8 @@ Last updated: 2026-08-14
   - long wait before first key-on
   - long wait before audible FM/PSG part
   - DAC-heavy intro
+- The old "wait until 100% render" behavior was also a playback-model issue.
+- After switching to streaming playback, audio starts before full rendering finishes.
 
 ## Still not fully supported
 
@@ -84,6 +88,19 @@ Last updated: 2026-08-14
   - browser / WASM playback
   - support for a practical subset of Genesis / DefleMask-oriented VGM data
   - clear documentation about what is supported and what is not
+
+## DefleMask-oriented finding
+
+- At least one target Genesis VGM uses YM2612 DAC stream commands in a practical way.
+- Observed pattern:
+  - `0x67` data blocks
+  - `0x90` stream target setup for YM2612 register `0x2a`
+  - `0x91` data bank setup
+  - repeated `0x92` with frequency `16000`
+  - repeated `0x95` with block switching between `0x0000` and `0x0001`
+  - final `0x94` stop
+- This means `0x90-0x95` cannot always be ignored for DefleMask-oriented Genesis support.
+- The good news is that this pattern still looks practical to support.
 
 ## Important reminder
 
@@ -183,32 +200,31 @@ Last updated: 2026-08-14
 ## Game integration path
 
 - Current playback style in `docs/vgm.html`
-  - render the whole VGM first
-  - start playback after rendering reaches 100%
+  - stream audio in chunks during playback
 - This is good for:
   - debugging
   - command analysis
-  - confirming that audio can be generated
-- This is not yet ideal for games because:
-  - playback does not start immediately
-  - long songs can take time before audio begins
+  - confirming that realtime audio can be generated
+- This is closer to game use, but not finished yet because:
   - main-thread work still matters
+  - loop handling is still basic
+  - `AudioWorklet` is not used yet
 
 ## What is needed for game-oriented playback
 
-- chunked / streaming playback instead of full offline rendering
 - audio generation that can feed Web Audio continuously
 - start / stop / reset controls
 - loop handling
 - stable timing for long playback
 - low enough main-thread cost for browser game use
+- move from `ScriptProcessorNode` demo style toward `AudioWorklet` when needed
 
 ## Practical next steps toward game use
 
-1. Keep the current full-render path as a debug mode.
-2. Add a streaming playback path for VGM.
-3. Move audio generation toward a Web Audio-friendly realtime model.
-4. Confirm YM2612 + PSG + target DAC stream subset work during streaming.
+1. Keep the current streaming demo stable.
+2. Add stop / replay / loop controls.
+3. Confirm YM2612 + PSG + target DAC stream subset work during streaming.
+4. Move audio generation toward an `AudioWorklet` model when needed.
 5. Add a small game-like sample after streaming becomes stable.
 
 ## Good next steps

@@ -162,6 +162,7 @@
       let audioContext = null;
       let ym2612 = null;
       let psg = null;
+      let activeStream = null;
 
       function setStatus(message) {
         status.textContent = message;
@@ -219,17 +220,21 @@
       }
 
       async function ensurePlaybackReady(vgm) {
-        if (!audioContext) {
-          audioContext = new AudioContext();
-        }
-        if (audioContext.state !== "running") {
-          await audioContext.resume();
-        }
         if (!ym2612) {
           ym2612 = await createYm2612(ym2612ModuleFactory);
         }
 
         const ymSampleRate = ym2612.sampleRate(vgm.header.ym2612Clock || 7670454);
+
+        if (!audioContext || audioContext.sampleRate !== ymSampleRate) {
+          if (audioContext) {
+            await audioContext.close();
+          }
+          audioContext = new AudioContext({ sampleRate: ymSampleRate });
+        }
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
 
         if (!psg || psg.sampleRate() !== ymSampleRate) {
           if (psg) {
@@ -252,10 +257,12 @@
         }
       }
 
-      function nextFrame() {
-        return new Promise((resolve) => {
-          requestAnimationFrame(() => resolve());
-        });
+      function stopActiveStream() {
+        if (!activeStream) {
+          return;
+        }
+        activeStream.node.disconnect();
+        activeStream = null;
       }
 
       async function playCurrentVgm() {
@@ -265,19 +272,26 @@
 
         playButton.disabled = true;
         try {
+          stopActiveStream();
+
           const parser = new Ym2612VGM(currentBuffer);
           const { ymSampleRate } = await ensurePlaybackReady(parser);
-          const estimatedFrames = Math.ceil((parser.header.totalSamples * ymSampleRate) / 44100) + 8;
-          const left = new Float32Array(estimatedFrames);
-          const right = new Float32Array(estimatedFrames);
 
           ym2612.reset();
           psg.reset();
 
-          let outputOffset = 0;
+          /** @type {Array<{ left: Float32Array, right: Float32Array, offset: number }>} */
+          const chunkQueue = [];
+          let queuedFrames = 0;
           let waitAccumulator = 0;
           let processedEvents = 0;
           let processedWaitSamples = 0;
+          let ended = false;
+
+          function queueChunk(left, right) {
+            chunkQueue.push({ left, right, offset: 0 });
+            queuedFrames += left.length;
+          }
 
           function renderWaitSegment(vgmSamples) {
             processedWaitSamples += vgmSamples;
@@ -288,50 +302,79 @@
             if (frames > 0) {
               const ym = ym2612.generateStereo(frames);
               const psgBlock = psg.generateStereo(frames);
-              mixInto(left, right, outputOffset, ym, 0.9);
-              mixInto(left, right, outputOffset, psgBlock, 0.35);
-              outputOffset += frames;
+              mixInto(ym.left, ym.right, 0, psgBlock, 0.35);
+              for (let index = 0; index < ym.left.length; index += 1) {
+                ym.left[index] *= 0.9;
+                ym.right[index] *= 0.9;
+              }
+              queueChunk(ym.left, ym.right);
             }
           }
 
-          setStatus("Rendering VGM...");
+          function fillQueue(targetFrames) {
+            while (!ended && queuedFrames < targetFrames) {
+              const event = parser.playStep({ ym2612, psg });
+              processedEvents += 1;
 
-          while (true) {
-            const event = parser.playStep({ ym2612, psg });
-            processedEvents += 1;
-            if (event.type === "wait") {
-              parser.consumeWait({ ym2612, psg }, event.samples, renderWaitSegment);
-            } else if (event.type === "end") {
-              break;
-            }
-
-            if ((processedEvents % 512) === 0) {
-              const commandProgress = currentBuffer.byteLength > 0
-                ? Math.min(100, (parser.position / currentBuffer.byteLength) * 100)
-                : 0;
-              const timeProgress = parser.header.totalSamples > 0
-                ? Math.min(100, (processedWaitSamples / parser.header.totalSamples) * 100)
-                : 0;
-              setStatus(
-                `Rendering VGM... commands=${processedEvents} file=${commandProgress.toFixed(1)}% audio=${timeProgress.toFixed(1)}%`,
-              );
-              await nextFrame();
+              if (event.type === "wait") {
+                parser.consumeWait({ ym2612, psg }, event.samples, renderWaitSegment);
+              } else if (event.type === "end") {
+                ended = true;
+              }
             }
           }
 
-          const audioBuffer = audioContext.createBuffer(2, outputOffset, ymSampleRate);
-          audioBuffer.copyToChannel(left.subarray(0, outputOffset), 0);
-          audioBuffer.copyToChannel(right.subarray(0, outputOffset), 1);
+          function copyQueuedFrames(left, right) {
+            let writeOffset = 0;
+            while (writeOffset < left.length) {
+              if (chunkQueue.length === 0) {
+                left.fill(0, writeOffset);
+                right.fill(0, writeOffset);
+                return;
+              }
 
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(audioContext.destination);
-          source.start();
+              const chunk = chunkQueue[0];
+              const available = chunk.left.length - chunk.offset;
+              const frames = Math.min(left.length - writeOffset, available);
+              left.set(chunk.left.subarray(chunk.offset, chunk.offset + frames), writeOffset);
+              right.set(chunk.right.subarray(chunk.offset, chunk.offset + frames), writeOffset);
+              chunk.offset += frames;
+              writeOffset += frames;
+              queuedFrames -= frames;
 
-          setStatus(`Playing VGM at ${ymSampleRate} Hz...`);
-          source.addEventListener("ended", () => {
-            setStatus("Ready.");
-          }, { once: true });
+              if (chunk.offset >= chunk.left.length) {
+                chunkQueue.shift();
+              }
+            }
+          }
+
+          const bufferSize = 2048;
+          fillQueue(bufferSize * 3);
+
+          const node = audioContext.createScriptProcessor(bufferSize, 0, 2);
+          activeStream = { node };
+          node.onaudioprocess = (event) => {
+            const left = event.outputBuffer.getChannelData(0);
+            const right = event.outputBuffer.getChannelData(1);
+
+            fillQueue(bufferSize * 3);
+            copyQueuedFrames(left, right);
+
+            const timeProgress = parser.header.totalSamples > 0
+              ? Math.min(100, (processedWaitSamples / parser.header.totalSamples) * 100)
+              : 0;
+            setStatus(
+              `Streaming VGM... commands=${processedEvents} queued=${queuedFrames} audio=${timeProgress.toFixed(1)}%`,
+            );
+
+            if (ended && queuedFrames === 0) {
+              stopActiveStream();
+              setStatus("Ready.");
+            }
+          };
+          node.connect(audioContext.destination);
+
+          setStatus(`Streaming VGM at ${ymSampleRate} Hz...`);
         } catch (error) {
           console.error(error);
           setStatus(`Error: ${error.message}`);
