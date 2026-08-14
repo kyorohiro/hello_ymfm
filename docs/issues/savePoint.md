@@ -12,6 +12,7 @@ Last updated: 2026-08-14
   VGM file can be parsed and played with YM2612 + PSG.
   Streaming playback now works in the browser.
   `Play`, `Pause`, `Resume`, `Replay`, `Stop`, and basic `Loop` controls now exist.
+  `AudioWorklet` is now used when available, with `ScriptProcessorNode` fallback.
 - `docs/ym2612vgm.js`
   Minimal VGM support was expanded to reduce `SKIP`.
 
@@ -44,6 +45,7 @@ Last updated: 2026-08-14
   Wait rendering was split so DAC stream writes can happen during playback timing.
   Playback was moved from full offline rendering to chunked streaming playback.
   The page now uses `GenesisAudioEngine` + `VgmPlayer`.
+  Browser audio output now prefers `AudioWorklet`.
 
 ## What we observed
 
@@ -72,6 +74,9 @@ Last updated: 2026-08-14
   - `Pause` keeps the current position
   - `Resume` continues from that position
   - `Stop` resets to the beginning
+- After switching to `AudioWorklet`, the progress text may feel a little less smooth.
+  - This looks like a UI update timing difference, not an audio stability problem.
+  - `queuedFrames` still stays healthy and scrolling does not become heavy.
 
 ## Still not fully supported
 
@@ -79,6 +84,7 @@ Last updated: 2026-08-14
 - Special / uncommon `0x67` block types are still skipped.
 - DAC stream handling is minimal.
 - Real hardware accuracy is not the goal yet.
+- `AudioWorklet` is used for output timing, but the player logic still runs on the main thread.
 
 ## Scope risk
 
@@ -219,7 +225,7 @@ Last updated: 2026-08-14
 - This is closer to game use, but not finished yet because:
   - main-thread work still matters
   - loop handling is still basic
-  - `AudioWorklet` is not used yet
+  - `AudioWorklet` output exists, but generation is not fully moved off the main thread yet
 
 ## What is needed for game-oriented playback
 
@@ -235,8 +241,9 @@ Last updated: 2026-08-14
 1. Keep the current streaming demo stable.
 2. Keep `play / pause / resume / replay / stop / loop` behavior stable.
 3. Confirm YM2612 + PSG + target DAC stream subset work during streaming.
-4. Move audio generation toward an `AudioWorklet` model when needed.
-5. Add a small game-like sample after streaming becomes stable.
+4. Keep the `AudioWorklet` path stable and verify fallback behavior.
+5. Move more generation/control work off the main thread only if needed.
+6. Add a small game-like sample after streaming becomes stable.
 
 ## Proposed interface split
 
@@ -278,8 +285,8 @@ Last updated: 2026-08-14
   - connect the player to browser audio output
   - keep Web Audio details separate from VGM / chip logic
 - Candidate implementations:
-  - current demo-oriented streaming path
-  - future `AudioWorklet` path
+  - current demo-oriented `AudioWorklet` path
+  - `ScriptProcessorNode` fallback path
 
 ## Why `process(left, right, frames)` is important
 
@@ -348,8 +355,10 @@ Last updated: 2026-08-14
    - command index
    - accumulated VGM samples
    - accumulated seconds
-3. If the first VGM still feels suspicious, inspect which command appears just before the first audible sound.
-4. Only after that, decide whether `0x68` or stricter DAC stream behavior is worth implementing.
+3. If needed, make the progress display smoother without changing the audio path:
+   - UI-only refresh with `requestAnimationFrame` or a light timer
+4. If the first VGM still feels suspicious, inspect which command appears just before the first audible sound.
+5. Only after that, decide whether `0x68` or stricter DAC stream behavior is worth implementing.
 
 ## Files to reopen next time
 
@@ -360,5 +369,5 @@ Last updated: 2026-08-14
 ## Short reminder for future me
 
 - The project is already past the "can browser/WASM make sound?" phase.
-- The next work is mostly about VGM behavior, timing visibility, and incremental compatibility.
+- The next work is mostly about VGM behavior, timing visibility, incremental compatibility, and game-oriented API cleanup.
 - Do not overreact to silence if `SKIP` is already gone.
