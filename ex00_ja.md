@@ -376,6 +376,35 @@ chip.write(1, 0x01);
 - `0x28`
   key on / key off のトリガ
 
+## コードをレジスタ辞書として読む
+
+YM2612 をもう一段深く理解して、自分で設定を書けるようになりたい場合は、
+`ymfm` のソースコードをそのまま読むのがかなり有効です。
+
+このリポジトリでは、[src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:209) がレジスタ辞書としてとても役に立ちます。
+
+特に次の行が分かりやすいです。
+
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:221)
+  `0x30` 系 -> `op_detune`, `op_multiple`
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:223)
+  `0x40` 系 -> `op_total_level`
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:224)
+  `0x50` 系 -> `op_ksr`, `op_attack_rate`
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:229)
+  `0x80` 系 -> `op_sustain_level`, `op_release_rate`
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:210)
+  `0xb0` -> `ch_feedback`, `ch_algorithm`
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:212)
+  `0xb4` -> 左右出力 / pan 関連
+- [src/ymfm_opn.h](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.h:209)
+  `0xa4` + `0xa0` -> `ch_block_freq`
+
+`0x28` の key on / key off の扱いは、[src/ymfm_opn.cpp](/Users/kyorohiro/development8/wfm/hello_ymfm/src/ymfm_opn.cpp:176) を読むと追えます。
+
+`ex03_beep.cpp` の `write()` と、ここでの定義が頭の中でつながるようになると、
+かなり自力で YM2612 の beep 設定を書ける段階に近づいています。
+
 ## 大事な考え方
 
 beep は特別な 1 命令で出るわけではありません。
