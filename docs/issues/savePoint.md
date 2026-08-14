@@ -258,6 +258,85 @@ Last updated: 2026-08-14
 
 - Prefer a 3-layer structure for easier embedding:
   - chip layer
+
+## Documentation direction added later
+
+- `docs/index.html` is now being treated as the main browser-side entrance page.
+- The page is now split into at least these entry sections:
+  - `Demos`
+  - `About YM2612`
+  - `YM2612 Wasm`
+- The direction is:
+  - keep Markdown notes as repository source notes
+  - add browser-readable HTML pages under `docs/info/`
+  - let `docs/index.html` link to them as a small learning hub
+
+## `docs/info/` direction
+
+- `ex00.md`, `ex00_ja.md`, and `ex00_vgm.md` remain as original working notes.
+- Browser-readable pages were added under `docs/info/`:
+  - `info/index.html`
+  - `info/ym2612.html`
+  - `info/ym2612-ja.html`
+  - `info/vgm.html`
+  - `info/wasm.html`
+  - `info/vgmplayer.html`
+  - `info/audioworklet.html`
+- Current interpretation:
+  - Markdown files are the original notes / source material
+  - `docs/info/*.html` are the public browser-reading path
+
+## Demo page source links
+
+- Source links were added to these browser demo pages:
+  - `docs/beep.html`
+  - `docs/psg.html`
+  - `docs/embed.html`
+  - `docs/vgm.html`
+- The intent is:
+  - demo first
+  - source second
+  - reduce the gap between "I heard it" and "where is the code?"
+
+## Upstream-friendly reminder
+
+- Do not treat upstream `examples` as project-owned documentation space.
+- Keep `examples` easy to merge from upstream.
+- Prefer:
+  - repository notes in `ex00*.md`
+  - browser-readable pages in `docs/info/`
+  - demo implementations in `docs/*.html`
+
+## Release packaging reminder
+
+- A release zip was created for the first public browser-side runtime bundle:
+  - `release/hello_ymfm_wasm_v0.0.1_web_runtime.zip`
+- It currently contains:
+  - `web/`
+  - `docs/generated/`
+
+## Current documentation/product split
+
+- `hello_ymfm_wasm` is moving toward:
+  - YM2612 / ymfm learning notes
+  - browser demos
+  - WASM / JavaScript integration examples
+  - Genesis / DefleMask bridge notes
+- The larger composer/tool idea should stay separate as another project.
+
+## Good next steps after a break
+
+1. Re-open `docs/index.html` and confirm the top-level site structure still feels right.
+2. Continue growing `docs/info/` rather than pushing too much text into `README.md`.
+3. Consider adding an FM-focused page next:
+   - 1 operator
+   - 2 operators in parallel
+   - 2 operators in series
+   - feedback
+4. If possible later, connect parameter changes to:
+   - audible output
+   - waveform view
+   - FFT view
   - player layer
   - audio output layer
 
