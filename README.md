@@ -1,3 +1,12 @@
+# About kyorohiro/hello_ymfm
+
+This repository has three goals:
+
+- To understand the YM2612 chip.
+- To create documentation that helps anyone understand the YM2612 chip.
+- To create documentation that helps anyone embed YM2612 audio in a browser app or game.
+
+
 # ymfm
 
 <div style='text-align:center;margin:auto'>
@@ -122,4 +131,3 @@ And chips with extended addressing may also have `read_status_hi()` and `read_da
 
 For writes, almost all chips have an address register and a data register, and so you can reliably count on there being a `write_address()` and `write_data()` method as well.
 If the chip supports extended addressing, it may also have `write_address_hi()` and `write_data_hi()`.
-
