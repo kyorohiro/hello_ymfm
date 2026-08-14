@@ -180,6 +180,37 @@ Last updated: 2026-08-14
   - YM2612 register writes such as `register=0x94` are normal FM register writes
   - that is different from VGM command `0x94`
 
+## Game integration path
+
+- Current playback style in `docs/vgm.html`
+  - render the whole VGM first
+  - start playback after rendering reaches 100%
+- This is good for:
+  - debugging
+  - command analysis
+  - confirming that audio can be generated
+- This is not yet ideal for games because:
+  - playback does not start immediately
+  - long songs can take time before audio begins
+  - main-thread work still matters
+
+## What is needed for game-oriented playback
+
+- chunked / streaming playback instead of full offline rendering
+- audio generation that can feed Web Audio continuously
+- start / stop / reset controls
+- loop handling
+- stable timing for long playback
+- low enough main-thread cost for browser game use
+
+## Practical next steps toward game use
+
+1. Keep the current full-render path as a debug mode.
+2. Add a streaming playback path for VGM.
+3. Move audio generation toward a Web Audio-friendly realtime model.
+4. Confirm YM2612 + PSG + target DAC stream subset work during streaming.
+5. Add a small game-like sample after streaming becomes stable.
+
 ## Good next steps
 
 1. In `docs/vgm.html`, show more timing information:
