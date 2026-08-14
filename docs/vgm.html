@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 VGM Parser Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.35rem;
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 24px 0 18px;
+      }
+
+      input[type="file"] {
+        font: inherit;
+      }
+
+      .link-button {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: #2b241d;
+        color: #f6ead7;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.92rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 VGM Parser Demo</h1>
+        <p>
+          This page parses a VGM file with the current YM2612-first parser and shows the header and early commands.
+        </p>
+        <p>
+          It does not play audio yet. The goal here is to confirm that parsing is correct before wiring playback.
+        </p>
+        <div class="actions">
+          <input id="fileInput" type="file" accept=".vgm,.vgz,application/octet-stream">
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+        <div class="status" id="status">Choose a .vgm file.</div>
+
+        <h2>Header</h2>
+        <pre id="headerOutput">No file loaded.</pre>
+
+        <h2>First Parsed Commands</h2>
+        <pre id="commandsOutput">No commands parsed yet.</pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import { Ym2612VGM } from "./ym2612vgm.js";
+
+      const fileInput = document.getElementById("fileInput");
+      const status = document.getElementById("status");
+      const headerOutput = document.getElementById("headerOutput");
+      const commandsOutput = document.getElementById("commandsOutput");
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function formatHex(value, width = 2) {
+        return `0x${value.toString(16).padStart(width, "0")}`;
+      }
+
+      function renderHeader(header) {
+        return [
+          `ident: ${header.ident}`,
+          `version: ${formatHex(header.version, 8)}`,
+          `ym2612Clock: ${header.ym2612Clock}`,
+          `totalSamples: ${header.totalSamples}`,
+          `loopOffset: ${formatHex(header.loopOffset, 8)}`,
+          `loopSamples: ${header.loopSamples}`,
+          `dataOffset: ${formatHex(header.dataOffset, 8)}`,
+        ].join("\n");
+      }
+
+      function renderEvent(event, index) {
+        if (event.type === "ym2612-write") {
+          return `${String(index).padStart(3, " ")}: write port=${event.port} register=${formatHex(event.register)} value=${formatHex(event.value)}`;
+        }
+        if (event.type === "wait") {
+          return `${String(index).padStart(3, " ")}: wait ${event.samples} samples`;
+        }
+        return `${String(index).padStart(3, " ")}: end`;
+      }
+
+      async function handleFile(file) {
+        setStatus(`Loading ${file.name}...`);
+        const buffer = await file.arrayBuffer();
+
+        let vgm;
+        try {
+          vgm = new Ym2612VGM(buffer);
+        } catch (error) {
+          console.error(error);
+          headerOutput.textContent = "Failed to parse VGM header.";
+          commandsOutput.textContent = error.message;
+          setStatus(`Error: ${error.message}`);
+          return;
+        }
+
+        headerOutput.textContent = renderHeader(vgm.header);
+
+        const events = [];
+        try {
+          for (let index = 0; index < 64; index += 1) {
+            const event = vgm.step();
+            events.push(renderEvent(event, index));
+            if (event.type === "end") {
+              break;
+            }
+          }
+        } catch (error) {
+          console.error(error);
+          events.push(`Parser stopped with error: ${error.message}`);
+        }
+
+        commandsOutput.textContent = events.join("\n");
+        setStatus(`Parsed ${file.name}.`);
+      }
+
+      fileInput.addEventListener("change", async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+        await handleFile(file);
+      });
+    </script>
+  </body>
+</html>
