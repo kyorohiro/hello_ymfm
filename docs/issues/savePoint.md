@@ -160,6 +160,7 @@ Last updated: 2026-08-14
 - add better loop handling
 - add clearer DefleMask-oriented workflow notes
 - support more Genesis VGM command patterns as needed by real samples
+- treat VGM DAC stream control `0x90-0x95` as a future compatibility target unless target Genesis / DefleMask files require it
 
 ### Not now
 
@@ -167,6 +168,17 @@ Last updated: 2026-08-14
 - real hardware accuracy tuning
 - broad support for many non-Genesis chip targets
 - turning this repository into a general-purpose VGM player project
+
+## Current decision about `0x90-0x95`
+
+- `0x90-0x95` DAC stream control is postponed for now.
+- Reason:
+  - it is part of broader VGM compatibility work
+  - it can easily expand the scope too much
+  - it should only be prioritized if target Genesis / DefleMask VGM files actually require it
+- Important distinction:
+  - YM2612 register writes such as `register=0x94` are normal FM register writes
+  - that is different from VGM command `0x94`
 
 ## Good next steps
 
