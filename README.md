@@ -49,6 +49,8 @@ Test:
 
 - Import `docs/generated/ym2612_wasm.js` in browser-side JavaScript.
 - Use `web/ym2612.js` as the thin JavaScript interface.
+- The `web/` directory is a small browser-side source folder for JavaScript interfaces and helpers in this repository.
+  It is not an external package registry dependency.
 - Create a `Ym2612` instance, call `reset()`, send register writes, and call `generateStereo(frames)`.
 
 See `web/README.md` for a minimal usage example.
