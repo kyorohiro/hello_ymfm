@@ -281,14 +281,51 @@ Last updated: 2026-08-14
 
 ## Interface direction for game use
 
-- Avoid making game code talk directly to YM2612 / PSG register writes.
-- Prefer:
+- Do not force a single interface style.
+- A practical split is:
+  - high-level API for BGM
+  - low-level API for SFX / realtime control
+
+### High-level API
+
+- Good for:
+  - VGM playback
+  - BGM handling
+  - simple browser/game integration
+- Prefer methods such as:
   - `load`
   - `play`
   - `stop`
   - `loop`
   - `process`
-- This should make later `AudioWorklet` integration easier too.
+
+### Low-level API
+
+- Good for:
+  - sound effects
+  - realtime note control
+  - direct YM2612 / PSG experimentation
+- Prefer methods such as:
+  - `writeYm2612(port, register, value)`
+  - `writePsg(value)`
+  - possible future helpers like `noteOn` / `noteOff`
+
+## Likely class direction
+
+- `GenesisAudioEngine`
+  - low-level YM2612 + PSG control
+  - sample generation via `process(left, right, frames)`
+- `VgmPlayer`
+  - high-level VGM playback built on top of `GenesisAudioEngine`
+
+## Why this split makes sense
+
+- BGM and SFX do not always want the same API.
+- VGM playback wants a higher-level player abstraction.
+- Game SFX may still want direct register access.
+- This keeps the repository useful for both:
+  - embedding music playback
+  - experimenting with chip-level sound design
 
 ## Good next steps
 
