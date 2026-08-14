@@ -6,6 +6,8 @@ This repository has three goals:
 - To create documentation that helps anyone understand the YM2612 chip.
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
 
+This repository also provides YM2612 WebAssembly modules and JavaScript interfaces for browser-side use.
+
 Current repository status:
 
 - Provides a WebAssembly build and JavaScript interface for YM2612.
