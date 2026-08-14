@@ -1,0 +1,218 @@
+#include "segapsg.h"
+
+#include <algorithm>
+#include <array>
+
+namespace
+{
+
+constexpr std::array<float, 16> VOLUME_TABLE = {
+    1.0f,
+    0.7943282f,
+    0.63095737f,
+    0.5011872f,
+    0.39810717f,
+    0.31622776f,
+    0.25118864f,
+    0.19952624f,
+    0.15848932f,
+    0.12589253f,
+    0.1f,
+    0.07943282f,
+    0.06309573f,
+    0.050118722f,
+    0.039810717f,
+    0.0f,
+};
+
+} // namespace
+
+SegaPSG::SegaPSG(uint32_t sample_rate, uint32_t clock) :
+    m_sample_rate(sample_rate),
+    m_clock(clock),
+    m_clock_accumulator(0),
+    m_noise_lfsr(0x8000),
+    m_noise_control(0),
+    m_noise_volume(0x0f),
+    m_noise_counter(0x10),
+    m_noise_output_high(false),
+    m_latched_channel(0),
+    m_latched_volume(false)
+{
+    reset();
+}
+
+void SegaPSG::reset()
+{
+    m_clock_accumulator = 0;
+
+    for (auto &channel : m_tone)
+    {
+        channel.period = 0x10;
+        channel.counter = 0x10;
+        channel.output_high = false;
+        channel.volume = 0x0f;
+    }
+
+    m_noise_lfsr = 0x8000;
+    m_noise_control = 0;
+    m_noise_volume = 0x0f;
+    m_noise_counter = 0x10;
+    m_noise_output_high = false;
+    m_latched_channel = 0;
+    m_latched_volume = false;
+}
+
+void SegaPSG::write(uint8_t data)
+{
+    if ((data & 0x80) != 0)
+    {
+        m_latched_channel = (data >> 5) & 0x03;
+        m_latched_volume = (data & 0x10) != 0;
+
+        const uint8_t nibble = data & 0x0f;
+        if (m_latched_channel < 3)
+        {
+            if (m_latched_volume)
+            {
+                m_tone[m_latched_channel].volume = nibble;
+            }
+            else
+            {
+                m_tone[m_latched_channel].period =
+                    static_cast<uint16_t>((m_tone[m_latched_channel].period & 0x03f0) | nibble);
+                if (m_tone[m_latched_channel].counter > tone_period(m_latched_channel))
+                {
+                    m_tone[m_latched_channel].counter = tone_period(m_latched_channel);
+                }
+            }
+        }
+        else
+        {
+            if (m_latched_volume)
+            {
+                m_noise_volume = nibble;
+            }
+            else
+            {
+                m_noise_control = nibble & 0x07;
+                m_noise_lfsr = 0x8000;
+                reload_noise_counter();
+            }
+        }
+        return;
+    }
+
+    if (m_latched_channel < 3)
+    {
+        if (m_latched_volume)
+        {
+            m_tone[m_latched_channel].volume = data & 0x0f;
+        }
+        else
+        {
+            m_tone[m_latched_channel].period =
+                static_cast<uint16_t>((m_tone[m_latched_channel].period & 0x000f) | ((data & 0x3f) << 4));
+            if (m_tone[m_latched_channel].counter > tone_period(m_latched_channel))
+            {
+                m_tone[m_latched_channel].counter = tone_period(m_latched_channel);
+            }
+        }
+    }
+    else if (m_latched_volume)
+    {
+        m_noise_volume = data & 0x0f;
+    }
+}
+
+void SegaPSG::generate(float *left, float *right, uint32_t frames)
+{
+    const uint32_t clocks_per_tick = m_sample_rate * 16;
+    for (uint32_t index = 0; index < frames; index++)
+    {
+        m_clock_accumulator += m_clock;
+        while (m_clock_accumulator >= clocks_per_tick)
+        {
+            m_clock_accumulator -= clocks_per_tick;
+            clock_generator();
+        }
+
+        float mixed = 0.0f;
+        mixed += tone_level(0);
+        mixed += tone_level(1);
+        mixed += tone_level(2);
+        mixed += noise_level();
+        mixed *= 0.2f;
+
+        left[index] = mixed;
+        right[index] = mixed;
+    }
+}
+
+void SegaPSG::clock_generator()
+{
+    for (uint32_t index = 0; index < 3; index++)
+    {
+        auto &channel = m_tone[index];
+        if (channel.counter > 0)
+        {
+            channel.counter--;
+        }
+        if (channel.counter == 0)
+        {
+            channel.counter = tone_period(index);
+            channel.output_high = !channel.output_high;
+        }
+    }
+
+    if (m_noise_counter > 0)
+    {
+        m_noise_counter--;
+    }
+    if (m_noise_counter == 0)
+    {
+        reload_noise_counter();
+
+        const bool white_noise = (m_noise_control & 0x04) != 0;
+        const uint16_t bit0 = m_noise_lfsr & 0x0001;
+        const uint16_t feedback = white_noise ? ((bit0 ^ ((m_noise_lfsr >> 3) & 0x0001)) & 0x0001) : bit0;
+        m_noise_lfsr = static_cast<uint16_t>((m_noise_lfsr >> 1) | (feedback << 15));
+        m_noise_output_high = (m_noise_lfsr & 0x0001) != 0;
+    }
+}
+
+void SegaPSG::reload_noise_counter()
+{
+    static constexpr uint16_t NOISE_PERIODS[4] = { 0x10, 0x20, 0x40, 0x00 };
+    const uint8_t mode = m_noise_control & 0x03;
+    if (mode == 0x03)
+    {
+        m_noise_counter = tone_period(2);
+    }
+    else
+    {
+        m_noise_counter = NOISE_PERIODS[mode];
+    }
+
+    if (m_noise_counter == 0)
+    {
+        m_noise_counter = 1;
+    }
+}
+
+uint16_t SegaPSG::tone_period(uint32_t channel) const
+{
+    return std::max<uint16_t>(m_tone[channel].period, 1);
+}
+
+float SegaPSG::tone_level(uint32_t channel) const
+{
+    const float amplitude = VOLUME_TABLE[m_tone[channel].volume & 0x0f];
+    return m_tone[channel].output_high ? amplitude : -amplitude;
+}
+
+float SegaPSG::noise_level() const
+{
+    const float amplitude = VOLUME_TABLE[m_noise_volume & 0x0f];
+    return m_noise_output_high ? amplitude : -amplitude;
+}

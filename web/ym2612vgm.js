@@ -18,6 +18,12 @@
  */
 
 /**
+ * @typedef {Object} SegaPsgWriteEvent
+ * @property {"psg-write"} type
+ * @property {number} value
+ */
+
+/**
  * @typedef {Object} Ym2612WaitEvent
  * @property {"wait"} type
  * @property {number} samples
@@ -29,7 +35,7 @@
  */
 
 /**
- * @typedef {Ym2612WriteEvent | Ym2612WaitEvent | Ym2612EndEvent} Ym2612VgmEvent
+ * @typedef {Ym2612WriteEvent | SegaPsgWriteEvent | Ym2612WaitEvent | Ym2612EndEvent} Ym2612VgmEvent
  */
 
 /**
@@ -153,6 +159,13 @@ export class Ym2612VGM {
 
     const command = this.bytes[this.position];
     switch (command) {
+      case 0x50: {
+        this.#ensureAvailable(2);
+        const value = this.bytes[this.position + 1];
+        this.position += 2;
+        /** @type {SegaPsgWriteEvent} */
+        return { type: "psg-write", value };
+      }
       case 0x52: {
         this.#ensureAvailable(3);
         const register = this.bytes[this.position + 1];
@@ -253,13 +266,26 @@ export class Ym2612VGM {
   }
 
   /**
-   * @param {{ writeRegister(register: number, value: number, port?: number): void }} chip
+   * @param {{
+   *   ym2612?: { writeRegister(register: number, value: number, port?: number): void },
+   *   psg?: { write(data: number): void },
+   *   writeRegister?: (register: number, value: number, port?: number) => void
+   * }} targets
    * @returns {Ym2612VgmEvent}
    */
-  playStep(chip) {
+  playStep(targets) {
     const event = this.step();
     if (event.type === "ym2612-write") {
-      chip.writeRegister(event.register, event.value, event.port);
+      const ym2612 = targets.ym2612 || targets;
+      if (ym2612 && typeof ym2612.writeRegister === "function") {
+        ym2612.writeRegister(event.register, event.value, event.port);
+      }
+    }
+    if (event.type === "psg-write") {
+      const psg = targets.psg;
+      if (psg && typeof psg.write === "function") {
+        psg.write(event.value);
+      }
     }
     return event;
   }

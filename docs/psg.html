@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sega PSG Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 24px 0 18px;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 20px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        box-shadow: 0 10px 24px rgba(126, 56, 28, 0.25);
+        transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+        text-decoration: none;
+      }
+
+      button:hover:not(:disabled),
+      .link-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 28px rgba(126, 56, 28, 0.32);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      .code {
+        margin-top: 24px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: #2b241d;
+        color: #f6ead7;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.92rem;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Sega PSG Demo</h1>
+        <p>
+          This page loads a minimal Sega PSG / SN76489-compatible WebAssembly wrapper
+          and plays a simple tone through the browser.
+        </p>
+        <div class="actions">
+          <button id="playButton" type="button">Play PSG Tone</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+        <div class="status" id="status">Ready.</div>
+        <div class="code">
+          write(latch/data) -> generateStereo(...)
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
+      import { createSegaPSG } from "./segapsg.js";
+
+      const playButton = document.getElementById("playButton");
+      const status = document.getElementById("status");
+
+      let audioContext;
+      let psg;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function configureTone(chip) {
+        const period = 254;
+        chip.reset();
+
+        chip.write(0x9f);
+        chip.write(0xbf);
+        chip.write(0xdf);
+        chip.write(0xff);
+
+        chip.write(0x80 | (period & 0x0f));
+        chip.write((period >> 4) & 0x3f);
+        chip.write(0x90 | 0x00);
+      }
+
+      async function ensureReady() {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
+        if (!psg) {
+          setStatus("Loading Sega PSG WASM...");
+          psg = await createSegaPSG(segaPsgModuleFactory);
+        }
+        return psg;
+      }
+
+      async function playTone() {
+        playButton.disabled = true;
+        try {
+          const chip = await ensureReady();
+          configureTone(chip);
+
+          const sampleRate = chip.sampleRate();
+          const frames = sampleRate * 2;
+          setStatus(`Generating ${frames} stereo frames at ${sampleRate} Hz...`);
+
+          const { left, right } = chip.generateStereo(frames);
+          const audioBuffer = audioContext.createBuffer(2, frames, sampleRate);
+          audioBuffer.copyToChannel(left, 0);
+          audioBuffer.copyToChannel(right, 1);
+
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioContext.destination);
+          source.start();
+
+          setStatus("Playing PSG tone...");
+          source.addEventListener("ended", () => {
+            setStatus("Ready.");
+          }, { once: true });
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        } finally {
+          playButton.disabled = false;
+        }
+      }
+
+      playButton.addEventListener("click", () => {
+        playTone();
+      });
+    </script>
+  </body>
+</html>

@@ -160,6 +160,9 @@
         if (event.type === "ym2612-write") {
           return `${String(index).padStart(3, " ")}: write port=${event.port} register=${formatHex(event.register)} value=${formatHex(event.value)}`;
         }
+        if (event.type === "psg-write") {
+          return `${String(index).padStart(3, " ")}: psg write value=${formatHex(event.value)}`;
+        }
         if (event.type === "wait") {
           return `${String(index).padStart(3, " ")}: wait ${event.samples} samples`;
         }
