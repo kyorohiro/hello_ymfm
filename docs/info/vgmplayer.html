@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VgmPlayer Usage</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      p, li { line-height: 1.6; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>VgmPlayer Usage</h1>
+        <p>
+          <code>VgmPlayer</code> is the higher-level playback class built on top of
+          <code>GenesisAudioEngine</code>. It is the browser-side path for prepared VGM data.
+        </p>
+        <p class="meta">
+          Related source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgmplayer.js">docs/vgmplayer.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/genesisaudioengine.js">docs/genesisaudioengine.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612vgm.js">docs/ym2612vgm.js</a>
+        </p>
+
+        <h2>Minimal Flow</h2>
+        <pre>import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
+import { createGenesisAudioEngine } from "./genesisaudioengine.js";
+import { VgmPlayer } from "./vgmplayer.js";
+
+const engine = await createGenesisAudioEngine({
+  ym2612ModuleFactory,
+  segaPsgModuleFactory,
+});
+
+const player = new VgmPlayer(engine);
+player.load(vgmArrayBuffer);
+player.setLoopEnabled(true);
+player.play();</pre>
+
+        <h2>Main Methods</h2>
+        <ul>
+          <li><code>load(buffer)</code></li>
+          <li><code>reset()</code></li>
+          <li><code>play()</code></li>
+          <li><code>pause()</code></li>
+          <li><code>resume()</code></li>
+          <li><code>stop()</code></li>
+          <li><code>setLoopEnabled(enabled)</code></li>
+          <li><code>process(left, right, frames)</code></li>
+          <li><code>stats()</code></li>
+        </ul>
+
+        <h2>How Audio Output Works</h2>
+        <p>
+          <code>VgmPlayer</code> itself does not connect to Web Audio directly.
+          It fills stereo buffers with <code>process(left, right, frames)</code>.
+          That makes it reusable for ScriptProcessorNode, AudioWorklet, or future game-engine callbacks.
+        </p>
+
+        <h2>Why It Is Separate from Direct Chip Control</h2>
+        <p>
+          <code>VgmPlayer</code> is for prepared music data. Direct chip control is for experiments,
+          realtime input, or future programmatic composition. The repository keeps these paths separate on purpose.
+        </p>
+
+        <h2>Good Next Reads</h2>
+        <ul>
+          <li><a href="../vgm.html">VGM Parser Demo</a></li>
+          <li><a href="./audioworklet.html">AudioWorklet Usage</a></li>
+          <li><a href="../embed.html">Integration Sample</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>

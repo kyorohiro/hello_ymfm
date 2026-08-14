@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 WASM Usage</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      p, li { line-height: 1.6; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 WASM Usage</h1>
+        <p>
+          This page is the browser-readable version of the basic WASM usage note.
+          It shows the minimum path from generated files to JavaScript control.
+        </p>
+        <p class="meta">
+          Related source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/README.md">web/README.md</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/wasm/ym2612_wasm.cpp">wasm/ym2612_wasm.cpp</a>
+        </p>
+
+        <h2>Build</h2>
+        <pre>sh scripts/build_ym2612_wasm.sh</pre>
+        <p>This generates:</p>
+        <ul>
+          <li><code>docs/generated/ym2612_wasm.js</code></li>
+          <li><code>docs/generated/ym2612_wasm.wasm</code></li>
+        </ul>
+
+        <h2>Minimal Browser Usage</h2>
+        <pre>import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+
+const ym2612 = await createYm2612(ym2612ModuleFactory);
+const sampleRate = ym2612.sampleRate(YM2612_CLOCK);
+
+ym2612.reset();
+ym2612.writeRegister(0x30, 0x01);
+ym2612.writeRegister(0x34, 0x01);
+ym2612.writeRegister(0x38, 0x01);
+ym2612.writeRegister(0x3c, 0x01);
+
+const { left, right } = ym2612.generateStereo(128);</pre>
+
+        <h2>Wrapper Methods</h2>
+        <ul>
+          <li><code>reset()</code></li>
+          <li><code>write(offset, data)</code></li>
+          <li><code>writeRegister(register, value, port = 0)</code></li>
+          <li><code>sampleRate(clock = YM2612_CLOCK)</code></li>
+          <li><code>generateStereo(frames)</code></li>
+          <li><code>dispose()</code></li>
+        </ul>
+
+        <h2>Good Next Reads</h2>
+        <ul>
+          <li><a href="../beep.html">Beep Demo</a></li>
+          <li><a href="./vgmplayer.html">VgmPlayer Usage</a></li>
+          <li><a href="./audioworklet.html">AudioWorklet Usage</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>

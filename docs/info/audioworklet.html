@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AudioWorklet Usage</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      p, li { line-height: 1.6; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>AudioWorklet Usage</h1>
+        <p>
+          The current repository uses AudioWorklet in <code>docs/vgm.html</code> when available.
+          The player logic still runs on the main thread, but audio output timing is handled by the worklet path.
+        </p>
+        <p class="meta">
+          Related source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgm-output-worklet.js">docs/vgm-output-worklet.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgm.html">docs/vgm.html</a>
+        </p>
+
+        <h2>Current Model</h2>
+        <ol>
+          <li>The main thread owns <code>VgmPlayer</code>.</li>
+          <li>The main thread renders float chunks with <code>player.process(...)</code>.</li>
+          <li>Those chunks are posted to an <code>AudioWorkletNode</code>.</li>
+          <li>The worklet queues chunks and writes them to the audio output.</li>
+        </ol>
+
+        <h2>Why This Exists</h2>
+        <ul>
+          <li>Audio output timing is steadier than a pure ScriptProcessorNode path.</li>
+          <li>It reduces the browser-demo gap between "it works" and "it is usable".</li>
+          <li>It is a better stepping stone toward game-oriented browser playback.</li>
+        </ul>
+
+        <h2>Important Limitation</h2>
+        <p>
+          This is not yet a full "all audio logic is inside the worklet" design.
+          The current implementation still computes VGM playback chunks on the main thread and streams them into the worklet queue.
+        </p>
+
+        <h2>Minimal Idea</h2>
+        <pre>await audioContext.audioWorklet.addModule("./vgm-output-worklet.js");
+
+const node = new AudioWorkletNode(audioContext, "vgm-output-processor", {
+  numberOfInputs: 0,
+  numberOfOutputs: 1,
+  outputChannelCount: [2],
+});
+
+node.port.postMessage({
+  type: "enqueue",
+  left: left.buffer,
+  right: right.buffer,
+}, [left.buffer, right.buffer]);</pre>
+
+        <h2>Good Next Reads</h2>
+        <ul>
+          <li><a href="../vgm.html">VGM Parser Demo</a></li>
+          <li><a href="./vgmplayer.html">VgmPlayer Usage</a></li>
+          <li><a href="../embed.html">Integration Sample</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>
