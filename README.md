@@ -1,10 +1,13 @@
-# About kyorohiro/hello_ymfm
+# About hello_ymfm_wasm
 
 This repository has three goals:
 
 - To understand the YM2612 chip.
 - To create documentation that helps anyone understand the YM2612 chip.
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
+
+This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
+See [LICENSE](/Users/kyorohiro/development8/wfm/hello_ymfm/LICENSE:1) for the license text included with this repository.
 
 ## tutorials
 - [ex00.md](./ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
