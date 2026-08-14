@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>hello_ymfm_wasm demos</title>
+    <title>hello_ymfm_wasm</title>
     <style>
       :root {
         color-scheme: light;
@@ -85,12 +85,19 @@
         margin-bottom: 8px;
         font-size: 1.05rem;
       }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 1.35rem;
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
     </style>
   </head>
   <body>
     <main>
       <section class="panel">
-        <h1>hello_ymfm_wasm demos</h1>
+        <h1>hello_ymfm_wasm</h1>
         <p>Small browser-side demos for YM2612, ymfm, WebAssembly, and VGM parsing.</p>
         <p>
           Repository:
@@ -100,6 +107,7 @@
           These demos use <a href="https://github.com/aaronsgiles/ymfm">ymfm</a>
           by Aaron Giles under the BSD 3-Clause License.
         </p>
+        <h2>Demos</h2>
         <div class="grid">
           <a class="card" href="./embed.html">
             <strong>Integration Sample</strong>
@@ -116,6 +124,34 @@
           <a class="card" href="./vgm.html">
             <strong>VGM Parser Demo</strong>
             Load a VGM file, inspect the header, and preview parsed YM2612-oriented commands.
+          </a>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>About YM2612</h2>
+        <p>
+          The YM2612 is the FM sound chip used in the Sega Mega Drive / Genesis.
+          This repository focuses on learning the chip, understanding how ymfm exposes it, and replaying it in the browser.
+        </p>
+        <p>
+          Start here if you want pin notes, beep-oriented register notes, or VGM basics in browser-readable pages.
+        </p>
+        <div class="grid">
+          <a class="card" href="./info/index.html">
+            <strong>Info Hub</strong>
+            Open the browser-side reading hub for YM2612, FM, and VGM notes.
+          </a>
+          <a class="card" href="./info/ym2612.html">
+            <strong>YM2612 Basics</strong>
+            Read the minimum path from pins and ports to a simple beep.
+          </a>
+          <a class="card" href="./info/ym2612-ja.html">
+            <strong>YM2612 Basics (JA)</strong>
+            日本語で YM2612 の基本と beep までの流れを読む。
+          </a>
+          <a class="card" href="./info/vgm.html">
+            <strong>VGM Basics</strong>
+            Learn what VGM stores and which YM2612-related commands matter first.
           </a>
         </div>
       </section>

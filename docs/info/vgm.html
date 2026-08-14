@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VGM Basics</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      p, li { line-height: 1.6; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>VGM Basics</h1>
+        <p>
+          VGM is not rendered audio like WAV. It is closer to a log of chip commands plus timing.
+        </p>
+
+        <h2>Mental Model</h2>
+        <ol>
+          <li>A tool creates chip music data.</li>
+          <li>A VGM file stores chip writes and wait commands.</li>
+          <li>A player reads the VGM commands in order.</li>
+          <li>The player writes registers to a YM2612 emulator.</li>
+          <li>The emulator generates audio samples.</li>
+        </ol>
+
+        <h2>Why This Matters for YM2612</h2>
+        <p>
+          YM2612 is controlled by register writes, so VGM fits it naturally.
+          A YM2612 VGM player is basically automating the same kind of writes as a beep example,
+          but with stored timing and metadata.
+        </p>
+
+        <h2>First Header Fields to Care About</h2>
+        <ul>
+          <li><code>0x08</code>: version</li>
+          <li><code>0x18</code>: total number of samples</li>
+          <li><code>0x1C</code>: loop offset</li>
+          <li><code>0x20</code>: loop number of samples</li>
+          <li><code>0x2C</code>: YM2612 clock</li>
+          <li><code>0x34</code>: VGM data offset</li>
+        </ul>
+
+        <h2>Most Important YM2612 Commands</h2>
+        <pre>0x52 aa dd  write dd to YM2612 port 0 register aa
+0x53 aa dd  write dd to YM2612 port 1 register aa
+0x61 nn nn  wait n samples
+0x62        wait 735 samples
+0x63        wait 882 samples
+0x66        end of sound data</pre>
+
+        <h2>DAC / PCM Related Commands</h2>
+        <ul>
+          <li><code>0x67</code>: data block</li>
+          <li><code>0x68</code>: PCM RAM write</li>
+          <li><code>0x80-0x8f</code>: DAC write + wait</li>
+          <li><code>0x90-0x95</code>: DAC stream control</li>
+          <li><code>0xe0</code>: data bank seek</li>
+        </ul>
+
+        <h2>Good Next Reads</h2>
+        <ul>
+          <li><a href="./ym2612.html">YM2612 Basics</a></li>
+          <li><a href="../vgm.html">VGM Parser Demo</a></li>
+          <li><a href="../../ex00_vgm.md">Original Markdown Note</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>

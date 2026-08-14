@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 基本メモ</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Hiragino Sans", "Yu Gothic", "Helvetica Neue", Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      p, li { line-height: 1.7; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 基本メモ</h1>
+        <p>
+          このページは、この repository にある初期メモをブラウザで読みやすくしたものです。
+          まずは「pin と register を見ながら beep まで辿る」ことを目的にしています。
+        </p>
+
+        <h2>何を見るページか</h2>
+        <ul>
+          <li>YM2612 の pin の意味</li>
+          <li><code>A0</code> / <code>A1</code> と <code>chip.write()</code> の対応</li>
+          <li>beep を鳴らすときに触る最小レジスタ群</li>
+          <li><code>ex03_beep.cpp</code> を読むための入口</li>
+        </ul>
+
+        <h2>ざっくりした全体像</h2>
+        <ol>
+          <li><code>ym2612</code> オブジェクトを作る</li>
+          <li><code>reset()</code> する</li>
+          <li>channel 1 の operator を設定する</li>
+          <li>algorithm と左右出力を設定する</li>
+          <li>周波数を設定する</li>
+          <li><code>Key ON</code> する</li>
+          <li>サンプルを生成する</li>
+        </ol>
+
+        <h2>重要な register group</h2>
+        <ul>
+          <li><code>0x30-0x3c</code>: detune / multiple</li>
+          <li><code>0x40-0x4c</code>: total level</li>
+          <li><code>0x50-0x5c</code>: attack rate</li>
+          <li><code>0x80-0x8c</code>: sustain level / release rate</li>
+          <li><code>0xb0</code>: algorithm / feedback</li>
+          <li><code>0xb4</code>: 左右出力</li>
+          <li><code>0xa4</code> と <code>0xa0</code>: 周波数</li>
+          <li><code>0x28</code>: key on / key off</li>
+        </ul>
+
+        <h2><code>chip.write()</code> の見方</h2>
+        <pre>chip.write(0, 0x30);
+chip.write(1, 0x01);</pre>
+        <p>
+          これは「address port 0 で <code>0x30</code> を選び、data port 0 から <code>0x01</code> を書く」
+          という意味です。
+        </p>
+
+        <h2>次に読むと良いもの</h2>
+        <ul>
+          <li><a href="./vgm.html">VGM Basics</a></li>
+          <li><a href="../beep.html">Beep Demo</a></li>
+          <li><a href="../../ex00_ja.md">元の日本語メモ</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>

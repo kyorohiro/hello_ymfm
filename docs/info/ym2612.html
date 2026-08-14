@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 Basics</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+      h1, h2, h3 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+      h2 { margin-top: 28px; font-size: 1.35rem; }
+      h3 { margin-top: 20px; font-size: 1.05rem; }
+      p, li { line-height: 1.6; }
+      ul, ol { margin: 0 0 16px 20px; }
+      pre, code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      .link-button {
+        display: inline-block;
+        margin-top: 16px;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 Basics</h1>
+        <p>
+          This page is a browser-readable version of the early YM2612 notes in this repository.
+          The focus is the minimum path from chip pins to a simple beep.
+        </p>
+
+        <h2>Pin Layout</h2>
+        <pre>    +--()--+
+GND | 1  24| 0M(CLK)
+ D0 | 2  23| Vcc
+ D1 | 3  22| A.Vcc
+ D2 | 4  21| MOL
+ D3 | 5  20| MOR
+ D4 | 6  19| A.GND
+ D5 | 7  18| A1
+ D6 | 8  17| A0
+ D7 | 9  16| /RD
+  ? |10  15| /WR
+/IC |11  14| /CS
+GND |12  13| /IRQ
+    +------+</pre>
+
+        <h2>Pin Summary</h2>
+        <ul>
+          <li><code>GND</code>: digital ground</li>
+          <li><code>A.GND</code>: analog ground for audio output</li>
+          <li><code>Vcc</code>: digital power supply</li>
+          <li><code>A.Vcc</code>: analog power supply for audio output</li>
+          <li><code>MOL</code> / <code>MOR</code>: left / right audio outputs</li>
+          <li><code>D0-D7</code>: 8-bit bidirectional data bus</li>
+          <li><code>A0</code> / <code>A1</code>: port select pins</li>
+          <li><code>/RD</code>, <code>/WR</code>, <code>/CS</code>, <code>/IRQ</code>, <code>/IC</code>: control signals</li>
+        </ul>
+
+        <h2>A0 and A1</h2>
+        <p>
+          <code>A0</code> and <code>A1</code> select address/data access and port 0 / port 1.
+        </p>
+        <ul>
+          <li><code>A1=0, A0=0</code>: address port 0</li>
+          <li><code>A1=0, A0=1</code>: data port 0</li>
+          <li><code>A1=1, A0=0</code>: address port 1</li>
+          <li><code>A1=1, A0=1</code>: data port 1</li>
+        </ul>
+
+        <h2>How <code>chip.write()</code> Maps to Pins</h2>
+        <p>
+          <code>void ym2612::write(uint32_t offset, uint8_t data)</code> is a simplified software interface.
+        </p>
+        <ul>
+          <li><code>offset = 0</code>: address port 0</li>
+          <li><code>offset = 1</code>: data port 0</li>
+          <li><code>offset = 2</code>: address port 1</li>
+          <li><code>offset = 3</code>: data port 1</li>
+        </ul>
+        <pre>chip.write(0, 0x30);
+chip.write(1, 0x01);</pre>
+        <p>
+          This means: select register <code>0x30</code>, then write <code>0x01</code> into it.
+        </p>
+
+        <h2>What We Do to Make a Beep</h2>
+        <ol>
+          <li>Create a <code>ym2612</code> object.</li>
+          <li>Reset the chip.</li>
+          <li>Set operator parameters for channel 1.</li>
+          <li>Set algorithm and stereo output.</li>
+          <li>Set frequency.</li>
+          <li>Send key on.</li>
+          <li>Generate samples.</li>
+        </ol>
+
+        <h2>Key Register Groups</h2>
+        <ul>
+          <li><code>0x30-0x3c</code>: detune and multiple</li>
+          <li><code>0x40-0x4c</code>: total level</li>
+          <li><code>0x50-0x5c</code>: attack rate</li>
+          <li><code>0x80-0x8c</code>: sustain level and release rate</li>
+          <li><code>0xb0</code>: algorithm and feedback</li>
+          <li><code>0xb4</code>: left/right output enable</li>
+          <li><code>0xa4</code> and <code>0xa0</code>: frequency</li>
+          <li><code>0x28</code>: key on / key off</li>
+        </ul>
+
+        <h2>Why Algorithm 7?</h2>
+        <p>
+          Algorithm 7 is a simple starting point because all 4 operators act as carriers.
+          Every operator directly contributes to the output.
+        </p>
+
+        <h2>Good Next Reads</h2>
+        <ul>
+          <li><a href="./vgm.html">VGM Basics</a></li>
+          <li><a href="../beep.html">Beep Demo</a></li>
+          <li><a href="../../ex00.md">Original Markdown Note</a></li>
+        </ul>
+
+        <a class="link-button" href="./index.html">Back</a>
+      </section>
+    </main>
+  </body>
+</html>
