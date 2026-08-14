@@ -7,7 +7,7 @@ This repository has three goals:
 - To create documentation that helps anyone embed YM2612 audio in a browser app or game.
 
 This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles under the BSD 3-Clause License.
-See [LICENSE](/Users/kyorohiro/development8/wfm/hello_ymfm/LICENSE:1) for the license text included with this repository.
+See `LICENSE` for the license text included with this repository.
 
 ## tutorials
 - [ex00.md](./ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
@@ -31,10 +31,10 @@ This generates:
 Test:
 
 - Import `docs/generated/ym2612_wasm.js` in browser-side JavaScript.
-- Use [web/ym2612.js](/Users/kyorohiro/development8/wfm/hello_ymfm/web/ym2612.js:1) as the thin JavaScript interface.
+- Use `web/ym2612.js` as the thin JavaScript interface.
 - Create a `Ym2612` instance, call `reset()`, send register writes, and call `generateStereo(frames)`.
 
-See [web/README.md](/Users/kyorohiro/development8/wfm/hello_ymfm/web/README.md:1) for a minimal usage example.
+See `web/README.md` for a minimal usage example.
 
 
 # ymfm
