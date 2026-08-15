@@ -1,6 +1,114 @@
 # Save Point
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
+
+## Current UI / YM2612 learning demo status
+
+- `docs/operator1.html`
+  1-operator YM2612 learning demo now exists.
+  It is no longer only a "play beep" page.
+  It now tries to help the reader connect:
+  - register parameters
+  - envelope intent
+  - actual generated sound
+- The current demo exposes these parameters:
+  - `MULTI`
+  - `TL`
+  - `AR`
+  - `D1R`
+  - `D2R`
+  - `SL`
+  - `RR`
+  - `Pitch`
+  - `Block`
+- Layout was compacted so the parameter UI and `Envelope` panel fit in one desktop window more easily.
+  - controls are smaller
+  - `Envelope` is placed beside the controls
+  - `Waveform` and `Spectrum` are below
+- The `Envelope` panel now keeps its drawing after playback ends.
+  - only `Waveform` and `Spectrum` return to idle
+  - `Envelope` stays as a parameter/result reference view
+- `docs/operator2.html`
+  A 2-operator YM2612 learning demo now exists.
+  It focuses on the jump from "single operator" to actual FM relationships:
+  - `parallel`
+  - `serial`
+  - `feedback`
+  The page currently lets the user compare:
+  - operator 1 / operator 2 frequency multipliers
+  - operator 1 / operator 2 total levels
+  - shared `AR` / `RR`
+  - `feedback`
+  - `Pitch` / `Block`
+  In the current design:
+  - parallel mode uses algorithm 7 and leaves operator 1 + operator 2 audible
+  - serial mode uses algorithm 4 and focuses on the `O1 -> O2` path while muting the other pair
+
+## Important interpretation for `docs/operator1.html`
+
+- The orange envelope line is not "real measured chip internals".
+- It is a parameter guide built from:
+  - `AR`
+  - `D1R`
+  - `D2R`
+  - `SL`
+  - `RR`
+  - `TL`
+- The cyan line is based on the actual generated audio output.
+  - it is computed from the generated stereo samples
+  - it is closer to an output amplitude trace than to an internal operator envelope
+- This difference is expected.
+  FM output amplitude can look very different from the intended parameter envelope because:
+  - modulation changes harmonic balance
+  - phase interaction changes visible amplitude
+  - the final waveform is not a direct envelope plot
+
+## What was added to `docs/operator1.html`
+
+- parameter UI for:
+  - `D1R`
+  - `D2R`
+  - `SL`
+- register writes for operator 4:
+  - `0x5c` for `AR`
+  - `0x6c` for `D1R`
+  - `0x7c` for `D2R`
+  - `0x8c` for `SL/RR`
+- actual output envelope overlay:
+  - built from generated `left/right` sample arrays
+  - uses short-window RMS buckets
+  - normalized and drawn as the cyan overlay
+
+## Current design decision
+
+- For now, prefer "faithful to the actual heard sound" over "more smoothed and easier to read".
+- That means:
+  - keep the cyan line relatively honest to the generated output
+  - do not over-smooth it just to make it look like the orange guide
+- If a later toggle is added, it should be optional:
+  - `raw output`
+  - `slightly smoothed`
+
+## Important unresolved point
+
+- `docs/operator1.html` still does not show an explicitly staged `key on` -> `key off` boundary.
+- A possible next improvement is:
+  - generate a hold segment
+  - then send `key off`
+  - then generate the release segment
+  - draw a vertical `key off` marker on the envelope panel
+- This would make the `RR` / release part easier to understand.
+
+## Another important unresolved point
+
+- The cyan line is still derived from output audio, not YM2612 internal operator state.
+- If "real internal envelope" is ever required:
+  - JS/WASM interface changes alone are not enough
+  - a C++-side export is needed
+  - possibly a minimal debug getter in `ymfm` or a wrapper around it
+- Current decision:
+  - do not change `ymfm` yet
+  - stay with output-based observation first
 
 ## Current status
 

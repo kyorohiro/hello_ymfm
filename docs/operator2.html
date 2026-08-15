@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 2 Operator Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 16px 48px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.3rem;
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .meta {
+        margin: 0 0 12px;
+        font-size: 0.9rem;
+      }
+
+      .editor-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.95fr);
+        gap: 16px;
+        align-items: start;
+        margin: 18px 0;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+      }
+
+      .control {
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      .control label {
+        display: block;
+        font-weight: 700;
+        margin-bottom: 4px;
+        font-size: 0.92rem;
+      }
+
+      .control small {
+        display: block;
+        margin-top: 4px;
+        line-height: 1.35;
+        font-size: 0.8rem;
+        color: rgba(31, 27, 22, 0.82);
+      }
+
+      input[type="range"],
+      select {
+        width: 100%;
+      }
+
+      .value {
+        display: inline-block;
+        min-width: 4ch;
+        font-weight: 700;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 14px 0 12px;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 10px 24px rgba(126, 56, 28, 0.25);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .visual {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      .visual h2 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .hero-visual canvas {
+        height: 220px;
+      }
+
+      .visuals {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+        margin: 18px 0;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 150px;
+        border-radius: 14px;
+        background: #241d16;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.86rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      @media (max-width: 920px) {
+        .editor-layout {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 2 Operator Demo</h1>
+        <p>
+          This page steps beyond the 1-operator case. Here you can switch between
+          <strong>parallel</strong> and <strong>serial</strong> relationships, then add
+          <strong>feedback</strong> to operator 1 and listen to how the tone changes.
+        </p>
+        <p>
+          In serial mode, the main active pair is built from the first and third operator slots
+          on channel 1, matching the way ymfm wires the internal 4-operator flow.
+          In parallel mode, the same two slots are left audible as separate carriers.
+        </p>
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/operator2.html">docs/operator2.html</a>
+          |
+          Related code:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
+        </p>
+
+        <div class="editor-layout">
+          <div class="controls">
+            <div class="control">
+              <label for="mode">Mode</label>
+              <select id="mode">
+                <option value="parallel">Parallel</option>
+                <option value="serial">Serial</option>
+              </select>
+              <small>Parallel mixes the active pair. Serial uses the same pair in a modulation path.</small>
+            </div>
+            <div class="control">
+              <label for="feedback">FB <span class="value" id="feedbackValue">0</span></label>
+              <input id="feedback" type="range" min="0" max="7" value="0">
+              <small>Self-feedback amount for operator 1.</small>
+            </div>
+            <div class="control">
+              <label for="op1multi">OP1 MULTI <span class="value" id="op1multiValue">2</span></label>
+              <input id="op1multi" type="range" min="0" max="15" value="2">
+              <small>Operator 1 frequency multiplier.</small>
+            </div>
+            <div class="control">
+              <label for="op1tl">OP1 TL <span class="value" id="op1tlValue">18</span></label>
+              <input id="op1tl" type="range" min="0" max="127" value="18">
+              <small>In serial mode this acts like modulation depth.</small>
+            </div>
+            <div class="control">
+              <label for="op2multi">OP2 MULTI <span class="value" id="op2multiValue">1</span></label>
+              <input id="op2multi" type="range" min="0" max="15" value="1">
+              <small>Second active slot frequency multiplier.</small>
+            </div>
+            <div class="control">
+              <label for="op2tl">OP2 TL <span class="value" id="op2tlValue">4</span></label>
+              <input id="op2tl" type="range" min="0" max="127" value="4">
+              <small>Second active slot loudness. Lower is louder.</small>
+            </div>
+            <div class="control">
+              <label for="op1ar">OP1 AR <span class="value" id="op1arValue">18</span></label>
+              <input id="op1ar" type="range" min="0" max="31" value="18">
+              <small>Operator 1 attack rate.</small>
+            </div>
+            <div class="control">
+              <label for="op1rr">OP1 RR <span class="value" id="op1rrValue">8</span></label>
+              <input id="op1rr" type="range" min="0" max="15" value="8">
+              <small>Operator 1 release rate.</small>
+            </div>
+            <div class="control">
+              <label for="op2ar">OP2 AR <span class="value" id="op2arValue">18</span></label>
+              <input id="op2ar" type="range" min="0" max="31" value="18">
+              <small>Operator 2 attack rate.</small>
+            </div>
+            <div class="control">
+              <label for="op2rr">OP2 RR <span class="value" id="op2rrValue">8</span></label>
+              <input id="op2rr" type="range" min="0" max="15" value="8">
+              <small>Operator 2 release rate.</small>
+            </div>
+            <div class="control">
+              <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+              <input id="fnum" type="range" min="256" max="1023" value="553">
+              <small>Channel frequency number.</small>
+            </div>
+            <div class="control">
+              <label for="block">Block <span class="value" id="blockValue">4</span></label>
+              <input id="block" type="range" min="0" max="7" value="4">
+              <small>Octave-like block value.</small>
+            </div>
+          </div>
+          <section class="visual hero-visual">
+            <h2>Envelope / Output</h2>
+            <canvas id="envelopeCanvas" width="480" height="220"></canvas>
+          </section>
+        </div>
+
+        <div class="actions">
+          <button id="playButton" type="button">Play 2 Operator Tone</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+
+        <div class="status" id="status">Ready.</div>
+
+        <div class="visuals">
+          <section class="visual">
+            <h2>Waveform</h2>
+            <canvas id="waveCanvas" width="480" height="180"></canvas>
+          </section>
+          <section class="visual">
+            <h2>Spectrum</h2>
+            <canvas id="spectrumCanvas" width="480" height="180"></canvas>
+          </section>
+        </div>
+
+        <h2>Current Register Intent</h2>
+        <pre id="summaryOutput"></pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+      import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+
+      const controls = {
+        mode: document.getElementById("mode"),
+        feedback: document.getElementById("feedback"),
+        op1multi: document.getElementById("op1multi"),
+        op1tl: document.getElementById("op1tl"),
+        op2multi: document.getElementById("op2multi"),
+        op2tl: document.getElementById("op2tl"),
+        op1ar: document.getElementById("op1ar"),
+        op1rr: document.getElementById("op1rr"),
+        op2ar: document.getElementById("op2ar"),
+        op2rr: document.getElementById("op2rr"),
+        fnum: document.getElementById("fnum"),
+        block: document.getElementById("block"),
+      };
+
+      const values = {
+        feedback: document.getElementById("feedbackValue"),
+        op1multi: document.getElementById("op1multiValue"),
+        op1tl: document.getElementById("op1tlValue"),
+        op2multi: document.getElementById("op2multiValue"),
+        op2tl: document.getElementById("op2tlValue"),
+        op1ar: document.getElementById("op1arValue"),
+        op1rr: document.getElementById("op1rrValue"),
+        op2ar: document.getElementById("op2arValue"),
+        op2rr: document.getElementById("op2rrValue"),
+        fnum: document.getElementById("fnumValue"),
+        block: document.getElementById("blockValue"),
+      };
+
+      const playButton = document.getElementById("playButton");
+      const status = document.getElementById("status");
+      const summaryOutput = document.getElementById("summaryOutput");
+      const waveCanvas = document.getElementById("waveCanvas");
+      const spectrumCanvas = document.getElementById("spectrumCanvas");
+      const envelopeCanvas = document.getElementById("envelopeCanvas");
+      const waveContext = waveCanvas.getContext("2d");
+      const spectrumContext = spectrumCanvas.getContext("2d");
+      const envelopeContext = envelopeCanvas.getContext("2d");
+
+      let audioContext = null;
+      let ym2612 = null;
+      let analyser = null;
+      let analyserTimeData = null;
+      let analyserFreqData = null;
+      let visualFrame = 0;
+      let currentSource = null;
+      let lastOutputEnvelope = null;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function clearCanvas(context, canvas) {
+        context.fillStyle = "#241d16";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function drawIdleAudioVisuals() {
+        clearCanvas(waveContext, waveCanvas);
+        clearCanvas(spectrumContext, spectrumCanvas);
+
+        waveContext.strokeStyle = "#d6b184";
+        waveContext.lineWidth = 1.5;
+        waveContext.beginPath();
+        waveContext.moveTo(0, waveCanvas.height / 2);
+        waveContext.lineTo(waveCanvas.width, waveCanvas.height / 2);
+        waveContext.stroke();
+
+        spectrumContext.fillStyle = "#d6b184";
+        spectrumContext.font = "14px sans-serif";
+        spectrumContext.fillText("Play a tone to update the visuals.", 18, 28);
+      }
+
+      function stopVisualLoop() {
+        if (visualFrame) {
+          cancelAnimationFrame(visualFrame);
+          visualFrame = 0;
+        }
+      }
+
+      function drawWaveform() {
+        clearCanvas(waveContext, waveCanvas);
+        if (!analyser || !analyserTimeData) {
+          return;
+        }
+
+        analyser.getByteTimeDomainData(analyserTimeData);
+        waveContext.strokeStyle = "#f2c078";
+        waveContext.lineWidth = 2;
+        waveContext.beginPath();
+
+        for (let index = 0; index < analyserTimeData.length; index += 1) {
+          const x = (index / (analyserTimeData.length - 1)) * waveCanvas.width;
+          const normalized = analyserTimeData[index] / 255;
+          const y = normalized * waveCanvas.height;
+          if (index === 0) {
+            waveContext.moveTo(x, y);
+          } else {
+            waveContext.lineTo(x, y);
+          }
+        }
+
+        waveContext.stroke();
+      }
+
+      function drawSpectrum() {
+        clearCanvas(spectrumContext, spectrumCanvas);
+        if (!analyser || !analyserFreqData) {
+          return;
+        }
+
+        analyser.getByteFrequencyData(analyserFreqData);
+
+        const barCount = Math.min(96, analyserFreqData.length);
+        const step = Math.max(1, Math.floor(analyserFreqData.length / barCount));
+        const barWidth = spectrumCanvas.width / barCount;
+
+        for (let index = 0; index < barCount; index += 1) {
+          const value = analyserFreqData[index * step] / 255;
+          const height = value * spectrumCanvas.height;
+          const x = index * barWidth;
+          const y = spectrumCanvas.height - height;
+          spectrumContext.fillStyle = `hsl(${24 + index * 0.9} 80% 62%)`;
+          spectrumContext.fillRect(x, y, Math.max(1, barWidth - 2), height);
+        }
+      }
+
+      function buildOutputEnvelope(left, right, pointCount = 160) {
+        const length = Math.min(left.length, right.length);
+        if (length === 0) {
+          return [];
+        }
+
+        const samplesPerBucket = Math.max(1, Math.floor(length / pointCount));
+        const points = [];
+
+        for (let start = 0; start < length; start += samplesPerBucket) {
+          const end = Math.min(length, start + samplesPerBucket);
+          let sum = 0;
+          for (let index = start; index < end; index += 1) {
+            const mixed = (left[index] + right[index]) * 0.5;
+            sum += mixed * mixed;
+          }
+          const rms = Math.sqrt(sum / Math.max(1, end - start));
+          points.push(rms);
+        }
+
+        let peak = 0;
+        for (const value of points) {
+          if (value > peak) {
+            peak = value;
+          }
+        }
+        if (peak <= 0) {
+          return points.map(() => 0);
+        }
+        return points.map((value) => Math.min(1, value / peak));
+      }
+
+      function drawOutputEnvelopeOverlay(points, layout) {
+        if (!points || points.length < 2) {
+          return;
+        }
+
+        envelopeContext.strokeStyle = "#7be0d6";
+        envelopeContext.lineWidth = 2;
+        envelopeContext.beginPath();
+
+        for (let index = 0; index < points.length; index += 1) {
+          const x = layout.left + (layout.innerWidth * index) / (points.length - 1);
+          const y = layout.bottom - points[index] * layout.innerHeight * 0.94;
+          if (index === 0) {
+            envelopeContext.moveTo(x, y);
+          } else {
+            envelopeContext.lineTo(x, y);
+          }
+        }
+
+        envelopeContext.stroke();
+      }
+
+      function drawOperatorGuide(layout, settings, style) {
+        const attackPortion = 0.06 + ((31 - settings.ar) / 31) * 0.22;
+        const holdPortion = 0.24;
+        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.24;
+        const tailPortion = Math.max(0.10, 1 - (attackPortion + holdPortion + releasePortion));
+
+        const x0 = layout.left;
+        const x1 = layout.left + layout.innerWidth * attackPortion;
+        const x2 = x1 + layout.innerWidth * holdPortion;
+        const x3 = x2 + layout.innerWidth * tailPortion;
+        const x4 = layout.right;
+
+        const intensity = 1 - (settings.tl / 127) * 0.75;
+        const peakLevel = 0.08 + (1 - intensity) * 0.12 + style.verticalBias;
+        const sustainLevel = Math.min(
+          0.90,
+          peakLevel + 0.18 + (settings.rr / 15) * 0.16 + style.verticalBias
+        );
+        const tailLevel = Math.min(0.94, sustainLevel + 0.04);
+        const peakY = layout.top + layout.innerHeight * peakLevel;
+        const sustainY = layout.top + layout.innerHeight * sustainLevel;
+        const tailY = layout.top + layout.innerHeight * tailLevel;
+
+        envelopeContext.strokeStyle = style.color;
+        envelopeContext.lineWidth = style.lineWidth;
+        envelopeContext.beginPath();
+        envelopeContext.moveTo(x0, layout.bottom);
+        envelopeContext.lineTo(x1, peakY);
+        envelopeContext.lineTo(x2, sustainY);
+        envelopeContext.lineTo(x3, tailY);
+        envelopeContext.lineTo(x4, layout.bottom);
+        envelopeContext.stroke();
+      }
+
+      function drawEnvelope(settings) {
+        clearCanvas(envelopeContext, envelopeCanvas);
+
+        const width = envelopeCanvas.width;
+        const height = envelopeCanvas.height;
+        const left = 22;
+        const right = width - 18;
+        const top = 16;
+        const bottom = height - 20;
+        const innerWidth = right - left;
+        const innerHeight = bottom - top;
+        const layout = { left, right, top, bottom, innerWidth, innerHeight };
+
+        envelopeContext.strokeStyle = "#514233";
+        envelopeContext.lineWidth = 1;
+        envelopeContext.beginPath();
+        envelopeContext.moveTo(left, bottom);
+        envelopeContext.lineTo(right, bottom);
+        envelopeContext.moveTo(left, top);
+        envelopeContext.lineTo(left, bottom);
+        envelopeContext.stroke();
+
+        for (let index = 1; index <= 4; index += 1) {
+          const x = left + (innerWidth * index) / 5;
+          envelopeContext.strokeStyle = "rgba(214, 177, 132, 0.18)";
+          envelopeContext.beginPath();
+          envelopeContext.moveTo(x, top);
+          envelopeContext.lineTo(x, bottom);
+          envelopeContext.stroke();
+        }
+
+        drawOperatorGuide(layout, {
+          ar: settings.op1ar,
+          rr: settings.op1rr,
+          tl: settings.op1tl,
+        }, {
+          color: "#f2c078",
+          lineWidth: 3,
+          verticalBias: settings.mode === "serial" ? 0 : 0.02,
+        });
+
+        drawOperatorGuide(layout, {
+          ar: settings.op2ar,
+          rr: settings.op2rr,
+          tl: settings.op2tl,
+        }, {
+          color: "#ff93bc",
+          lineWidth: 2,
+          verticalBias: settings.mode === "serial" ? -0.02 : 0,
+        });
+
+        drawOutputEnvelopeOverlay(lastOutputEnvelope, { left, bottom, innerWidth, innerHeight });
+
+        envelopeContext.fillStyle = "#f6ead7";
+        envelopeContext.font = "13px sans-serif";
+        envelopeContext.fillText("attack", left + 6, bottom - 8);
+        envelopeContext.fillText("hold", left + innerWidth * 0.28, top + 18);
+        envelopeContext.fillText("release", left + innerWidth * 0.72, top + 18);
+
+        envelopeContext.fillStyle = "#d6b184";
+        envelopeContext.fillText("Orange: OP1 guide. Pink: OP2 guide. Cyan: output envelope from generated audio.", 18, 28);
+      }
+
+      function updateVisuals() {
+        drawWaveform();
+        drawSpectrum();
+        drawEnvelope(readSettings());
+        if (currentSource) {
+          visualFrame = requestAnimationFrame(updateVisuals);
+        } else {
+          visualFrame = 0;
+        }
+      }
+
+      function readSettings() {
+        return {
+          mode: controls.mode.value,
+          feedback: Number(controls.feedback.value),
+          op1multi: Number(controls.op1multi.value),
+          op1tl: Number(controls.op1tl.value),
+          op2multi: Number(controls.op2multi.value),
+          op2tl: Number(controls.op2tl.value),
+          op1ar: Number(controls.op1ar.value),
+          op1rr: Number(controls.op1rr.value),
+          op2ar: Number(controls.op2ar.value),
+          op2rr: Number(controls.op2rr.value),
+          fnum: Number(controls.fnum.value),
+          block: Number(controls.block.value),
+        };
+      }
+
+      function updateLabelsAndSummary() {
+        const settings = readSettings();
+        Object.keys(values).forEach((key) => {
+          values[key].textContent = String(settings[key]);
+        });
+
+        const high = ((settings.block & 0x07) << 3) | ((settings.fnum >> 8) & 0x07);
+        const low = settings.fnum & 0xff;
+        const algorithm = settings.mode === "serial" ? 4 : 7;
+
+        summaryOutput.textContent = [
+          "Audible channel: channel 1",
+          `Mode: ${settings.mode}`,
+          `Algorithm/Feedback: (${settings.feedback} << 3) | ${algorithm}`,
+          `OP1 DT/MULTI: (0 << 4) | (${settings.op1multi} << 0)`,
+          `OP1 TL: 0x${settings.op1tl.toString(16).padStart(2, "0")} (${settings.op1tl})`,
+          `OP1 AR: 0x${settings.op1ar.toString(16).padStart(2, "0")} (${settings.op1ar})`,
+          `OP1 RR: 0x${settings.op1rr.toString(16).padStart(2, "0")} (${settings.op1rr})`,
+          `OP2 DT/MULTI: active second slot at 0x38 -> (0 << 4) | (${settings.op2multi} << 0)`,
+          `OP2 TL: active second slot at 0x48 -> 0x${settings.op2tl.toString(16).padStart(2, "0")} (${settings.op2tl})`,
+          `OP2 AR: 0x${settings.op2ar.toString(16).padStart(2, "0")} (${settings.op2ar})`,
+          `OP2 RR: 0x${settings.op2rr.toString(16).padStart(2, "0")} (${settings.op2rr})`,
+          `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
+          `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
+          "",
+          "Active pair here is 0x30 and 0x38.",
+          "Serial mode uses algorithm 4 and keeps the active pair for the main path.",
+          "Parallel mode uses algorithm 7 and leaves the active pair audible as separate carriers.",
+          "Feedback always applies to operator 1.",
+        ].join("\n");
+
+        drawEnvelope(settings);
+      }
+
+      function writeOperatorEnvelope(chip, base50, base80, ar, rr) {
+        chip.writeRegister(base50, ar);
+        chip.writeRegister(base50 + 0x10, 0x00);
+        chip.writeRegister(base50 + 0x20, 0x00);
+        chip.writeRegister(base80, (0 << 4) | rr);
+      }
+
+      function configureTwoOperators(chip, settings) {
+        chip.reset();
+
+        chip.writeRegister(0x30, (0 << 4) | settings.op1multi);
+        chip.writeRegister(0x34, (0 << 4) | 1);
+        chip.writeRegister(0x38, (0 << 4) | settings.op2multi);
+        chip.writeRegister(0x3c, (0 << 4) | 1);
+
+        if (settings.mode === "serial") {
+          chip.writeRegister(0x40, settings.op1tl);
+          chip.writeRegister(0x44, 0x7f);
+          chip.writeRegister(0x48, settings.op2tl);
+          chip.writeRegister(0x4c, 0x7f);
+          chip.writeRegister(0xb0, (settings.feedback << 3) | 4);
+        } else {
+          chip.writeRegister(0x40, settings.op1tl);
+          chip.writeRegister(0x44, 0x7f);
+          chip.writeRegister(0x48, settings.op2tl);
+          chip.writeRegister(0x4c, 0x7f);
+          chip.writeRegister(0xb0, (settings.feedback << 3) | 7);
+        }
+
+        writeOperatorEnvelope(chip, 0x50, 0x80, settings.op1ar, settings.op1rr);
+        writeOperatorEnvelope(chip, 0x54, 0x84, 31, 15);
+        writeOperatorEnvelope(chip, 0x58, 0x88, settings.op2ar, settings.op2rr);
+        writeOperatorEnvelope(chip, 0x5c, 0x8c, 31, 15);
+
+        chip.writeRegister(0xb4, 0xc0);
+
+        const high = ((settings.block & 0x07) << 3) | ((settings.fnum >> 8) & 0x07);
+        const low = settings.fnum & 0xff;
+        chip.writeRegister(0xa4, high);
+        chip.writeRegister(0xa0, low);
+
+        chip.writeRegister(0x28, 0x00);
+        chip.writeRegister(0x28, 0x30);
+      }
+
+      async function ensureReady() {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
+        if (!analyser) {
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0.75;
+          analyserTimeData = new Uint8Array(analyser.fftSize);
+          analyserFreqData = new Uint8Array(analyser.frequencyBinCount);
+          analyser.connect(audioContext.destination);
+        }
+        if (!ym2612) {
+          setStatus("Loading YM2612 WASM...");
+          ym2612 = await createYm2612(ym2612ModuleFactory);
+        }
+        return ym2612;
+      }
+
+      async function playTone() {
+        playButton.disabled = true;
+        try {
+          const chip = await ensureReady();
+          const settings = readSettings();
+          configureTwoOperators(chip, settings);
+
+          const sampleRate = chip.sampleRate(YM2612_CLOCK);
+          const frames = Math.floor(sampleRate * 1.5);
+          setStatus(`Generating ${frames} stereo frames at ${sampleRate} Hz...`);
+
+          const { left, right } = chip.generateStereo(frames);
+          lastOutputEnvelope = buildOutputEnvelope(left, right);
+
+          const audioBuffer = audioContext.createBuffer(2, frames, sampleRate);
+          audioBuffer.copyToChannel(left, 0);
+          audioBuffer.copyToChannel(right, 1);
+
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(analyser);
+          currentSource = source;
+          stopVisualLoop();
+          updateVisuals();
+          source.start();
+
+          setStatus(`Playing 2 operator tone (${settings.mode})...`);
+          source.addEventListener("ended", () => {
+            currentSource = null;
+            stopVisualLoop();
+            drawIdleAudioVisuals();
+            drawEnvelope(readSettings());
+            setStatus("Ready.");
+          }, { once: true });
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        } finally {
+          playButton.disabled = false;
+        }
+      }
+
+      controls.mode.addEventListener("change", updateLabelsAndSummary);
+      Object.values(controls).forEach((input) => {
+        if (input !== controls.mode) {
+          input.addEventListener("input", updateLabelsAndSummary);
+        }
+      });
+      playButton.addEventListener("click", playTone);
+
+      updateLabelsAndSummary();
+      drawIdleAudioVisuals();
+    </script>
+  </body>
+</html>
