@@ -73,7 +73,7 @@
 
       .editor-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.95fr);
+        grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.45fr);
         gap: 16px;
         align-items: start;
         margin: 18px 0;
@@ -85,6 +85,30 @@
         gap: 10px;
       }
 
+      .controls.compact {
+        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        gap: 8px;
+      }
+
+      .controls-stack {
+        display: grid;
+        gap: 12px;
+        order: 2;
+      }
+
+      .control-section {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .control-section h2 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        letter-spacing: -0.02em;
+      }
+
       .control {
         padding: 10px 12px;
         border-radius: 14px;
@@ -92,11 +116,21 @@
         background: rgba(255, 255, 255, 0.45);
       }
 
+      .controls.compact .control {
+        padding: 8px 10px;
+        border-radius: 12px;
+      }
+
       .control label {
         display: block;
         font-weight: 700;
         margin-bottom: 4px;
         font-size: 0.92rem;
+      }
+
+      .controls.compact .control label {
+        margin-bottom: 2px;
+        font-size: 0.84rem;
       }
 
       .control small {
@@ -107,6 +141,12 @@
         color: rgba(31, 27, 22, 0.82);
       }
 
+      .controls.compact .control small {
+        margin-top: 2px;
+        line-height: 1.2;
+        font-size: 0.72rem;
+      }
+
       input[type="range"],
       select {
         width: 100%;
@@ -114,7 +154,7 @@
 
       .value {
         display: inline-block;
-        min-width: 4ch;
+        min-width: 3ch;
         font-weight: 700;
       }
 
@@ -168,6 +208,12 @@
         height: 220px;
       }
 
+      .hero-visual {
+        order: 1;
+        position: sticky;
+        top: 14px;
+      }
+
       .visuals {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -201,6 +247,19 @@
         .editor-layout {
           grid-template-columns: 1fr;
         }
+
+        .controls.compact {
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        }
+
+        .controls-stack,
+        .hero-visual {
+          order: initial;
+        }
+
+        .hero-visual {
+          position: static;
+        }
       }
     </style>
   </head>
@@ -228,82 +287,145 @@
         </p>
 
         <div class="editor-layout">
-          <div class="controls">
-            <div class="control">
-              <label for="preset">Preset</label>
-              <select id="preset">
-                <option value="custom">Custom</option>
-                <option value="plain-dual">Plain Dual</option>
-                <option value="mild-fm">Mild FM</option>
-                <option value="bright-fm">Bright FM</option>
-                <option value="feedback-growl">Feedback Growl</option>
-                <option value="soft-bell">Soft Bell</option>
-              </select>
-              <small>Load a starting point, then tweak OP1 and OP2 by hand.</small>
-            </div>
-            <div class="control">
-              <label for="mode">Mode</label>
-              <select id="mode">
-                <option value="parallel">Parallel</option>
-                <option value="serial">Serial</option>
-              </select>
-              <small>Parallel mixes the active pair. Serial uses the same pair in a modulation path.</small>
-            </div>
-            <div class="control">
-              <label for="feedback">FB <span class="value" id="feedbackValue">0</span></label>
-              <input id="feedback" type="range" min="0" max="7" value="0">
-              <small>Self-feedback amount for operator 1.</small>
-            </div>
-            <div class="control">
-              <label for="op1multi">OP1 MULTI <span class="value" id="op1multiValue">2</span></label>
-              <input id="op1multi" type="range" min="0" max="15" value="2">
-              <small>Operator 1 frequency multiplier.</small>
-            </div>
-            <div class="control">
-              <label for="op1tl">OP1 TL <span class="value" id="op1tlValue">18</span></label>
-              <input id="op1tl" type="range" min="0" max="127" value="18">
-              <small>In serial mode this acts like modulation depth.</small>
-            </div>
-            <div class="control">
-              <label for="op2multi">OP2 MULTI <span class="value" id="op2multiValue">1</span></label>
-              <input id="op2multi" type="range" min="0" max="15" value="1">
-              <small>Second active slot frequency multiplier.</small>
-            </div>
-            <div class="control">
-              <label for="op2tl">OP2 TL <span class="value" id="op2tlValue">4</span></label>
-              <input id="op2tl" type="range" min="0" max="127" value="4">
-              <small>Second active slot loudness. Lower is louder.</small>
-            </div>
-            <div class="control">
-              <label for="op1ar">OP1 AR <span class="value" id="op1arValue">18</span></label>
-              <input id="op1ar" type="range" min="0" max="31" value="18">
-              <small>Operator 1 attack rate.</small>
-            </div>
-            <div class="control">
-              <label for="op1rr">OP1 RR <span class="value" id="op1rrValue">8</span></label>
-              <input id="op1rr" type="range" min="0" max="15" value="8">
-              <small>Operator 1 release rate.</small>
-            </div>
-            <div class="control">
-              <label for="op2ar">OP2 AR <span class="value" id="op2arValue">18</span></label>
-              <input id="op2ar" type="range" min="0" max="31" value="18">
-              <small>Operator 2 attack rate.</small>
-            </div>
-            <div class="control">
-              <label for="op2rr">OP2 RR <span class="value" id="op2rrValue">8</span></label>
-              <input id="op2rr" type="range" min="0" max="15" value="8">
-              <small>Operator 2 release rate.</small>
-            </div>
-            <div class="control">
-              <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
-              <input id="fnum" type="range" min="256" max="1023" value="553">
-              <small>Channel frequency number.</small>
-            </div>
-            <div class="control">
-              <label for="block">Block <span class="value" id="blockValue">4</span></label>
-              <input id="block" type="range" min="0" max="7" value="4">
-              <small>Octave-like block value.</small>
-            </div>
+          <div class="controls-stack">
+            <section class="control-section">
+              <h2>Common</h2>
+              <div class="controls">
+                <div class="control">
+                  <label for="preset">Preset</label>
+                  <select id="preset">
+                    <option value="custom">Custom</option>
+                    <option value="plain-dual">Plain Dual</option>
+                    <option value="mild-fm">Mild FM</option>
+                    <option value="bright-fm">Bright FM</option>
+                    <option value="feedback-growl">Feedback Growl</option>
+                    <option value="soft-bell">Soft Bell</option>
+                    <option value="metal-hit">Metal Hit</option>
+                    <option value="wood-hit">Wood Hit</option>
+                    <option value="organ-ish">Organ-ish</option>
+                    <option value="hard-brass">Hard Brass</option>
+                    <option value="noisy-lead">Noisy Lead</option>
+                    <option value="pseudo-percussion">Pseudo Percussion</option>
+                  </select>
+                  <small>Load a starting point, then tweak OP1 and OP2 by hand.</small>
+                </div>
+                <div class="control">
+                  <label for="mode">Mode</label>
+                  <select id="mode">
+                    <option value="parallel">Parallel</option>
+                    <option value="serial">Serial</option>
+                  </select>
+                  <small>Parallel mixes the active pair. Serial uses the same pair in a modulation path.</small>
+                </div>
+                <div class="control">
+                  <label for="feedback">FB <span class="value" id="feedbackValue">0</span></label>
+                  <input id="feedback" type="range" min="0" max="7" value="0">
+                  <small>Self-feedback amount for operator 1.</small>
+                </div>
+                <div class="control">
+                  <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+                  <input id="fnum" type="range" min="256" max="1023" value="553">
+                  <small>Channel frequency number.</small>
+                </div>
+                <div class="control">
+                  <label for="block">Block <span class="value" id="blockValue">4</span></label>
+                  <input id="block" type="range" min="0" max="7" value="4">
+                  <small>Octave-like block value.</small>
+                </div>
+              </div>
+            </section>
+
+            <section class="control-section">
+              <h2>OP1</h2>
+              <div class="controls compact">
+                <div class="control">
+                  <label for="op1dt">DT <span class="value" id="op1dtValue">0</span></label>
+                  <input id="op1dt" type="range" min="0" max="7" value="0">
+                  <small>Detune.</small>
+                </div>
+                <div class="control">
+                  <label for="op1multi">MULTI <span class="value" id="op1multiValue">2</span></label>
+                  <input id="op1multi" type="range" min="0" max="15" value="2">
+                  <small>Frequency multiplier.</small>
+                </div>
+                <div class="control">
+                  <label for="op1tl">TL <span class="value" id="op1tlValue">18</span></label>
+                  <input id="op1tl" type="range" min="0" max="127" value="18">
+                  <small>Loudness or FM depth.</small>
+                </div>
+                <div class="control">
+                  <label for="op1ar">AR <span class="value" id="op1arValue">18</span></label>
+                  <input id="op1ar" type="range" min="0" max="31" value="18">
+                  <small>Attack rate.</small>
+                </div>
+                <div class="control">
+                  <label for="op1d1r">D1R <span class="value" id="op1d1rValue">8</span></label>
+                  <input id="op1d1r" type="range" min="0" max="31" value="8">
+                  <small>First decay.</small>
+                </div>
+                <div class="control">
+                  <label for="op1d2r">D2R <span class="value" id="op1d2rValue">4</span></label>
+                  <input id="op1d2r" type="range" min="0" max="31" value="4">
+                  <small>Sustain decay.</small>
+                </div>
+                <div class="control">
+                  <label for="op1sl">SL <span class="value" id="op1slValue">4</span></label>
+                  <input id="op1sl" type="range" min="0" max="15" value="4">
+                  <small>Sustain level.</small>
+                </div>
+                <div class="control">
+                  <label for="op1rr">RR <span class="value" id="op1rrValue">8</span></label>
+                  <input id="op1rr" type="range" min="0" max="15" value="8">
+                  <small>Release rate.</small>
+                </div>
+              </div>
+            </section>
+
+            <section class="control-section">
+              <h2>OP2</h2>
+              <div class="controls compact">
+                <div class="control">
+                  <label for="op2dt">DT <span class="value" id="op2dtValue">0</span></label>
+                  <input id="op2dt" type="range" min="0" max="7" value="0">
+                  <small>Detune.</small>
+                </div>
+                <div class="control">
+                  <label for="op2multi">MULTI <span class="value" id="op2multiValue">1</span></label>
+                  <input id="op2multi" type="range" min="0" max="15" value="1">
+                  <small>Frequency multiplier.</small>
+                </div>
+                <div class="control">
+                  <label for="op2tl">TL <span class="value" id="op2tlValue">4</span></label>
+                  <input id="op2tl" type="range" min="0" max="127" value="4">
+                  <small>Loudness.</small>
+                </div>
+                <div class="control">
+                  <label for="op2ar">AR <span class="value" id="op2arValue">18</span></label>
+                  <input id="op2ar" type="range" min="0" max="31" value="18">
+                  <small>Attack rate.</small>
+                </div>
+                <div class="control">
+                  <label for="op2d1r">D1R <span class="value" id="op2d1rValue">8</span></label>
+                  <input id="op2d1r" type="range" min="0" max="31" value="8">
+                  <small>First decay.</small>
+                </div>
+                <div class="control">
+                  <label for="op2d2r">D2R <span class="value" id="op2d2rValue">4</span></label>
+                  <input id="op2d2r" type="range" min="0" max="31" value="4">
+                  <small>Sustain decay.</small>
+                </div>
+                <div class="control">
+                  <label for="op2sl">SL <span class="value" id="op2slValue">4</span></label>
+                  <input id="op2sl" type="range" min="0" max="15" value="4">
+                  <small>Sustain level.</small>
+                </div>
+                <div class="control">
+                  <label for="op2rr">RR <span class="value" id="op2rrValue">8</span></label>
+                  <input id="op2rr" type="range" min="0" max="15" value="8">
+                  <small>Release rate.</small>
+                </div>
+              </div>
+            </section>
           </div>
           <section class="visual hero-visual">
             <h2>Envelope / Output</h2>
@@ -342,13 +464,21 @@
         preset: document.getElementById("preset"),
         mode: document.getElementById("mode"),
         feedback: document.getElementById("feedback"),
+        op1dt: document.getElementById("op1dt"),
         op1multi: document.getElementById("op1multi"),
         op1tl: document.getElementById("op1tl"),
+        op2dt: document.getElementById("op2dt"),
         op2multi: document.getElementById("op2multi"),
         op2tl: document.getElementById("op2tl"),
         op1ar: document.getElementById("op1ar"),
+        op1d1r: document.getElementById("op1d1r"),
+        op1d2r: document.getElementById("op1d2r"),
+        op1sl: document.getElementById("op1sl"),
         op1rr: document.getElementById("op1rr"),
         op2ar: document.getElementById("op2ar"),
+        op2d1r: document.getElementById("op2d1r"),
+        op2d2r: document.getElementById("op2d2r"),
+        op2sl: document.getElementById("op2sl"),
         op2rr: document.getElementById("op2rr"),
         fnum: document.getElementById("fnum"),
         block: document.getElementById("block"),
@@ -356,13 +486,21 @@
 
       const values = {
         feedback: document.getElementById("feedbackValue"),
+        op1dt: document.getElementById("op1dtValue"),
         op1multi: document.getElementById("op1multiValue"),
         op1tl: document.getElementById("op1tlValue"),
+        op2dt: document.getElementById("op2dtValue"),
         op2multi: document.getElementById("op2multiValue"),
         op2tl: document.getElementById("op2tlValue"),
         op1ar: document.getElementById("op1arValue"),
+        op1d1r: document.getElementById("op1d1rValue"),
+        op1d2r: document.getElementById("op1d2rValue"),
+        op1sl: document.getElementById("op1slValue"),
         op1rr: document.getElementById("op1rrValue"),
         op2ar: document.getElementById("op2arValue"),
+        op2d1r: document.getElementById("op2d1rValue"),
+        op2d2r: document.getElementById("op2d2rValue"),
+        op2sl: document.getElementById("op2slValue"),
         op2rr: document.getElementById("op2rrValue"),
         fnum: document.getElementById("fnumValue"),
         block: document.getElementById("blockValue"),
@@ -391,13 +529,21 @@
         "plain-dual": {
           mode: "parallel",
           feedback: 0,
+          op1dt: 0,
           op1multi: 1,
           op1tl: 8,
+          op2dt: 0,
           op2multi: 1,
           op2tl: 12,
           op1ar: 22,
+          op1d1r: 6,
+          op1d2r: 3,
+          op1sl: 3,
           op1rr: 8,
           op2ar: 22,
+          op2d1r: 6,
+          op2d2r: 3,
+          op2sl: 3,
           op2rr: 8,
           fnum: 553,
           block: 4,
@@ -405,13 +551,21 @@
         "mild-fm": {
           mode: "serial",
           feedback: 0,
+          op1dt: 0,
           op1multi: 2,
           op1tl: 22,
+          op2dt: 0,
           op2multi: 1,
           op2tl: 4,
           op1ar: 20,
+          op1d1r: 7,
+          op1d2r: 5,
+          op1sl: 5,
           op1rr: 8,
           op2ar: 20,
+          op2d1r: 8,
+          op2d2r: 4,
+          op2sl: 4,
           op2rr: 8,
           fnum: 553,
           block: 4,
@@ -419,13 +573,21 @@
         "bright-fm": {
           mode: "serial",
           feedback: 1,
+          op1dt: 1,
           op1multi: 4,
           op1tl: 10,
+          op2dt: 0,
           op2multi: 1,
           op2tl: 2,
           op1ar: 24,
+          op1d1r: 14,
+          op1d2r: 8,
+          op1sl: 6,
           op1rr: 10,
           op2ar: 24,
+          op2d1r: 10,
+          op2d2r: 5,
+          op2sl: 4,
           op2rr: 8,
           fnum: 610,
           block: 4,
@@ -433,13 +595,21 @@
         "feedback-growl": {
           mode: "serial",
           feedback: 5,
+          op1dt: 1,
           op1multi: 3,
           op1tl: 6,
+          op2dt: 0,
           op2multi: 1,
           op2tl: 3,
           op1ar: 26,
+          op1d1r: 20,
+          op1d2r: 12,
+          op1sl: 8,
           op1rr: 9,
           op2ar: 18,
+          op2d1r: 7,
+          op2d2r: 5,
+          op2sl: 5,
           op2rr: 8,
           fnum: 483,
           block: 3,
@@ -447,16 +617,156 @@
         "soft-bell": {
           mode: "serial",
           feedback: 0,
+          op1dt: 0,
           op1multi: 3,
           op1tl: 18,
+          op2dt: 0,
           op2multi: 1,
           op2tl: 6,
           op1ar: 10,
+          op1d1r: 18,
+          op1d2r: 10,
+          op1sl: 10,
           op1rr: 5,
           op2ar: 12,
+          op2d1r: 16,
+          op2d2r: 9,
+          op2sl: 9,
           op2rr: 4,
           fnum: 553,
           block: 4,
+        },
+        "metal-hit": {
+          mode: "serial",
+          feedback: 2,
+          op1dt: 2,
+          op1multi: 7,
+          op1tl: 6,
+          op2dt: 0,
+          op2multi: 1,
+          op2tl: 3,
+          op1ar: 31,
+          op1d1r: 24,
+          op1d2r: 18,
+          op1sl: 11,
+          op1rr: 10,
+          op2ar: 29,
+          op2d1r: 18,
+          op2d2r: 12,
+          op2sl: 8,
+          op2rr: 8,
+          fnum: 620,
+          block: 4,
+        },
+        "wood-hit": {
+          mode: "serial",
+          feedback: 0,
+          op1dt: 0,
+          op1multi: 5,
+          op1tl: 12,
+          op2dt: 0,
+          op2multi: 1,
+          op2tl: 5,
+          op1ar: 31,
+          op1d1r: 28,
+          op1d2r: 20,
+          op1sl: 12,
+          op1rr: 7,
+          op2ar: 26,
+          op2d1r: 22,
+          op2d2r: 10,
+          op2sl: 8,
+          op2rr: 6,
+          fnum: 470,
+          block: 3,
+        },
+        "organ-ish": {
+          mode: "parallel",
+          feedback: 0,
+          op1dt: 0,
+          op1multi: 1,
+          op1tl: 8,
+          op2dt: 0,
+          op2multi: 2,
+          op2tl: 14,
+          op1ar: 30,
+          op1d1r: 2,
+          op1d2r: 0,
+          op1sl: 1,
+          op1rr: 4,
+          op2ar: 30,
+          op2d1r: 2,
+          op2d2r: 0,
+          op2sl: 1,
+          op2rr: 4,
+          fnum: 553,
+          block: 4,
+        },
+        "hard-brass": {
+          mode: "serial",
+          feedback: 1,
+          op1dt: 1,
+          op1multi: 2,
+          op1tl: 9,
+          op2dt: 0,
+          op2multi: 1,
+          op2tl: 2,
+          op1ar: 26,
+          op1d1r: 10,
+          op1d2r: 6,
+          op1sl: 6,
+          op1rr: 8,
+          op2ar: 24,
+          op2d1r: 12,
+          op2d2r: 4,
+          op2sl: 4,
+          op2rr: 7,
+          fnum: 520,
+          block: 4,
+        },
+        "noisy-lead": {
+          mode: "serial",
+          feedback: 6,
+          op1dt: 1,
+          op1multi: 2,
+          op1tl: 3,
+          op2dt: 0,
+          op2multi: 1,
+          op2tl: 1,
+          op1ar: 31,
+          op1d1r: 18,
+          op1d2r: 14,
+          op1sl: 7,
+          op1rr: 9,
+          op2ar: 27,
+          op2d1r: 9,
+          op2d2r: 5,
+          op2sl: 4,
+          op2rr: 7,
+          fnum: 580,
+          block: 4,
+        },
+        "pseudo-percussion": {
+          mode: "serial",
+          feedback: 3,
+          op1dt: 2,
+          op1multi: 8,
+          op1tl: 2,
+          op2dt: 0,
+          op2multi: 1,
+          op2tl: 6,
+          op1ar: 31,
+          op1d1r: 31,
+          op1d2r: 24,
+          op1sl: 13,
+          op1rr: 10,
+          op2ar: 31,
+          op2d1r: 26,
+          op2d2r: 12,
+          op2sl: 10,
+          op2rr: 8,
+          fnum: 430,
+          block: 3,
         },
       };
 
@@ -595,24 +905,31 @@
 
       function drawOperatorGuide(layout, settings, style) {
         const attackPortion = 0.06 + ((31 - settings.ar) / 31) * 0.22;
-        const holdPortion = 0.24;
-        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.24;
-        const tailPortion = Math.max(0.10, 1 - (attackPortion + holdPortion + releasePortion));
+        const decayPortion = 0.08 + ((31 - settings.d1r) / 31) * 0.16;
+        const sustainPortion = 0.16 + ((31 - settings.d2r) / 31) * 0.18;
+        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.20;
+        const tailPortion = Math.max(0.08, 1 - (attackPortion + decayPortion + sustainPortion + releasePortion));
 
         const x0 = layout.left;
         const x1 = layout.left + layout.innerWidth * attackPortion;
-        const x2 = x1 + layout.innerWidth * holdPortion;
-        const x3 = x2 + layout.innerWidth * tailPortion;
-        const x4 = layout.right;
+        const x2 = x1 + layout.innerWidth * decayPortion;
+        const x3 = x2 + layout.innerWidth * sustainPortion;
+        const x4 = x3 + layout.innerWidth * tailPortion;
+        const x5 = layout.right;
 
-        const intensity = 1 - (settings.tl / 127) * 0.75;
+        const intensity = 1 - (settings.tl / 127) * 0.75 - (settings.dt / 7) * 0.04;
         const peakLevel = 0.08 + (1 - intensity) * 0.12 + style.verticalBias;
-        const sustainLevel = Math.min(
+        const decayLevel = Math.min(
           0.90,
-          peakLevel + 0.18 + (settings.rr / 15) * 0.16 + style.verticalBias
+          peakLevel + 0.12 + (settings.d1r / 31) * 0.18 + style.verticalBias
         );
-        const tailLevel = Math.min(0.94, sustainLevel + 0.04);
+        const sustainLevel = Math.max(
+          decayLevel,
+          0.10 + (settings.sl / 15) * 0.70 + (settings.d2r / 31) * 0.04 + style.verticalBias
+        );
+        const tailLevel = Math.min(0.94, sustainLevel + 0.04 + (settings.rr / 15) * 0.04);
         const peakY = layout.top + layout.innerHeight * peakLevel;
+        const decayY = layout.top + layout.innerHeight * decayLevel;
         const sustainY = layout.top + layout.innerHeight * sustainLevel;
         const tailY = layout.top + layout.innerHeight * tailLevel;
 
@@ -621,9 +938,10 @@
         envelopeContext.beginPath();
         envelopeContext.moveTo(x0, layout.bottom);
         envelopeContext.lineTo(x1, peakY);
-        envelopeContext.lineTo(x2, sustainY);
-        envelopeContext.lineTo(x3, tailY);
-        envelopeContext.lineTo(x4, layout.bottom);
+        envelopeContext.lineTo(x2, decayY);
+        envelopeContext.lineTo(x3, sustainY);
+        envelopeContext.lineTo(x4, tailY);
+        envelopeContext.lineTo(x5, layout.bottom);
         envelopeContext.stroke();
       }
 
@@ -659,7 +977,11 @@
         }
 
         drawOperatorGuide(layout, {
+          dt: settings.op1dt,
           ar: settings.op1ar,
+          d1r: settings.op1d1r,
+          d2r: settings.op1d2r,
+          sl: settings.op1sl,
           rr: settings.op1rr,
           tl: settings.op1tl,
         }, {
@@ -669,7 +991,11 @@
         });
 
         drawOperatorGuide(layout, {
+          dt: settings.op2dt,
           ar: settings.op2ar,
+          d1r: settings.op2d1r,
+          d2r: settings.op2d2r,
+          sl: settings.op2sl,
           rr: settings.op2rr,
           tl: settings.op2tl,
         }, {
@@ -706,13 +1032,21 @@
           preset: controls.preset.value,
           mode: controls.mode.value,
           feedback: Number(controls.feedback.value),
+          op1dt: Number(controls.op1dt.value),
           op1multi: Number(controls.op1multi.value),
           op1tl: Number(controls.op1tl.value),
+          op2dt: Number(controls.op2dt.value),
           op2multi: Number(controls.op2multi.value),
           op2tl: Number(controls.op2tl.value),
           op1ar: Number(controls.op1ar.value),
+          op1d1r: Number(controls.op1d1r.value),
+          op1d2r: Number(controls.op1d2r.value),
+          op1sl: Number(controls.op1sl.value),
           op1rr: Number(controls.op1rr.value),
           op2ar: Number(controls.op2ar.value),
+          op2d1r: Number(controls.op2d1r.value),
+          op2d2r: Number(controls.op2d2r.value),
+          op2sl: Number(controls.op2sl.value),
           op2rr: Number(controls.op2rr.value),
           fnum: Number(controls.fnum.value),
           block: Number(controls.block.value),
@@ -728,13 +1062,21 @@
         controls.preset.value = name;
         controls.mode.value = preset.mode;
         controls.feedback.value = String(preset.feedback);
+        controls.op1dt.value = String(preset.op1dt);
         controls.op1multi.value = String(preset.op1multi);
         controls.op1tl.value = String(preset.op1tl);
+        controls.op2dt.value = String(preset.op2dt);
         controls.op2multi.value = String(preset.op2multi);
         controls.op2tl.value = String(preset.op2tl);
         controls.op1ar.value = String(preset.op1ar);
+        controls.op1d1r.value = String(preset.op1d1r);
+        controls.op1d2r.value = String(preset.op1d2r);
+        controls.op1sl.value = String(preset.op1sl);
         controls.op1rr.value = String(preset.op1rr);
         controls.op2ar.value = String(preset.op2ar);
+        controls.op2d1r.value = String(preset.op2d1r);
+        controls.op2d2r.value = String(preset.op2d2r);
+        controls.op2sl.value = String(preset.op2sl);
         controls.op2rr.value = String(preset.op2rr);
         controls.fnum.value = String(preset.fnum);
         controls.block.value = String(preset.block);
@@ -755,14 +1097,14 @@
           `Preset: ${settings.preset}`,
           `Mode: ${settings.mode}`,
           `Algorithm/Feedback: (${settings.feedback} << 3) | ${algorithm}`,
-          `OP1 DT/MULTI: (0 << 4) | (${settings.op1multi} << 0)`,
+          `OP1 DT/MULTI: (${settings.op1dt} << 4) | (${settings.op1multi} << 0)`,
           `OP1 TL: 0x${settings.op1tl.toString(16).padStart(2, "0")} (${settings.op1tl})`,
           `OP1 AR: 0x${settings.op1ar.toString(16).padStart(2, "0")} (${settings.op1ar})`,
-          `OP1 RR: 0x${settings.op1rr.toString(16).padStart(2, "0")} (${settings.op1rr})`,
-          `OP2 DT/MULTI: active second slot at 0x38 -> (0 << 4) | (${settings.op2multi} << 0)`,
+          `OP1 D1R/D2R/SL/RR: ${settings.op1d1r}, ${settings.op1d2r}, ${settings.op1sl}, ${settings.op1rr}`,
+          `OP2 DT/MULTI: active second slot at 0x38 -> (${settings.op2dt} << 4) | (${settings.op2multi} << 0)`,
           `OP2 TL: active second slot at 0x48 -> 0x${settings.op2tl.toString(16).padStart(2, "0")} (${settings.op2tl})`,
           `OP2 AR: 0x${settings.op2ar.toString(16).padStart(2, "0")} (${settings.op2ar})`,
-          `OP2 RR: 0x${settings.op2rr.toString(16).padStart(2, "0")} (${settings.op2rr})`,
+          `OP2 D1R/D2R/SL/RR: ${settings.op2d1r}, ${settings.op2d2r}, ${settings.op2sl}, ${settings.op2rr}`,
           `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
           `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
           "",
@@ -775,19 +1117,20 @@
         drawEnvelope(settings);
       }
 
-      function writeOperatorEnvelope(chip, base50, base80, ar, rr) {
+      function writeOperatorEnvelope(chip, base30, base50, base60, base70, base80, dt, multi, ar, d1r, d2r, sl, rr) {
+        chip.writeRegister(base30, (dt << 4) | multi);
         chip.writeRegister(base50, ar);
-        chip.writeRegister(base50 + 0x10, 0x00);
-        chip.writeRegister(base50 + 0x20, 0x00);
-        chip.writeRegister(base80, (0 << 4) | rr);
+        chip.writeRegister(base60, d1r);
+        chip.writeRegister(base70, d2r);
+        chip.writeRegister(base80, (sl << 4) | rr);
       }
 
       function configureTwoOperators(chip, settings) {
         chip.reset();
 
-        chip.writeRegister(0x30, (0 << 4) | settings.op1multi);
+        chip.writeRegister(0x30, (settings.op1dt << 4) | settings.op1multi);
         chip.writeRegister(0x34, (0 << 4) | 1);
-        chip.writeRegister(0x38, (0 << 4) | settings.op2multi);
+        chip.writeRegister(0x38, (settings.op2dt << 4) | settings.op2multi);
         chip.writeRegister(0x3c, (0 << 4) | 1);
 
         if (settings.mode === "serial") {
@@ -804,10 +1147,10 @@
           chip.writeRegister(0xb0, (settings.feedback << 3) | 7);
         }
 
-        writeOperatorEnvelope(chip, 0x50, 0x80, settings.op1ar, settings.op1rr);
-        writeOperatorEnvelope(chip, 0x54, 0x84, 31, 15);
-        writeOperatorEnvelope(chip, 0x58, 0x88, settings.op2ar, settings.op2rr);
-        writeOperatorEnvelope(chip, 0x5c, 0x8c, 31, 15);
+        writeOperatorEnvelope(chip, 0x30, 0x50, 0x60, 0x70, 0x80, settings.op1dt, settings.op1multi, settings.op1ar, settings.op1d1r, settings.op1d2r, settings.op1sl, settings.op1rr);
+        writeOperatorEnvelope(chip, 0x34, 0x54, 0x64, 0x74, 0x84, 0, 1, 31, 0, 0, 0, 15);
+        writeOperatorEnvelope(chip, 0x38, 0x58, 0x68, 0x78, 0x88, settings.op2dt, settings.op2multi, settings.op2ar, settings.op2d1r, settings.op2d2r, settings.op2sl, settings.op2rr);
+        writeOperatorEnvelope(chip, 0x3c, 0x5c, 0x6c, 0x7c, 0x8c, 0, 1, 31, 0, 0, 0, 15);
 
         chip.writeRegister(0xb4, 0xc0);
 
@@ -894,7 +1237,10 @@
       controls.mode.addEventListener("change", updateLabelsAndSummary);
       Object.values(controls).forEach((input) => {
         if (input !== controls.mode && input !== controls.preset) {
-          input.addEventListener("input", updateLabelsAndSummary);
+          input.addEventListener("input", () => {
+            controls.preset.value = "custom";
+            updateLabelsAndSummary();
+          });
         }
       });
       playButton.addEventListener("click", playTone);
