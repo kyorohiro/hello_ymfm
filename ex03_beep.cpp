@@ -228,10 +228,12 @@ int main()
 }
 
 /*
-em++ -std=c++14 \
+mkdir -p .emcache
+EM_CACHE="$PWD/.emcache" em++ -std=c++14 \
     -Isrc \
     ex03_beep.cpp \
     src/*.cpp \
+    -sNODERAWFS=1 \
     -o test.js
 node ./test.js
 */
