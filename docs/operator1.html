@@ -139,6 +139,34 @@
         font-weight: 600;
       }
 
+      .visuals {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin: 24px 0;
+      }
+
+      .visual {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      .visual h2 {
+        margin-top: 0;
+        font-size: 1.05rem;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 180px;
+        border-radius: 14px;
+        background: #241d16;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
       pre {
         margin: 0;
         padding: 16px 18px;
@@ -214,6 +242,21 @@
 
         <div class="status" id="status">Ready.</div>
 
+        <div class="visuals">
+          <section class="visual">
+            <h2>Waveform</h2>
+            <canvas id="waveCanvas" width="480" height="180"></canvas>
+          </section>
+          <section class="visual">
+            <h2>Spectrum</h2>
+            <canvas id="spectrumCanvas" width="480" height="180"></canvas>
+          </section>
+          <section class="visual">
+            <h2>Envelope</h2>
+            <canvas id="envelopeCanvas" width="480" height="180"></canvas>
+          </section>
+        </div>
+
         <h2>Current Register Intent</h2>
         <pre id="summaryOutput"></pre>
       </section>
@@ -244,12 +287,188 @@
       const playButton = document.getElementById("playButton");
       const status = document.getElementById("status");
       const summaryOutput = document.getElementById("summaryOutput");
+      const waveCanvas = document.getElementById("waveCanvas");
+      const spectrumCanvas = document.getElementById("spectrumCanvas");
+      const envelopeCanvas = document.getElementById("envelopeCanvas");
+      const waveContext = waveCanvas.getContext("2d");
+      const spectrumContext = spectrumCanvas.getContext("2d");
+      const envelopeContext = envelopeCanvas.getContext("2d");
 
       let audioContext = null;
       let ym2612 = null;
+      let analyser = null;
+      let analyserTimeData = null;
+      let analyserFreqData = null;
+      let visualFrame = 0;
+      let currentSource = null;
 
       function setStatus(message) {
         status.textContent = message;
+      }
+
+      function clearCanvas(context, canvas) {
+        context.fillStyle = "#241d16";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function drawIdleVisuals() {
+        clearCanvas(waveContext, waveCanvas);
+        clearCanvas(spectrumContext, spectrumCanvas);
+        clearCanvas(envelopeContext, envelopeCanvas);
+
+        waveContext.strokeStyle = "#d6b184";
+        waveContext.lineWidth = 1.5;
+        waveContext.beginPath();
+        waveContext.moveTo(0, waveCanvas.height / 2);
+        waveContext.lineTo(waveCanvas.width, waveCanvas.height / 2);
+        waveContext.stroke();
+
+        spectrumContext.fillStyle = "#d6b184";
+        spectrumContext.font = "14px sans-serif";
+        spectrumContext.fillText("Play a tone to update the visuals.", 18, 28);
+
+        envelopeContext.strokeStyle = "#8d7a63";
+        envelopeContext.lineWidth = 1;
+        envelopeContext.beginPath();
+        envelopeContext.moveTo(18, envelopeCanvas.height - 20);
+        envelopeContext.lineTo(envelopeCanvas.width - 16, envelopeCanvas.height - 20);
+        envelopeContext.stroke();
+
+        envelopeContext.fillStyle = "#d6b184";
+        envelopeContext.font = "14px sans-serif";
+        envelopeContext.fillText("Attack / hold / release guide", 18, 28);
+      }
+
+      function stopVisualLoop() {
+        if (visualFrame) {
+          cancelAnimationFrame(visualFrame);
+          visualFrame = 0;
+        }
+      }
+
+      function drawWaveform() {
+        clearCanvas(waveContext, waveCanvas);
+        if (!analyser || !analyserTimeData) {
+          return;
+        }
+
+        analyser.getByteTimeDomainData(analyserTimeData);
+
+        waveContext.strokeStyle = "#f2c078";
+        waveContext.lineWidth = 2;
+        waveContext.beginPath();
+
+        for (let index = 0; index < analyserTimeData.length; index += 1) {
+          const x = (index / (analyserTimeData.length - 1)) * waveCanvas.width;
+          const normalized = analyserTimeData[index] / 255;
+          const y = normalized * waveCanvas.height;
+          if (index === 0) {
+            waveContext.moveTo(x, y);
+          } else {
+            waveContext.lineTo(x, y);
+          }
+        }
+
+        waveContext.stroke();
+      }
+
+      function drawSpectrum() {
+        clearCanvas(spectrumContext, spectrumCanvas);
+        if (!analyser || !analyserFreqData) {
+          return;
+        }
+
+        analyser.getByteFrequencyData(analyserFreqData);
+
+        const barCount = Math.min(96, analyserFreqData.length);
+        const step = Math.max(1, Math.floor(analyserFreqData.length / barCount));
+        const barWidth = spectrumCanvas.width / barCount;
+
+        for (let index = 0; index < barCount; index += 1) {
+          const value = analyserFreqData[index * step] / 255;
+          const height = value * spectrumCanvas.height;
+          const x = index * barWidth;
+          const y = spectrumCanvas.height - height;
+          spectrumContext.fillStyle = `hsl(${24 + index * 0.9} 80% 62%)`;
+          spectrumContext.fillRect(x, y, Math.max(1, barWidth - 2), height);
+        }
+      }
+
+      function drawEnvelope(settings) {
+        clearCanvas(envelopeContext, envelopeCanvas);
+
+        const width = envelopeCanvas.width;
+        const height = envelopeCanvas.height;
+        const left = 22;
+        const right = width - 18;
+        const top = 16;
+        const bottom = height - 20;
+        const innerWidth = right - left;
+        const innerHeight = bottom - top;
+
+        envelopeContext.strokeStyle = "#514233";
+        envelopeContext.lineWidth = 1;
+        envelopeContext.beginPath();
+        envelopeContext.moveTo(left, bottom);
+        envelopeContext.lineTo(right, bottom);
+        envelopeContext.moveTo(left, top);
+        envelopeContext.lineTo(left, bottom);
+        envelopeContext.stroke();
+
+        for (let index = 1; index <= 4; index += 1) {
+          const x = left + (innerWidth * index) / 5;
+          envelopeContext.strokeStyle = "rgba(214, 177, 132, 0.18)";
+          envelopeContext.beginPath();
+          envelopeContext.moveTo(x, top);
+          envelopeContext.lineTo(x, bottom);
+          envelopeContext.stroke();
+        }
+
+        const attackPortion = 0.08 + ((31 - settings.ar) / 31) * 0.28;
+        const holdPortion = 0.20;
+        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.32;
+        const totalPortion = attackPortion + holdPortion + releasePortion;
+        const sustainPortion = Math.max(0.08, 1 - totalPortion);
+
+        const x0 = left;
+        const x1 = left + innerWidth * attackPortion;
+        const x2 = x1 + innerWidth * holdPortion;
+        const x3 = x2 + innerWidth * sustainPortion;
+        const x4 = right;
+
+        const peakY = top + innerHeight * 0.06;
+        const sustainLevel = 0.10 + (settings.tl / 127) * 0.78;
+        const sustainY = top + innerHeight * sustainLevel;
+
+        envelopeContext.strokeStyle = "#f2c078";
+        envelopeContext.lineWidth = 3;
+        envelopeContext.beginPath();
+        envelopeContext.moveTo(x0, bottom);
+        envelopeContext.lineTo(x1, peakY);
+        envelopeContext.lineTo(x2, sustainY);
+        envelopeContext.lineTo(x3, sustainY);
+        envelopeContext.lineTo(x4, bottom);
+        envelopeContext.stroke();
+
+        envelopeContext.fillStyle = "#f6ead7";
+        envelopeContext.font = "13px sans-serif";
+        envelopeContext.fillText("attack", x0 + 6, bottom - 8);
+        envelopeContext.fillText("hold", x1 + 6, top + 18);
+        envelopeContext.fillText("release", Math.max(x3 - 12, left + 6), top + 18);
+
+        envelopeContext.fillStyle = "#d6b184";
+        envelopeContext.fillText("This is a simplified guide, not an exact YM2612 envelope trace.", 18, 28);
+      }
+
+      function updateVisuals() {
+        drawWaveform();
+        drawSpectrum();
+        drawEnvelope(readSettings());
+        if (currentSource) {
+          visualFrame = requestAnimationFrame(updateVisuals);
+        } else {
+          visualFrame = 0;
+        }
       }
 
       function readSettings() {
@@ -283,7 +502,10 @@
           "",
           "Other operators are muted with TL=0x7f.",
           "Algorithm 7 is used so all operators are carriers.",
+          "Envelope view is a simplified attack/hold/release guide.",
         ].join("\n");
+
+        drawEnvelope(settings);
       }
 
       function configureSingleOperator(chip, settings) {
@@ -328,6 +550,14 @@
         if (audioContext.state !== "running") {
           await audioContext.resume();
         }
+        if (!analyser) {
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 2048;
+          analyser.smoothingTimeConstant = 0.75;
+          analyserTimeData = new Uint8Array(analyser.fftSize);
+          analyserFreqData = new Uint8Array(analyser.frequencyBinCount);
+          analyser.connect(audioContext.destination);
+        }
         if (!ym2612) {
           setStatus("Loading YM2612 WASM...");
           ym2612 = await createYm2612(ym2612ModuleFactory);
@@ -353,11 +583,17 @@
 
           const source = audioContext.createBufferSource();
           source.buffer = audioBuffer;
-          source.connect(audioContext.destination);
+          source.connect(analyser);
+          currentSource = source;
+          stopVisualLoop();
+          updateVisuals();
           source.start();
 
           setStatus("Playing 1 operator tone...");
           source.addEventListener("ended", () => {
+            currentSource = null;
+            stopVisualLoop();
+            drawIdleVisuals();
             setStatus("Ready.");
           }, { once: true });
         } catch (error) {
@@ -377,6 +613,7 @@
       });
 
       updateLabelsAndSummary();
+      drawIdleVisuals();
     </script>
   </body>
 </html>
