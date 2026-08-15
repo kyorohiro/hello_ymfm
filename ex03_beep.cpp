@@ -38,22 +38,46 @@ int main()
     std::cout << "sample rate = " << sampleRate << "\n";
 
     //
-    // Channel 1 / Operator settings
+    // YM2612 has 6 FM channels.
+    // Each channel is built from 4 operators.
+    //
     //
 
-    // DT / MULTI
-    chip.write(0, 0x30);
-    chip.write(1, 0x01);
+    // --------------------------------
+    // DT / MULTI register format:
+    // - bits 6-4 = DT
+    //   DT (detune) is a small pitch offset for the operator
+    // - bits 3-0 = MULTI
+    //   MULTI (multiple) is the operator frequency multiplier
+    //
 
-    chip.write(0, 0x34);
-    chip.write(1, 0x01);
+    // port 0, channel 1, operator 1
+    chip.write(0, 0x30); // 0x30 + operator offset (0 for operator 1)
+    chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
-    chip.write(0, 0x38);
-    chip.write(1, 0x01);
+    // port 0, channel 1, operator 2
+    chip.write(0, 0x34); // 0x30 + operator offset (4 for operator 2)
+    chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
-    chip.write(0, 0x3c);
-    chip.write(1, 0x01);
+    // port 0, channel 1, operator 3
+    chip.write(0, 0x38); // 0x30 + operator offset (8 for operator 3)
+    chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
+    // port 0, channel 1, operator 4
+    chip.write(0, 0x3c); // 0x30 + operator offset (12 for operator 4)
+    chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
+
+    // [ps]
+    // port 0, channel 2, operator 1
+    // chip.write(0, 0x31); // 0x31 + operator offset (0 for operator 1)
+    // chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
+    //
+    // port 1, channel 4, operator 1
+    // chip.write(2, 0x30); // port 1, 0x30 + operator offset (0 for operator 1)
+    // chip.write(3, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
+    // --------------------------------
+
+    //
     // Total Level
     // carrierだけ大きくする
     chip.write(0, 0x40);
