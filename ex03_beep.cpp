@@ -114,62 +114,105 @@ int main()
     // chip.write(3, 0x7f); // TL = 0x7f
     // --------------------------------
 
-    // Attack rate
-    chip.write(0, 0x50);
-    chip.write(1, 0x1f);
-
-    chip.write(0, 0x54);
-    chip.write(1, 0x1f);
-
-    chip.write(0, 0x58);
-    chip.write(1, 0x1f);
-
-    chip.write(0, 0x5c);
-    chip.write(1, 0x1f);
-
-    // Sustain
-    chip.write(0, 0x80);
-    chip.write(1, 0x0f);
-
-    chip.write(0, 0x84);
-    chip.write(1, 0x0f);
-
-    chip.write(0, 0x88);
-    chip.write(1, 0x0f);
-
-    chip.write(0, 0x8c);
-    chip.write(1, 0x0f);
-
+    // --------------------------------
+    // Attack Rate register format:
+    // - bits 4-0 = AR
+    //   AR (attack rate) controls how quickly the operator reaches full level
+    //   larger values rise faster
     //
-    // Algorithm 7
-    // 全Operatorがcarrier
-    //
-    chip.write(0, 0xb0);
-    chip.write(1, 0x07);
+    // 0x1f = fast attack for all 4 operators in channel 1
 
-    // L + R enable
-    chip.write(0, 0xb4);
-    chip.write(1, 0xc0);
+    // port 0, channel 1, operator 1
+    chip.write(0, 0x50); // 0x50 + operator offset (0 for operator 1)
+    chip.write(1, 0x1f); // AR = 0x1f
 
+    // port 0, channel 1, operator 2
+    chip.write(0, 0x54); // 0x50 + operator offset (4 for operator 2)
+    chip.write(1, 0x1f); // AR = 0x1f
+
+    // port 0, channel 1, operator 3
+    chip.write(0, 0x58); // 0x50 + operator offset (8 for operator 3)
+    chip.write(1, 0x1f); // AR = 0x1f
+
+    // port 0, channel 1, operator 4
+    chip.write(0, 0x5c); // 0x50 + operator offset (12 for operator 4)
+    chip.write(1, 0x1f); // AR = 0x1f
+    // --------------------------------
+
+    // --------------------------------
+    // Sustain Level / Release Rate register format:
+    // - bits 7-4 = SL
+    //   SL (sustain level) is the held level after decay
+    // - bits 3-0 = RR
+    //   RR (release rate) controls how fast the sound fades after key off
     //
-    // Frequency
+    // 0x0f = SL = 0, RR = 0x0f
+
+    // port 0, channel 1, operator 1
+    chip.write(0, 0x80); // 0x80 + operator offset (0 for operator 1)
+    chip.write(1, 0x0f); // SL = 0, RR = 0x0f
+
+    // port 0, channel 1, operator 2
+    chip.write(0, 0x84); // 0x80 + operator offset (4 for operator 2)
+    chip.write(1, 0x0f); // SL = 0, RR = 0x0f
+
+    // port 0, channel 1, operator 3
+    chip.write(0, 0x88); // 0x80 + operator offset (8 for operator 3)
+    chip.write(1, 0x0f); // SL = 0, RR = 0x0f
+
+    // port 0, channel 1, operator 4
+    chip.write(0, 0x8c); // 0x80 + operator offset (12 for operator 4)
+    chip.write(1, 0x0f); // SL = 0, RR = 0x0f
+    // --------------------------------
+
+    // --------------------------------
+    // Algorithm / Feedback register format:
+    // - bits 5-3 = FB
+    //   FB (feedback) controls self-modulation amount
+    // - bits 2-0 = ALG
+    //   ALG (algorithm) selects how the 4 operators are connected
     //
-    chip.write(0, 0xa4);
+    // 0x07 = FB = 0, ALG = 7
+    // Algorithm 7 makes all 4 operators act as carriers.
+    // That is simple for a first beep because every operator goes directly
+    // to the audible output.
+    chip.write(0, 0xb0); // channel 1 algorithm/feedback register
+    chip.write(1, 0x07); // FB = 0, ALG = 7
+
+    // Output / Pan register format:
+    // - bit 7 = left enable
+    // - bit 6 = right enable
+    //
+    // 0xc0 = left on + right on
+    chip.write(0, 0xb4); // channel 1 output register
+    chip.write(1, 0xc0); // L = 1, R = 1
+    // --------------------------------
+
+    // --------------------------------
+    // Frequency for channel 1:
+    // - 0xa4 holds the upper bits (block + upper frequency bits)
+    // - 0xa0 holds the lower 8 bits
+    //
+    // Together they form the pitch for the note.
+    chip.write(0, 0xa4); // channel 1 frequency high
     chip.write(1, 0x22);
 
-    chip.write(0, 0xa0);
+    chip.write(0, 0xa0); // channel 1 frequency low
     chip.write(1, 0x69);
+    // --------------------------------
 
+    // --------------------------------
+    // Key ON / Key OFF register:
+    // - 0x28 selects which channel and which operators are triggered
     //
-    // Key ON
-    // operators 1-4 ON, channel 0
-    //
-    chip.write(0, 0x28);
-    chip.write(1, 0xf0);
+    // 0xf0 means:
+    // - high nibble 0xf: operators 1-4 on
+    // - low nibble 0x0: channel slot 0 (= channel 1 on port 0 side)
+    chip.write(0, 0x28); // key on/off control register
+    chip.write(1, 0xf0); // key on channel 1, operators 1-4
+    // --------------------------------
 
-    //
-    // Generate 3 seconds
-    //
+    // Generate 3 seconds of stereo audio and save it as a WAV file.
     ymfm::ymfm_wavfile<2> wav(sampleRate);
 
     for (uint32_t i = 0; i < sampleRate * 3; i++)
