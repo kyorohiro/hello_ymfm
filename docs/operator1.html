@@ -346,6 +346,7 @@
       let analyserFreqData = null;
       let visualFrame = 0;
       let currentSource = null;
+      let lastOutputEnvelope = null;
 
       function setStatus(message) {
         status.textContent = message;
@@ -427,6 +428,60 @@
         }
       }
 
+      function buildOutputEnvelope(left, right, pointCount = 160) {
+        const length = Math.min(left.length, right.length);
+        if (length === 0) {
+          return [];
+        }
+
+        const samplesPerBucket = Math.max(1, Math.floor(length / pointCount));
+        const points = [];
+
+        for (let start = 0; start < length; start += samplesPerBucket) {
+          const end = Math.min(length, start + samplesPerBucket);
+          let sum = 0;
+          for (let index = start; index < end; index += 1) {
+            const mixed = (left[index] + right[index]) * 0.5;
+            sum += mixed * mixed;
+          }
+          const rms = Math.sqrt(sum / Math.max(1, end - start));
+          points.push(rms);
+        }
+
+        let peak = 0;
+        for (const value of points) {
+          if (value > peak) {
+            peak = value;
+          }
+        }
+        if (peak <= 0) {
+          return points.map(() => 0);
+        }
+        return points.map((value) => Math.min(1, value / peak));
+      }
+
+      function drawOutputEnvelopeOverlay(points, layout) {
+        if (!points || points.length < 2) {
+          return;
+        }
+
+        envelopeContext.strokeStyle = "#7be0d6";
+        envelopeContext.lineWidth = 2;
+        envelopeContext.beginPath();
+
+        for (let index = 0; index < points.length; index += 1) {
+          const x = layout.left + (layout.innerWidth * index) / (points.length - 1);
+          const y = layout.bottom - points[index] * layout.innerHeight * 0.94;
+          if (index === 0) {
+            envelopeContext.moveTo(x, y);
+          } else {
+            envelopeContext.lineTo(x, y);
+          }
+        }
+
+        envelopeContext.stroke();
+      }
+
       function drawEnvelope(settings) {
         clearCanvas(envelopeContext, envelopeCanvas);
 
@@ -491,6 +546,13 @@
         envelopeContext.lineTo(x5, bottom);
         envelopeContext.stroke();
 
+        drawOutputEnvelopeOverlay(lastOutputEnvelope, {
+          left,
+          bottom,
+          innerWidth,
+          innerHeight,
+        });
+
         envelopeContext.fillStyle = "#f6ead7";
         envelopeContext.font = "13px sans-serif";
         envelopeContext.fillText("attack", x0 + 6, bottom - 8);
@@ -499,7 +561,7 @@
         envelopeContext.fillText("release", Math.max(x4 - 30, left + 6), top + 18);
 
         envelopeContext.fillStyle = "#d6b184";
-        envelopeContext.fillText("Approximate YM2612-style envelope guide for the current operator settings.", 18, 28);
+        envelopeContext.fillText("Orange: parameter guide. Cyan: actual output envelope from generated audio.", 18, 28);
       }
 
       function updateVisuals() {
@@ -549,7 +611,8 @@
           "",
           "Other operators are muted with TL=0x7f.",
           "Algorithm 7 is used so all operators are carriers.",
-          "Envelope view follows AR -> D1R -> D2R -> RR in an approximate way.",
+          "Orange line: parameter guide.",
+          "Cyan line: output envelope measured from generated audio.",
         ].join("\n");
 
         drawEnvelope(settings);
@@ -634,6 +697,7 @@
           setStatus(`Generating ${frames} stereo frames at ${sampleRate} Hz...`);
 
           const { left, right } = chip.generateStereo(frames);
+          lastOutputEnvelope = buildOutputEnvelope(left, right);
           const audioBuffer = audioContext.createBuffer(2, frames, sampleRate);
           audioBuffer.copyToChannel(left, 0);
           audioBuffer.copyToChannel(right, 1);
