@@ -37,11 +37,12 @@ int main()
     std::cout << "YM2612 created\n";
     std::cout << "sample rate = " << sampleRate << "\n";
 
+    // --------------------------------
     //
     // YM2612 has 6 FM channels.
     // Each channel is built from 4 operators.
     //
-    //
+    // --------------------------------
 
     // --------------------------------
     // DT / MULTI register format:
@@ -52,19 +53,19 @@ int main()
     //
 
     // port 0, channel 1, operator 1
-    chip.write(0, 0x30); // 0x30 + operator offset (0 for operator 1)
+    chip.write(0, 0x30);                // 0x30 + operator offset (0 for operator 1)
     chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
     // port 0, channel 1, operator 2
-    chip.write(0, 0x34); // 0x30 + operator offset (4 for operator 2)
+    chip.write(0, 0x34);                // 0x30 + operator offset (4 for operator 2)
     chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
     // port 0, channel 1, operator 3
-    chip.write(0, 0x38); // 0x30 + operator offset (8 for operator 3)
+    chip.write(0, 0x38);                // 0x30 + operator offset (8 for operator 3)
     chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
     // port 0, channel 1, operator 4
-    chip.write(0, 0x3c); // 0x30 + operator offset (12 for operator 4)
+    chip.write(0, 0x3c);                // 0x30 + operator offset (12 for operator 4)
     chip.write(1, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
 
     // [ps]
@@ -77,20 +78,41 @@ int main()
     // chip.write(3, (0 << 4) | (1 << 0)); // DT = 0, MULTI = 1
     // --------------------------------
 
+    // --------------------------------
+    // Total Level register format:
+    // - bits 6-0 = TL
+    //   TL (total level) is the operator output level
+    //   0x00 is loud, 0x7f is quiet
     //
-    // Total Level
-    // carrierだけ大きくする
-    chip.write(0, 0x40);
-    chip.write(1, 0x7f);
+    // In this example, operator 4 is used as the audible carrier,
+    // so operator 4 is loud and operators 1-3 are kept quiet.
+    //
 
-    chip.write(0, 0x44);
-    chip.write(1, 0x7f);
+    // port 0, channel 1, operator 1
+    chip.write(0, 0x40); // 0x40 + operator offset (0 for operator 1)
+    chip.write(1, 0x7f); // TL = 0x7f (quiet)
 
-    chip.write(0, 0x48);
-    chip.write(1, 0x7f);
+    // port 0, channel 1, operator 2
+    chip.write(0, 0x44); // 0x40 + operator offset (4 for operator 2)
+    chip.write(1, 0x7f); // TL = 0x7f (quiet)
 
-    chip.write(0, 0x4c);
-    chip.write(1, 0x00);
+    // port 0, channel 1, operator 3
+    chip.write(0, 0x48); // 0x40 + operator offset (8 for operator 3)
+    chip.write(1, 0x7f); // TL = 0x7f (quiet)
+
+    // port 0, channel 1, operator 4
+    chip.write(0, 0x4c); // 0x40 + operator offset (12 for operator 4)
+    chip.write(1, 0x00); // TL = 0x00 (loud)
+
+    // examples:
+    // port 0, channel 2, operator 1
+    // chip.write(0, 0x41); // 0x41 + operator offset (0 for operator 1)
+    // chip.write(1, 0x7f); // TL = 0x7f
+    //
+    // port 1, channel 4, operator 1
+    // chip.write(2, 0x40); // port 1, 0x40 + operator offset (0 for operator 1)
+    // chip.write(3, 0x7f); // TL = 0x7f
+    // --------------------------------
 
     // Attack rate
     chip.write(0, 0x50);
