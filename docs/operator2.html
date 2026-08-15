@@ -230,6 +230,18 @@
         <div class="editor-layout">
           <div class="controls">
             <div class="control">
+              <label for="preset">Preset</label>
+              <select id="preset">
+                <option value="custom">Custom</option>
+                <option value="plain-dual">Plain Dual</option>
+                <option value="mild-fm">Mild FM</option>
+                <option value="bright-fm">Bright FM</option>
+                <option value="feedback-growl">Feedback Growl</option>
+                <option value="soft-bell">Soft Bell</option>
+              </select>
+              <small>Load a starting point, then tweak OP1 and OP2 by hand.</small>
+            </div>
+            <div class="control">
               <label for="mode">Mode</label>
               <select id="mode">
                 <option value="parallel">Parallel</option>
@@ -327,6 +339,7 @@
       import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
 
       const controls = {
+        preset: document.getElementById("preset"),
         mode: document.getElementById("mode"),
         feedback: document.getElementById("feedback"),
         op1multi: document.getElementById("op1multi"),
@@ -373,6 +386,79 @@
       let visualFrame = 0;
       let currentSource = null;
       let lastOutputEnvelope = null;
+
+      const PRESETS = {
+        "plain-dual": {
+          mode: "parallel",
+          feedback: 0,
+          op1multi: 1,
+          op1tl: 8,
+          op2multi: 1,
+          op2tl: 12,
+          op1ar: 22,
+          op1rr: 8,
+          op2ar: 22,
+          op2rr: 8,
+          fnum: 553,
+          block: 4,
+        },
+        "mild-fm": {
+          mode: "serial",
+          feedback: 0,
+          op1multi: 2,
+          op1tl: 22,
+          op2multi: 1,
+          op2tl: 4,
+          op1ar: 20,
+          op1rr: 8,
+          op2ar: 20,
+          op2rr: 8,
+          fnum: 553,
+          block: 4,
+        },
+        "bright-fm": {
+          mode: "serial",
+          feedback: 1,
+          op1multi: 4,
+          op1tl: 10,
+          op2multi: 1,
+          op2tl: 2,
+          op1ar: 24,
+          op1rr: 10,
+          op2ar: 24,
+          op2rr: 8,
+          fnum: 610,
+          block: 4,
+        },
+        "feedback-growl": {
+          mode: "serial",
+          feedback: 5,
+          op1multi: 3,
+          op1tl: 6,
+          op2multi: 1,
+          op2tl: 3,
+          op1ar: 26,
+          op1rr: 9,
+          op2ar: 18,
+          op2rr: 8,
+          fnum: 483,
+          block: 3,
+        },
+        "soft-bell": {
+          mode: "serial",
+          feedback: 0,
+          op1multi: 3,
+          op1tl: 18,
+          op2multi: 1,
+          op2tl: 6,
+          op1ar: 10,
+          op1rr: 5,
+          op2ar: 12,
+          op2rr: 4,
+          fnum: 553,
+          block: 4,
+        },
+      };
 
       function setStatus(message) {
         status.textContent = message;
@@ -617,6 +703,7 @@
 
       function readSettings() {
         return {
+          preset: controls.preset.value,
           mode: controls.mode.value,
           feedback: Number(controls.feedback.value),
           op1multi: Number(controls.op1multi.value),
@@ -632,6 +719,27 @@
         };
       }
 
+      function applyPreset(name) {
+        const preset = PRESETS[name];
+        if (!preset) {
+          return;
+        }
+
+        controls.preset.value = name;
+        controls.mode.value = preset.mode;
+        controls.feedback.value = String(preset.feedback);
+        controls.op1multi.value = String(preset.op1multi);
+        controls.op1tl.value = String(preset.op1tl);
+        controls.op2multi.value = String(preset.op2multi);
+        controls.op2tl.value = String(preset.op2tl);
+        controls.op1ar.value = String(preset.op1ar);
+        controls.op1rr.value = String(preset.op1rr);
+        controls.op2ar.value = String(preset.op2ar);
+        controls.op2rr.value = String(preset.op2rr);
+        controls.fnum.value = String(preset.fnum);
+        controls.block.value = String(preset.block);
+      }
+
       function updateLabelsAndSummary() {
         const settings = readSettings();
         Object.keys(values).forEach((key) => {
@@ -644,6 +752,7 @@
 
         summaryOutput.textContent = [
           "Audible channel: channel 1",
+          `Preset: ${settings.preset}`,
           `Mode: ${settings.mode}`,
           `Algorithm/Feedback: (${settings.feedback} << 3) | ${algorithm}`,
           `OP1 DT/MULTI: (0 << 4) | (${settings.op1multi} << 0)`,
@@ -775,14 +884,22 @@
         }
       }
 
+      controls.preset.addEventListener("change", () => {
+        if (controls.preset.value !== "custom") {
+          applyPreset(controls.preset.value);
+        }
+        updateLabelsAndSummary();
+      });
+
       controls.mode.addEventListener("change", updateLabelsAndSummary);
       Object.values(controls).forEach((input) => {
-        if (input !== controls.mode) {
+        if (input !== controls.mode && input !== controls.preset) {
           input.addEventListener("input", updateLabelsAndSummary);
         }
       });
       playButton.addEventListener("click", playTone);
 
+      applyPreset("plain-dual");
       updateLabelsAndSummary();
       drawIdleAudioVisuals();
     </script>
