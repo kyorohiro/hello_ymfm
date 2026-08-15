@@ -33,6 +33,25 @@ See `LICENSE` for the license text included with this repository.
 - `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
   VGM playback and direct chip control.
 
+## YM2612 references
+- `ymfm` repository:
+  - https://github.com/aaronsgiles/ymfm
+- `ymfm` examples:
+  - https://github.com/aaronsgiles/ymfm/tree/main/examples
+- `ymfm` source for YM2612 registers and behavior:
+  - `src/ymfm_opn.h`
+  - `src/ymfm_opn.cpp`
+- YM2612 pin reference:
+  - http://www.chipdir.nl/pinusr/ym2612.txt
+- YM2612 overview:
+  - https://www.vgmpf.com/Wiki/index.php?title=YM2612
+- Genesis development discussion and practical notes:
+  - https://gendev.spritesmind.net/forum/viewtopic.php?start=585&t=386
+- VGM specification:
+  - https://vgmrips.net/wiki/VGM_Specification
+- SMS Power:
+  - https://www.smspower.org/
+
 ## build/test ym2612 wasm
 Build:
 
