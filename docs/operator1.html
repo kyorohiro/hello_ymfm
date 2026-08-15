@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612 1 Operator Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1, h2 {
+        margin: 0 0 12px;
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.3rem;
+      }
+
+      p {
+        margin: 0 0 16px;
+        line-height: 1.6;
+      }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin: 20px 0 24px;
+      }
+
+      .control {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.45);
+      }
+
+      .control label {
+        display: block;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .control small {
+        display: block;
+        margin-top: 8px;
+        line-height: 1.5;
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      .value {
+        display: inline-block;
+        min-width: 4ch;
+        font-weight: 700;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 18px 0;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 10px 24px rgba(126, 56, 28, 0.25);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.92rem;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612 1 Operator Demo</h1>
+        <p>
+          This page keeps the setup small: one audible operator, three muted operators,
+          and a few parameters you can change without reading the whole FM algorithm story first.
+        </p>
+        <p>
+          YM2612 operators use a fixed sine-based waveform. This demo changes the operator settings,
+          not a selectable oscillator shape.
+        </p>
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/operator1.html">docs/operator1.html</a>
+          |
+          Related code:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
+        </p>
+
+        <div class="controls">
+          <div class="control">
+            <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
+            <input id="multi" type="range" min="0" max="15" value="1">
+            <small>Frequency multiplier for the audible operator.</small>
+          </div>
+          <div class="control">
+            <label for="tl">TL <span class="value" id="tlValue">0</span></label>
+            <input id="tl" type="range" min="0" max="127" value="0">
+            <small>Total level. Lower is louder. Higher is quieter.</small>
+          </div>
+          <div class="control">
+            <label for="ar">AR <span class="value" id="arValue">31</span></label>
+            <input id="ar" type="range" min="0" max="31" value="31">
+            <small>Attack rate. Larger values rise faster.</small>
+          </div>
+          <div class="control">
+            <label for="rr">RR <span class="value" id="rrValue">15</span></label>
+            <input id="rr" type="range" min="0" max="15" value="15">
+            <small>Release rate. Larger values fade faster after key off.</small>
+          </div>
+          <div class="control">
+            <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+            <input id="fnum" type="range" min="256" max="1023" value="553">
+            <small>Channel frequency number. Higher values raise the note.</small>
+          </div>
+          <div class="control">
+            <label for="block">Block <span class="value" id="blockValue">4</span></label>
+            <input id="block" type="range" min="0" max="7" value="4">
+            <small>Octave-like block value for the channel frequency.</small>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="playButton" type="button">Play 1 Operator Tone</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+
+        <div class="status" id="status">Ready.</div>
+
+        <h2>Current Register Intent</h2>
+        <pre id="summaryOutput"></pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+      import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+
+      const controls = {
+        multi: document.getElementById("multi"),
+        tl: document.getElementById("tl"),
+        ar: document.getElementById("ar"),
+        rr: document.getElementById("rr"),
+        fnum: document.getElementById("fnum"),
+        block: document.getElementById("block"),
+      };
+
+      const values = {
+        multi: document.getElementById("multiValue"),
+        tl: document.getElementById("tlValue"),
+        ar: document.getElementById("arValue"),
+        rr: document.getElementById("rrValue"),
+        fnum: document.getElementById("fnumValue"),
+        block: document.getElementById("blockValue"),
+      };
+
+      const playButton = document.getElementById("playButton");
+      const status = document.getElementById("status");
+      const summaryOutput = document.getElementById("summaryOutput");
+
+      let audioContext = null;
+      let ym2612 = null;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function readSettings() {
+        return {
+          multi: Number(controls.multi.value),
+          tl: Number(controls.tl.value),
+          ar: Number(controls.ar.value),
+          rr: Number(controls.rr.value),
+          fnum: Number(controls.fnum.value),
+          block: Number(controls.block.value),
+        };
+      }
+
+      function updateLabelsAndSummary() {
+        const settings = readSettings();
+        Object.keys(values).forEach((key) => {
+          values[key].textContent = String(settings[key]);
+        });
+
+        const high = ((settings.block & 0x07) << 3) | ((settings.fnum >> 8) & 0x07);
+        const low = settings.fnum & 0xff;
+
+        summaryOutput.textContent = [
+          "Audible operator: channel 1, operator 4",
+          `DT/MULTI: (0 << 4) | (${settings.multi} << 0)`,
+          `TL: 0x${settings.tl.toString(16).padStart(2, "0")} (${settings.tl})`,
+          `AR: 0x${settings.ar.toString(16).padStart(2, "0")} (${settings.ar})`,
+          `SL/RR: (0 << 4) | (${settings.rr} << 0)`,
+          `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
+          `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
+          "",
+          "Other operators are muted with TL=0x7f.",
+          "Algorithm 7 is used so all operators are carriers.",
+        ].join("\n");
+      }
+
+      function configureSingleOperator(chip, settings) {
+        chip.reset();
+
+        // All operators start with no detune and MULTI=1.
+        chip.writeRegister(0x30, (0 << 4) | (1 << 0));
+        chip.writeRegister(0x34, (0 << 4) | (1 << 0));
+        chip.writeRegister(0x38, (0 << 4) | (1 << 0));
+        chip.writeRegister(0x3c, (0 << 4) | (settings.multi << 0));
+
+        // Operators 1-3 stay quiet. Operator 4 is the audible one.
+        chip.writeRegister(0x40, 0x7f);
+        chip.writeRegister(0x44, 0x7f);
+        chip.writeRegister(0x48, 0x7f);
+        chip.writeRegister(0x4c, settings.tl);
+
+        chip.writeRegister(0x50, 0x1f);
+        chip.writeRegister(0x54, 0x1f);
+        chip.writeRegister(0x58, 0x1f);
+        chip.writeRegister(0x5c, settings.ar);
+
+        chip.writeRegister(0x80, (0 << 4) | (15 << 0));
+        chip.writeRegister(0x84, (0 << 4) | (15 << 0));
+        chip.writeRegister(0x88, (0 << 4) | (15 << 0));
+        chip.writeRegister(0x8c, (0 << 4) | (settings.rr << 0));
+
+        chip.writeRegister(0xb0, 0x07);
+        chip.writeRegister(0xb4, 0xc0);
+
+        const high = ((settings.block & 0x07) << 3) | ((settings.fnum >> 8) & 0x07);
+        const low = settings.fnum & 0xff;
+        chip.writeRegister(0xa4, high);
+        chip.writeRegister(0xa0, low);
+        chip.writeRegister(0x28, 0xf0);
+      }
+
+      async function ensureReady() {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
+        if (!ym2612) {
+          setStatus("Loading YM2612 WASM...");
+          ym2612 = await createYm2612(ym2612ModuleFactory);
+        }
+        return ym2612;
+      }
+
+      async function playTone() {
+        playButton.disabled = true;
+        try {
+          const chip = await ensureReady();
+          const settings = readSettings();
+          configureSingleOperator(chip, settings);
+
+          const sampleRate = chip.sampleRate(YM2612_CLOCK);
+          const frames = Math.floor(sampleRate * 1.5);
+          setStatus(`Generating ${frames} stereo frames at ${sampleRate} Hz...`);
+
+          const { left, right } = chip.generateStereo(frames);
+          const audioBuffer = audioContext.createBuffer(2, frames, sampleRate);
+          audioBuffer.copyToChannel(left, 0);
+          audioBuffer.copyToChannel(right, 1);
+
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(audioContext.destination);
+          source.start();
+
+          setStatus("Playing 1 operator tone...");
+          source.addEventListener("ended", () => {
+            setStatus("Ready.");
+          }, { once: true });
+        } catch (error) {
+          console.error(error);
+          setStatus(`Error: ${error.message}`);
+        } finally {
+          playButton.disabled = false;
+        }
+      }
+
+      Object.values(controls).forEach((input) => {
+        input.addEventListener("input", updateLabelsAndSummary);
+      });
+
+      playButton.addEventListener("click", () => {
+        playTone();
+      });
+
+      updateLabelsAndSummary();
+    </script>
+  </body>
+</html>
