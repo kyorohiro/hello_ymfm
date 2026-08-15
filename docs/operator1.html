@@ -219,6 +219,21 @@
             <small>Attack rate. Larger values rise faster.</small>
           </div>
           <div class="control">
+            <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
+            <input id="d1r" type="range" min="0" max="31" value="8">
+            <small>First decay rate after the attack peak.</small>
+          </div>
+          <div class="control">
+            <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
+            <input id="d2r" type="range" min="0" max="31" value="4">
+            <small>Secondary decay rate while the note is held.</small>
+          </div>
+          <div class="control">
+            <label for="sl">SL <span class="value" id="slValue">4</span></label>
+            <input id="sl" type="range" min="0" max="15" value="4">
+            <small>Sustain level target after the first decay stage.</small>
+          </div>
+          <div class="control">
             <label for="rr">RR <span class="value" id="rrValue">15</span></label>
             <input id="rr" type="range" min="0" max="15" value="15">
             <small>Release rate. Larger values fade faster after key off.</small>
@@ -270,6 +285,9 @@
         multi: document.getElementById("multi"),
         tl: document.getElementById("tl"),
         ar: document.getElementById("ar"),
+        d1r: document.getElementById("d1r"),
+        d2r: document.getElementById("d2r"),
+        sl: document.getElementById("sl"),
         rr: document.getElementById("rr"),
         fnum: document.getElementById("fnum"),
         block: document.getElementById("block"),
@@ -279,6 +297,9 @@
         multi: document.getElementById("multiValue"),
         tl: document.getElementById("tlValue"),
         ar: document.getElementById("arValue"),
+        d1r: document.getElementById("d1rValue"),
+        d2r: document.getElementById("d2rValue"),
+        sl: document.getElementById("slValue"),
         rr: document.getElementById("rrValue"),
         fnum: document.getElementById("fnumValue"),
         block: document.getElementById("blockValue"),
@@ -336,7 +357,7 @@
 
         envelopeContext.fillStyle = "#d6b184";
         envelopeContext.font = "14px sans-serif";
-        envelopeContext.fillText("Attack / hold / release guide", 18, 28);
+        envelopeContext.fillText("Attack / decay / sustain / release guide", 18, 28);
       }
 
       function stopVisualLoop() {
@@ -424,21 +445,28 @@
           envelopeContext.stroke();
         }
 
-        const attackPortion = 0.08 + ((31 - settings.ar) / 31) * 0.28;
-        const holdPortion = 0.20;
-        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.32;
-        const totalPortion = attackPortion + holdPortion + releasePortion;
-        const sustainPortion = Math.max(0.08, 1 - totalPortion);
+        const attackPortion = 0.06 + ((31 - settings.ar) / 31) * 0.22;
+        const decayPortion = 0.08 + ((31 - settings.d1r) / 31) * 0.18;
+        const sustainPortion = 0.18 + ((31 - settings.d2r) / 31) * 0.16;
+        const releasePortion = 0.10 + ((15 - settings.rr) / 15) * 0.24;
+        const tailPortion = Math.max(0.08, 1 - (attackPortion + decayPortion + sustainPortion + releasePortion));
 
         const x0 = left;
         const x1 = left + innerWidth * attackPortion;
-        const x2 = x1 + innerWidth * holdPortion;
+        const x2 = x1 + innerWidth * decayPortion;
         const x3 = x2 + innerWidth * sustainPortion;
-        const x4 = right;
+        const x4 = x3 + innerWidth * tailPortion;
+        const x5 = right;
 
-        const peakY = top + innerHeight * 0.06;
-        const sustainLevel = 0.10 + (settings.tl / 127) * 0.78;
+        const peakLevel = 0.05 + (settings.tl / 127) * 0.35;
+        const sustainLevel = Math.max(
+          peakLevel,
+          0.10 + (settings.sl / 15) * 0.72 + (settings.tl / 127) * 0.10
+        );
+        const tailDropLevel = Math.min(0.96, sustainLevel + 0.04 + (settings.d2r / 31) * 0.16);
+        const peakY = top + innerHeight * peakLevel;
         const sustainY = top + innerHeight * sustainLevel;
+        const tailY = top + innerHeight * tailDropLevel;
 
         envelopeContext.strokeStyle = "#f2c078";
         envelopeContext.lineWidth = 3;
@@ -446,18 +474,20 @@
         envelopeContext.moveTo(x0, bottom);
         envelopeContext.lineTo(x1, peakY);
         envelopeContext.lineTo(x2, sustainY);
-        envelopeContext.lineTo(x3, sustainY);
-        envelopeContext.lineTo(x4, bottom);
+        envelopeContext.lineTo(x3, tailY);
+        envelopeContext.lineTo(x4, tailY);
+        envelopeContext.lineTo(x5, bottom);
         envelopeContext.stroke();
 
         envelopeContext.fillStyle = "#f6ead7";
         envelopeContext.font = "13px sans-serif";
         envelopeContext.fillText("attack", x0 + 6, bottom - 8);
-        envelopeContext.fillText("hold", x1 + 6, top + 18);
-        envelopeContext.fillText("release", Math.max(x3 - 12, left + 6), top + 18);
+        envelopeContext.fillText("decay", x1 + 6, top + 18);
+        envelopeContext.fillText("sustain", x2 + 6, top + 18);
+        envelopeContext.fillText("release", Math.max(x4 - 30, left + 6), top + 18);
 
         envelopeContext.fillStyle = "#d6b184";
-        envelopeContext.fillText("This is a simplified guide, not an exact YM2612 envelope trace.", 18, 28);
+        envelopeContext.fillText("Approximate YM2612-style envelope guide for the current operator settings.", 18, 28);
       }
 
       function updateVisuals() {
@@ -476,6 +506,9 @@
           multi: Number(controls.multi.value),
           tl: Number(controls.tl.value),
           ar: Number(controls.ar.value),
+          d1r: Number(controls.d1r.value),
+          d2r: Number(controls.d2r.value),
+          sl: Number(controls.sl.value),
           rr: Number(controls.rr.value),
           fnum: Number(controls.fnum.value),
           block: Number(controls.block.value),
@@ -496,13 +529,15 @@
           `DT/MULTI: (0 << 4) | (${settings.multi} << 0)`,
           `TL: 0x${settings.tl.toString(16).padStart(2, "0")} (${settings.tl})`,
           `AR: 0x${settings.ar.toString(16).padStart(2, "0")} (${settings.ar})`,
-          `SL/RR: (0 << 4) | (${settings.rr} << 0)`,
+          `D1R: 0x${settings.d1r.toString(16).padStart(2, "0")} (${settings.d1r})`,
+          `D2R: 0x${settings.d2r.toString(16).padStart(2, "0")} (${settings.d2r})`,
+          `SL/RR: (${settings.sl} << 4) | (${settings.rr} << 0)`,
           `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
           `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
           "",
           "Other operators are muted with TL=0x7f.",
           "Algorithm 7 is used so all operators are carriers.",
-          "Envelope view is a simplified attack/hold/release guide.",
+          "Envelope view follows AR -> D1R -> D2R -> RR in an approximate way.",
         ].join("\n");
 
         drawEnvelope(settings);
@@ -528,10 +563,20 @@
         chip.writeRegister(0x58, 0x1f);
         chip.writeRegister(0x5c, settings.ar);
 
+        chip.writeRegister(0x60, 0x00);
+        chip.writeRegister(0x64, 0x00);
+        chip.writeRegister(0x68, 0x00);
+        chip.writeRegister(0x6c, settings.d1r);
+
+        chip.writeRegister(0x70, 0x00);
+        chip.writeRegister(0x74, 0x00);
+        chip.writeRegister(0x78, 0x00);
+        chip.writeRegister(0x7c, settings.d2r);
+
         chip.writeRegister(0x80, (0 << 4) | (15 << 0));
         chip.writeRegister(0x84, (0 << 4) | (15 << 0));
         chip.writeRegister(0x88, (0 << 4) | (15 << 0));
-        chip.writeRegister(0x8c, (0 << 4) | (settings.rr << 0));
+        chip.writeRegister(0x8c, (settings.sl << 4) | (settings.rr << 0));
 
         chip.writeRegister(0xb0, 0x07);
         chip.writeRegister(0xb4, 0xc0);
