@@ -36,6 +36,8 @@ See `LICENSE` for the license text included with this repository.
 ## YM2612 references
 - `ymfm` repository:
   - https://github.com/aaronsgiles/ymfm
+- `retropc.net`:
+  - http://retropc.net/cisc/m88/
 - `ymfm` examples:
   - https://github.com/aaronsgiles/ymfm/tree/main/examples
 - `ymfm` source for YM2612 registers and behavior:
