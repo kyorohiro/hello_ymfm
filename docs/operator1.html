@@ -33,16 +33,16 @@
       }
 
       main {
-        max-width: 980px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 48px 20px 64px;
+        padding: 32px 16px 48px;
       }
 
       .panel {
         background: color-mix(in srgb, var(--panel) 90%, white 10%);
         border: 1px solid var(--line);
         border-radius: 24px;
-        padding: 28px;
+        padding: 22px;
         box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
       }
 
@@ -67,20 +67,27 @@
       }
 
       .meta {
-        margin: 0 0 16px;
-        font-size: 0.95rem;
+        margin: 0 0 12px;
+        font-size: 0.9rem;
+      }
+
+      .editor-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.95fr);
+        gap: 16px;
+        align-items: start;
+        margin: 18px 0 18px;
       }
 
       .controls {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 16px;
-        margin: 20px 0 24px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
       }
 
       .control {
-        padding: 16px;
-        border-radius: 18px;
+        padding: 10px 12px;
+        border-radius: 14px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.45);
       }
@@ -88,13 +95,16 @@
       .control label {
         display: block;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
+        font-size: 0.92rem;
       }
 
       .control small {
         display: block;
-        margin-top: 8px;
-        line-height: 1.5;
+        margin-top: 4px;
+        line-height: 1.35;
+        font-size: 0.8rem;
+        color: rgba(31, 27, 22, 0.82);
       }
 
       input[type="range"] {
@@ -111,7 +121,7 @@
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
-        margin: 18px 0;
+        margin: 14px 0 12px;
       }
 
       button,
@@ -137,31 +147,37 @@
       .status {
         min-height: 1.5em;
         font-weight: 600;
+        font-size: 0.95rem;
       }
 
       .visuals {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 16px;
-        margin: 24px 0;
+        margin: 18px 0;
       }
 
       .visual {
-        padding: 16px;
-        border-radius: 18px;
+        padding: 12px;
+        border-radius: 16px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.45);
       }
 
       .visual h2 {
         margin-top: 0;
-        font-size: 1.05rem;
+        margin-bottom: 8px;
+        font-size: 1rem;
+      }
+
+      .hero-visual canvas {
+        height: 220px;
       }
 
       canvas {
         display: block;
         width: 100%;
-        height: 180px;
+        height: 150px;
         border-radius: 14px;
         background: #241d16;
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -169,15 +185,21 @@
 
       pre {
         margin: 0;
-        padding: 16px 18px;
+        padding: 14px 16px;
         border-radius: 16px;
         background: var(--code);
         color: var(--code-ink);
         font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-        font-size: 0.92rem;
+        font-size: 0.86rem;
         overflow-x: auto;
         white-space: pre-wrap;
         word-break: break-word;
+      }
+
+      @media (max-width: 920px) {
+        .editor-layout {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -202,52 +224,58 @@
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
         </p>
 
-        <div class="controls">
-          <div class="control">
-            <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
-            <input id="multi" type="range" min="0" max="15" value="1">
-            <small>Frequency multiplier for the audible operator.</small>
+        <div class="editor-layout">
+          <div class="controls">
+            <div class="control">
+              <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
+              <input id="multi" type="range" min="0" max="15" value="1">
+              <small>Frequency multiplier for the audible operator.</small>
+            </div>
+            <div class="control">
+              <label for="tl">TL <span class="value" id="tlValue">0</span></label>
+              <input id="tl" type="range" min="0" max="127" value="0">
+              <small>Total level. Lower is louder. Higher is quieter.</small>
+            </div>
+            <div class="control">
+              <label for="ar">AR <span class="value" id="arValue">31</span></label>
+              <input id="ar" type="range" min="0" max="31" value="31">
+              <small>Attack rate. Larger values rise faster.</small>
+            </div>
+            <div class="control">
+              <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
+              <input id="d1r" type="range" min="0" max="31" value="8">
+              <small>First decay rate after the attack peak.</small>
+            </div>
+            <div class="control">
+              <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
+              <input id="d2r" type="range" min="0" max="31" value="4">
+              <small>Secondary decay rate while the note is held.</small>
+            </div>
+            <div class="control">
+              <label for="sl">SL <span class="value" id="slValue">4</span></label>
+              <input id="sl" type="range" min="0" max="15" value="4">
+              <small>Sustain level target after the first decay stage.</small>
+            </div>
+            <div class="control">
+              <label for="rr">RR <span class="value" id="rrValue">15</span></label>
+              <input id="rr" type="range" min="0" max="15" value="15">
+              <small>Release rate. Larger values fade faster after key off.</small>
+            </div>
+            <div class="control">
+              <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+              <input id="fnum" type="range" min="256" max="1023" value="553">
+              <small>Channel frequency number. Higher values raise the note.</small>
+            </div>
+            <div class="control">
+              <label for="block">Block <span class="value" id="blockValue">4</span></label>
+              <input id="block" type="range" min="0" max="7" value="4">
+              <small>Octave-like block value for the channel frequency.</small>
+            </div>
           </div>
-          <div class="control">
-            <label for="tl">TL <span class="value" id="tlValue">0</span></label>
-            <input id="tl" type="range" min="0" max="127" value="0">
-            <small>Total level. Lower is louder. Higher is quieter.</small>
-          </div>
-          <div class="control">
-            <label for="ar">AR <span class="value" id="arValue">31</span></label>
-            <input id="ar" type="range" min="0" max="31" value="31">
-            <small>Attack rate. Larger values rise faster.</small>
-          </div>
-          <div class="control">
-            <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
-            <input id="d1r" type="range" min="0" max="31" value="8">
-            <small>First decay rate after the attack peak.</small>
-          </div>
-          <div class="control">
-            <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
-            <input id="d2r" type="range" min="0" max="31" value="4">
-            <small>Secondary decay rate while the note is held.</small>
-          </div>
-          <div class="control">
-            <label for="sl">SL <span class="value" id="slValue">4</span></label>
-            <input id="sl" type="range" min="0" max="15" value="4">
-            <small>Sustain level target after the first decay stage.</small>
-          </div>
-          <div class="control">
-            <label for="rr">RR <span class="value" id="rrValue">15</span></label>
-            <input id="rr" type="range" min="0" max="15" value="15">
-            <small>Release rate. Larger values fade faster after key off.</small>
-          </div>
-          <div class="control">
-            <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
-            <input id="fnum" type="range" min="256" max="1023" value="553">
-            <small>Channel frequency number. Higher values raise the note.</small>
-          </div>
-          <div class="control">
-            <label for="block">Block <span class="value" id="blockValue">4</span></label>
-            <input id="block" type="range" min="0" max="7" value="4">
-            <small>Octave-like block value for the channel frequency.</small>
-          </div>
+          <section class="visual hero-visual">
+            <h2>Envelope</h2>
+            <canvas id="envelopeCanvas" width="480" height="220"></canvas>
+          </section>
         </div>
 
         <div class="actions">
@@ -265,10 +293,6 @@
           <section class="visual">
             <h2>Spectrum</h2>
             <canvas id="spectrumCanvas" width="480" height="180"></canvas>
-          </section>
-          <section class="visual">
-            <h2>Envelope</h2>
-            <canvas id="envelopeCanvas" width="480" height="180"></canvas>
           </section>
         </div>
 
@@ -332,10 +356,9 @@
         context.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      function drawIdleVisuals() {
+      function drawIdleAudioVisuals() {
         clearCanvas(waveContext, waveCanvas);
         clearCanvas(spectrumContext, spectrumCanvas);
-        clearCanvas(envelopeContext, envelopeCanvas);
 
         waveContext.strokeStyle = "#d6b184";
         waveContext.lineWidth = 1.5;
@@ -347,17 +370,6 @@
         spectrumContext.fillStyle = "#d6b184";
         spectrumContext.font = "14px sans-serif";
         spectrumContext.fillText("Play a tone to update the visuals.", 18, 28);
-
-        envelopeContext.strokeStyle = "#8d7a63";
-        envelopeContext.lineWidth = 1;
-        envelopeContext.beginPath();
-        envelopeContext.moveTo(18, envelopeCanvas.height - 20);
-        envelopeContext.lineTo(envelopeCanvas.width - 16, envelopeCanvas.height - 20);
-        envelopeContext.stroke();
-
-        envelopeContext.fillStyle = "#d6b184";
-        envelopeContext.font = "14px sans-serif";
-        envelopeContext.fillText("Attack / decay / sustain / release guide", 18, 28);
       }
 
       function stopVisualLoop() {
@@ -638,7 +650,8 @@
           source.addEventListener("ended", () => {
             currentSource = null;
             stopVisualLoop();
-            drawIdleVisuals();
+            drawIdleAudioVisuals();
+            drawEnvelope(readSettings());
             setStatus("Ready.");
           }, { once: true });
         } catch (error) {
@@ -658,7 +671,7 @@
       });
 
       updateLabelsAndSummary();
-      drawIdleVisuals();
+      drawIdleAudioVisuals();
     </script>
   </body>
 </html>
