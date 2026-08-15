@@ -5,13 +5,33 @@
 
 int main()
 {
-    constexpr uint32_t CLOCK = 7670454;
+    // YM2612 master clock for Sega Mega Drive / Genesis
+    constexpr uint32_t CLOCK = 7670454; // 7.67 MHz
 
+    // ymfm_interface is the host-side bridge used by ymfm.
+    // It mixes callback/notification-style hooks and query-style hooks.
+    // In a larger emulator or wrapper, this is where you would connect:
+    // - timer
+    //   YM2612 internal timers to your host-side timing system
+    // - IRQ
+    //   YM2612 interrupt notifications to your host-side IRQ handling
+    // - busy
+    //   the YM2612 busy flag to your host-side time/bus model
+    // - external I/O
+    //   any external reads/writes that the chip should forward outside
+    //
+    // This minimal example does not need those integrations, so the default
+    // ymfm_interface implementation is enough.
     ymfm::ymfm_interface intf;
     ymfm::ym2612 chip(intf);
 
+    //
+    // reset the overall state
     chip.reset();
 
+    //
+    // compute the output audio sample rate for the Genesis YM2612 clock
+    // sampleRate means how many audio samples the chip outputs per second
     uint32_t sampleRate = chip.sample_rate(CLOCK);
 
     std::cout << "YM2612 created\n";
@@ -124,5 +144,5 @@ em++ -std=c++14 \
     ex03_beep.cpp \
     src/*.cpp \
     -o test.js
-./test.js
+node ./test.js
 */

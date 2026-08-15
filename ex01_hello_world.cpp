@@ -1,3 +1,6 @@
+/**
+ * It is a minimal setup check.
+ */
 #include <iostream>
 #include "ymfm.h"
 #include "ymfm_opn.h"
