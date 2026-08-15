@@ -33,9 +33,11 @@ See `LICENSE` for the license text included with this repository.
 - `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
   VGM playback and direct chip control.
 
-## YM2612 references
+## References
 - `ymfm` repository:
   - https://github.com/aaronsgiles/ymfm
+- `MAME`:
+  - https://www.mamedev.org/
 - `retropc.net`:
   - http://retropc.net/cisc/m88/
 - `ymfm` examples:
