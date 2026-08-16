@@ -1321,6 +1321,7 @@ var _ym2612_reset = Module['_ym2612_reset'] = makeInvalidEarlyAccess('_ym2612_re
 var _ym2612_write = Module['_ym2612_write'] = makeInvalidEarlyAccess('_ym2612_write');
 var _ym2612_sample_rate = Module['_ym2612_sample_rate'] = makeInvalidEarlyAccess('_ym2612_sample_rate');
 var _ym2612_generate = Module['_ym2612_generate'] = makeInvalidEarlyAccess('_ym2612_generate');
+var _ym2612_generate_with_internal_envelope = Module['_ym2612_generate_with_internal_envelope'] = makeInvalidEarlyAccess('_ym2612_generate_with_internal_envelope');
 var _fflush = Module['_fflush'] = makeInvalidEarlyAccess('_fflush');
 var _strerror = Module['_strerror'] = makeInvalidEarlyAccess('_strerror');
 var _emscripten_stack_get_end = Module['_emscripten_stack_get_end'] = makeInvalidEarlyAccess('_emscripten_stack_get_end');
@@ -1343,6 +1344,7 @@ function assignWasmExports(wasmExports) {
   assert(typeof wasmExports['ym2612_write'] != 'undefined', 'missing Wasm export: ym2612_write');
   assert(typeof wasmExports['ym2612_sample_rate'] != 'undefined', 'missing Wasm export: ym2612_sample_rate');
   assert(typeof wasmExports['ym2612_generate'] != 'undefined', 'missing Wasm export: ym2612_generate');
+  assert(typeof wasmExports['ym2612_generate_with_internal_envelope'] != 'undefined', 'missing Wasm export: ym2612_generate_with_internal_envelope');
   assert(typeof wasmExports['fflush'] != 'undefined', 'missing Wasm export: fflush');
   assert(typeof wasmExports['strerror'] != 'undefined', 'missing Wasm export: strerror');
   assert(typeof wasmExports['emscripten_stack_get_end'] != 'undefined', 'missing Wasm export: emscripten_stack_get_end');
@@ -1362,6 +1364,7 @@ function assignWasmExports(wasmExports) {
   _ym2612_write = Module['_ym2612_write'] = createExportWrapper('ym2612_write', wasmExports['ym2612_write'], 3);
   _ym2612_sample_rate = Module['_ym2612_sample_rate'] = createExportWrapper('ym2612_sample_rate', wasmExports['ym2612_sample_rate'], 2);
   _ym2612_generate = Module['_ym2612_generate'] = createExportWrapper('ym2612_generate', wasmExports['ym2612_generate'], 4);
+  _ym2612_generate_with_internal_envelope = Module['_ym2612_generate_with_internal_envelope'] = createExportWrapper('ym2612_generate_with_internal_envelope', wasmExports['ym2612_generate_with_internal_envelope'], 9);
   _fflush = Module['_fflush'] = createExportWrapper('fflush', wasmExports['fflush'], 1);
   _strerror = Module['_strerror'] = createExportWrapper('strerror', wasmExports['strerror'], 1);
   _emscripten_stack_get_end = Module['_emscripten_stack_get_end'] = wasmExports['emscripten_stack_get_end'];

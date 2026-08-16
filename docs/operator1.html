@@ -279,7 +279,8 @@
         </div>
 
         <div class="actions">
-          <button id="playButton" type="button">Play 1 Operator Tone</button>
+          <button id="playButton" type="button">Hold to Play</button>
+          <button id="stopButton" type="button">Stop</button>
           <a class="link-button" href="./index.html">Back</a>
         </div>
 
@@ -330,6 +331,7 @@
       };
 
       const playButton = document.getElementById("playButton");
+      const stopButton = document.getElementById("stopButton");
       const status = document.getElementById("status");
       const summaryOutput = document.getElementById("summaryOutput");
       const waveCanvas = document.getElementById("waveCanvas");
@@ -342,12 +344,26 @@
       let audioContext = null;
       let ym2612 = null;
       let analyser = null;
+      let outputGain = null;
       let analyserTimeData = null;
       let analyserFreqData = null;
       let visualFrame = 0;
-      let currentSource = null;
+      let playbackActive = false;
+      let schedulerTimer = 0;
+      let nextPlaybackTime = 0;
+      let isHolding = false;
+      let releaseRequested = false;
+      let releaseStartedAt = 0;
+      let activeSources = [];
       let lastOutputEnvelope = null;
+      let lastInternalEnvelope = null;
+      let outputTraceLeft = [];
+      let outputTraceRight = [];
+      let internalTrace = [];
 
+      const CHUNK_FRAMES = 2048;
+      const SCHEDULE_AHEAD_SECONDS = 0.12;
+      const CLICK_FADE_SECONDS = 0.008;
       function setStatus(message) {
         status.textContent = message;
       }
@@ -482,6 +498,28 @@
         envelopeContext.stroke();
       }
 
+      function drawInternalEnvelopeOverlay(points, layout) {
+        if (!points || points.length < 2) {
+          return;
+        }
+
+        envelopeContext.strokeStyle = "#9dff9b";
+        envelopeContext.lineWidth = 2;
+        envelopeContext.beginPath();
+
+        for (let index = 0; index < points.length; index += 1) {
+          const x = layout.left + (layout.innerWidth * index) / (points.length - 1);
+          const y = layout.bottom - points[index] * layout.innerHeight * 0.94;
+          if (index === 0) {
+            envelopeContext.moveTo(x, y);
+          } else {
+            envelopeContext.lineTo(x, y);
+          }
+        }
+
+        envelopeContext.stroke();
+      }
+
       function drawEnvelope(settings) {
         clearCanvas(envelopeContext, envelopeCanvas);
 
@@ -552,6 +590,12 @@
           innerWidth,
           innerHeight,
         });
+        drawInternalEnvelopeOverlay(lastInternalEnvelope, {
+          left,
+          bottom,
+          innerWidth,
+          innerHeight,
+        });
 
         envelopeContext.fillStyle = "#f6ead7";
         envelopeContext.font = "13px sans-serif";
@@ -561,14 +605,14 @@
         envelopeContext.fillText("release", Math.max(x4 - 30, left + 6), top + 18);
 
         envelopeContext.fillStyle = "#d6b184";
-        envelopeContext.fillText("Orange: parameter guide. Cyan: actual output envelope from generated audio.", 18, 28);
+        envelopeContext.fillText("Orange: parameter guide. Cyan: output. Green: YM2612 internal envelope.", 18, 28);
       }
 
       function updateVisuals() {
         drawWaveform();
         drawSpectrum();
         drawEnvelope(readSettings());
-        if (currentSource) {
+        if (playbackActive) {
           visualFrame = requestAnimationFrame(updateVisuals);
         } else {
           visualFrame = 0;
@@ -660,7 +704,136 @@
         const low = settings.fnum & 0xff;
         chip.writeRegister(0xa4, high);
         chip.writeRegister(0xa0, low);
+      }
+
+      function keyOnSingleOperator(chip) {
         chip.writeRegister(0x28, 0xf0);
+      }
+
+      function keyOffSingleOperator(chip) {
+        chip.writeRegister(0x28, 0x00);
+      }
+
+      function finalizeTraceData() {
+        lastOutputEnvelope = buildOutputEnvelope(outputTraceLeft, outputTraceRight);
+        if (internalTrace.length > 1) {
+          lastInternalEnvelope = internalTrace.slice();
+        } else {
+          lastInternalEnvelope = null;
+        }
+      }
+
+      function appendChunkTrace(left, right, internal) {
+        outputTraceLeft.push(...left);
+        outputTraceRight.push(...right);
+        internalTrace.push(...internal);
+        finalizeTraceData();
+      }
+
+      function stopStreamingPlayback(message = "Ready.") {
+        playbackActive = false;
+        isHolding = false;
+        releaseRequested = false;
+        releaseStartedAt = 0;
+        if (schedulerTimer) {
+          clearTimeout(schedulerTimer);
+          schedulerTimer = 0;
+        }
+        stopVisualLoop();
+        drawIdleAudioVisuals();
+        drawEnvelope(readSettings());
+        playButton.disabled = false;
+        setStatus(message);
+      }
+
+      function removeActiveSource(source) {
+        activeSources = activeSources.filter((item) => item !== source);
+      }
+
+      function scheduleChunkPlayback(audioBuffer) {
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(analyser);
+        activeSources.push(source);
+        source.addEventListener("ended", () => {
+          removeActiveSource(source);
+        }, { once: true });
+        source.start(nextPlaybackTime);
+      }
+
+      async function fadeOutAndStopActiveSources() {
+        if (audioContext && outputGain) {
+          const now = audioContext.currentTime;
+          outputGain.gain.cancelScheduledValues(now);
+          outputGain.gain.setValueAtTime(outputGain.gain.value, now);
+          outputGain.gain.linearRampToValueAtTime(0, now + CLICK_FADE_SECONDS);
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, Math.ceil(CLICK_FADE_SECONDS * 1000) + 4);
+          });
+        }
+
+        for (const source of activeSources) {
+          try {
+            source.stop();
+          } catch (error) {
+            console.debug("Source already stopped.", error);
+          }
+        }
+        activeSources = [];
+
+        if (audioContext && outputGain) {
+          const now = audioContext.currentTime;
+          outputGain.gain.cancelScheduledValues(now);
+          outputGain.gain.setValueAtTime(1, now);
+        }
+      }
+
+      async function forceStopPlayback() {
+        if (ym2612) {
+          ym2612.reset();
+        }
+        await fadeOutAndStopActiveSources();
+        stopStreamingPlayback("Stopped.");
+      }
+
+      async function streamOneChunk(chip, sampleRate) {
+        const chunkDuration = CHUNK_FRAMES / sampleRate;
+        const { left, right, envelopes } = chip.generateStereoWithInternalEnvelope(CHUNK_FRAMES, 0);
+        appendChunkTrace(left, right, envelopes[3]);
+
+        const audioBuffer = audioContext.createBuffer(2, CHUNK_FRAMES, sampleRate);
+        audioBuffer.copyToChannel(left, 0);
+        audioBuffer.copyToChannel(right, 1);
+        scheduleChunkPlayback(audioBuffer);
+        nextPlaybackTime += chunkDuration;
+
+        if (releaseRequested) {
+          const tail = envelopes[3].slice(Math.max(0, envelopes[3].length - 64));
+          const peak = tail.reduce((max, value) => Math.max(max, value), 0);
+          if (peak < 0.01) {
+            stopStreamingPlayback("Ready.");
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      async function runScheduler(chip, sampleRate) {
+        if (!playbackActive) {
+          return;
+        }
+
+        while (playbackActive && nextPlaybackTime < audioContext.currentTime + SCHEDULE_AHEAD_SECONDS) {
+          const keepGoing = await streamOneChunk(chip, sampleRate);
+          if (!keepGoing) {
+            return;
+          }
+        }
+
+        schedulerTimer = window.setTimeout(() => {
+          runScheduler(chip, sampleRate);
+        }, 25);
       }
 
       async function ensureReady() {
@@ -676,7 +849,12 @@
           analyser.smoothingTimeConstant = 0.75;
           analyserTimeData = new Uint8Array(analyser.fftSize);
           analyserFreqData = new Uint8Array(analyser.frequencyBinCount);
-          analyser.connect(audioContext.destination);
+        }
+        if (!outputGain) {
+          outputGain = audioContext.createGain();
+          outputGain.gain.value = 1;
+          analyser.connect(outputGain);
+          outputGain.connect(audioContext.destination);
         }
         if (!ym2612) {
           setStatus("Loading YM2612 WASM...");
@@ -685,53 +863,88 @@
         return ym2612;
       }
 
-      async function playTone() {
+      async function startHoldPlayback() {
+        if (playbackActive) {
+          await forceStopPlayback();
+        }
+
         playButton.disabled = true;
         try {
           const chip = await ensureReady();
           const settings = readSettings();
           configureSingleOperator(chip, settings);
+          keyOnSingleOperator(chip);
 
           const sampleRate = chip.sampleRate(YM2612_CLOCK);
-          const frames = Math.floor(sampleRate * 1.5);
-          setStatus(`Generating ${frames} stereo frames at ${sampleRate} Hz...`);
+          if (typeof chip.generateStereoWithInternalEnvelope !== "function") {
+            setStatus("Internal envelope API unavailable until hard refresh.");
+            playButton.disabled = false;
+            return;
+          }
 
-          const { left, right } = chip.generateStereo(frames);
-          lastOutputEnvelope = buildOutputEnvelope(left, right);
-          const audioBuffer = audioContext.createBuffer(2, frames, sampleRate);
-          audioBuffer.copyToChannel(left, 0);
-          audioBuffer.copyToChannel(right, 1);
-
-          const source = audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(analyser);
-          currentSource = source;
+          outputTraceLeft = [];
+          outputTraceRight = [];
+          internalTrace = [];
+          lastOutputEnvelope = null;
+          lastInternalEnvelope = null;
+          playbackActive = true;
+          isHolding = true;
+          releaseRequested = false;
+          releaseStartedAt = 0;
+          nextPlaybackTime = audioContext.currentTime + 0.02;
           stopVisualLoop();
           updateVisuals();
-          source.start();
-
-          setStatus("Playing 1 operator tone...");
-          source.addEventListener("ended", () => {
-            currentSource = null;
-            stopVisualLoop();
-            drawIdleAudioVisuals();
-            drawEnvelope(readSettings());
-            setStatus("Ready.");
-          }, { once: true });
+          playButton.disabled = false;
+          stopButton.disabled = false;
+          setStatus("Holding key on...");
+          await runScheduler(chip, sampleRate);
         } catch (error) {
           console.error(error);
-          setStatus(`Error: ${error.message}`);
-        } finally {
+          playbackActive = false;
+          isHolding = false;
+          releaseRequested = false;
+          releaseStartedAt = 0;
+          if (schedulerTimer) {
+            clearTimeout(schedulerTimer);
+            schedulerTimer = 0;
+          }
           playButton.disabled = false;
+          stopButton.disabled = false;
+          setStatus(`Error: ${error.message}`);
         }
+      }
+
+      function requestRelease() {
+        if (!playbackActive || releaseRequested) {
+          return;
+        }
+        releaseRequested = true;
+        isHolding = false;
+        releaseStartedAt = audioContext ? audioContext.currentTime : 0;
+        if (ym2612) {
+          keyOffSingleOperator(ym2612);
+        }
+        setStatus("Key off... release phase.");
       }
 
       Object.values(controls).forEach((input) => {
         input.addEventListener("input", updateLabelsAndSummary);
       });
 
-      playButton.addEventListener("click", () => {
-        playTone();
+      playButton.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        startHoldPlayback();
+      });
+      playButton.addEventListener("pointerup", requestRelease);
+      playButton.addEventListener("pointerleave", requestRelease);
+      playButton.addEventListener("pointercancel", requestRelease);
+      stopButton.addEventListener("click", () => {
+        forceStopPlayback();
+      });
+      window.addEventListener("pointerup", () => {
+        if (isHolding) {
+          requestRelease();
+        }
       });
 
       updateLabelsAndSummary();

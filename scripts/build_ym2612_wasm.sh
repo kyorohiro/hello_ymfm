@@ -24,6 +24,6 @@ em++ -std=c++14 \
   -sENVIRONMENT=web,worker \
   -sALLOW_MEMORY_GROWTH=1 \
   -sEXPORT_ALL=1 \
-  -sEXPORTED_FUNCTIONS='["_ym2612_create","_ym2612_destroy","_ym2612_reset","_ym2612_write","_ym2612_sample_rate","_ym2612_generate","_malloc","_free"]' \
+  -sEXPORTED_FUNCTIONS='["_ym2612_create","_ym2612_destroy","_ym2612_reset","_ym2612_write","_ym2612_sample_rate","_ym2612_generate","_ym2612_generate_with_internal_envelope","_malloc","_free"]' \
   -sEXPORTED_RUNTIME_METHODS='["cwrap","HEAPF32"]' \
   -o "$OUT_DIR/ym2612_wasm.js"
