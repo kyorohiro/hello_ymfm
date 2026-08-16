@@ -73,16 +73,40 @@
 
       .editor-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.95fr);
+        grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.45fr);
         gap: 16px;
         align-items: start;
-        margin: 18px 0 18px;
+        margin: 18px 0;
       }
 
       .controls {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         gap: 10px;
+      }
+
+      .controls.compact {
+        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        gap: 8px;
+      }
+
+      .controls-stack {
+        display: grid;
+        gap: 12px;
+        order: 2;
+      }
+
+      .control-section {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.3);
+      }
+
+      .control-section h2 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        letter-spacing: -0.02em;
       }
 
       .control {
@@ -92,11 +116,21 @@
         background: rgba(255, 255, 255, 0.45);
       }
 
+      .controls.compact .control {
+        padding: 8px 10px;
+        border-radius: 12px;
+      }
+
       .control label {
         display: block;
         font-weight: 700;
         margin-bottom: 4px;
         font-size: 0.92rem;
+      }
+
+      .controls.compact .control label {
+        margin-bottom: 2px;
+        font-size: 0.84rem;
       }
 
       .control small {
@@ -107,13 +141,19 @@
         color: rgba(31, 27, 22, 0.82);
       }
 
+      .controls.compact .control small {
+        margin-top: 2px;
+        line-height: 1.2;
+        font-size: 0.72rem;
+      }
+
       input[type="range"] {
         width: 100%;
       }
 
       .value {
         display: inline-block;
-        min-width: 4ch;
+        min-width: 3ch;
         font-weight: 700;
       }
 
@@ -174,6 +214,12 @@
         height: 220px;
       }
 
+      .hero-visual {
+        order: 1;
+        position: sticky;
+        top: 14px;
+      }
+
       canvas {
         display: block;
         width: 100%;
@@ -225,52 +271,68 @@
         </p>
 
         <div class="editor-layout">
-          <div class="controls">
-            <div class="control">
-              <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
-              <input id="multi" type="range" min="0" max="15" value="1">
-              <small>Frequency multiplier for the audible operator.</small>
-            </div>
-            <div class="control">
-              <label for="tl">TL <span class="value" id="tlValue">0</span></label>
-              <input id="tl" type="range" min="0" max="127" value="0">
-              <small>Total level. Lower is louder. Higher is quieter.</small>
-            </div>
-            <div class="control">
-              <label for="ar">AR <span class="value" id="arValue">31</span></label>
-              <input id="ar" type="range" min="0" max="31" value="31">
-              <small>Attack rate. Larger values rise faster.</small>
-            </div>
-            <div class="control">
-              <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
-              <input id="d1r" type="range" min="0" max="31" value="8">
-              <small>First decay rate after the attack peak.</small>
-            </div>
-            <div class="control">
-              <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
-              <input id="d2r" type="range" min="0" max="31" value="4">
-              <small>Secondary decay rate while the note is held.</small>
-            </div>
-            <div class="control">
-              <label for="sl">SL <span class="value" id="slValue">4</span></label>
-              <input id="sl" type="range" min="0" max="15" value="4">
-              <small>Sustain level target after the first decay stage.</small>
-            </div>
-            <div class="control">
-              <label for="rr">RR <span class="value" id="rrValue">15</span></label>
-              <input id="rr" type="range" min="0" max="15" value="15">
-              <small>Release rate. Larger values fade faster after key off.</small>
-            </div>
-            <div class="control">
-              <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
-              <input id="fnum" type="range" min="256" max="1023" value="553">
-              <small>Channel frequency number. Higher values raise the note.</small>
-            </div>
-            <div class="control">
-              <label for="block">Block <span class="value" id="blockValue">4</span></label>
-              <input id="block" type="range" min="0" max="7" value="4">
-              <small>Octave-like block value for the channel frequency.</small>
-            </div>
+          <div class="controls-stack">
+            <section class="control-section">
+              <h2>Common</h2>
+              <div class="controls compact">
+                <div class="control">
+                  <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+                  <input id="fnum" type="range" min="256" max="1023" value="553">
+                  <small>Channel frequency number.</small>
+                </div>
+                <div class="control">
+                  <label for="block">Block <span class="value" id="blockValue">4</span></label>
+                  <input id="block" type="range" min="0" max="7" value="4">
+                  <small>Octave-like block value.</small>
+                </div>
+              </div>
+            </section>
+
+            <section class="control-section">
+              <h2>OP1</h2>
+              <div class="controls compact">
+                <div class="control">
+                  <label for="dt">DT <span class="value" id="dtValue">0</span></label>
+                  <input id="dt" type="range" min="0" max="7" value="0">
+                  <small>Detune.</small>
+                </div>
+                <div class="control">
+                  <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
+                  <input id="multi" type="range" min="0" max="15" value="1">
+                  <small>Frequency multiplier.</small>
+                </div>
+                <div class="control">
+                  <label for="tl">TL <span class="value" id="tlValue">0</span></label>
+                  <input id="tl" type="range" min="0" max="127" value="0">
+                  <small>Loudness or FM depth.</small>
+                </div>
+                <div class="control">
+                  <label for="ar">AR <span class="value" id="arValue">31</span></label>
+                  <input id="ar" type="range" min="0" max="31" value="31">
+                  <small>Attack rate.</small>
+                </div>
+                <div class="control">
+                  <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
+                  <input id="d1r" type="range" min="0" max="31" value="8">
+                  <small>First decay.</small>
+                </div>
+                <div class="control">
+                  <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
+                  <input id="d2r" type="range" min="0" max="31" value="4">
+                  <small>Sustain decay.</small>
+                </div>
+                <div class="control">
+                  <label for="sl">SL <span class="value" id="slValue">4</span></label>
+                  <input id="sl" type="range" min="0" max="15" value="4">
+                  <small>Sustain level.</small>
+                </div>
+                <div class="control">
+                  <label for="rr">RR <span class="value" id="rrValue">15</span></label>
+                  <input id="rr" type="range" min="0" max="15" value="15">
+                  <small>Release rate.</small>
+                </div>
+              </div>
+            </section>
           </div>
           <section class="visual hero-visual">
             <h2>Envelope</h2>
@@ -307,6 +369,7 @@
       import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
 
       const controls = {
+        dt: document.getElementById("dt"),
         multi: document.getElementById("multi"),
         tl: document.getElementById("tl"),
         ar: document.getElementById("ar"),
@@ -319,6 +382,7 @@
       };
 
       const values = {
+        dt: document.getElementById("dtValue"),
         multi: document.getElementById("multiValue"),
         tl: document.getElementById("tlValue"),
         ar: document.getElementById("arValue"),
@@ -621,6 +685,7 @@
 
       function readSettings() {
         return {
+          dt: Number(controls.dt.value),
           multi: Number(controls.multi.value),
           tl: Number(controls.tl.value),
           ar: Number(controls.ar.value),
@@ -644,7 +709,7 @@
 
         summaryOutput.textContent = [
           "Audible operator: channel 1, operator 4",
-          `DT/MULTI: (0 << 4) | (${settings.multi} << 0)`,
+          `DT/MULTI: (${settings.dt} << 4) | (${settings.multi} << 0)`,
           `TL: 0x${settings.tl.toString(16).padStart(2, "0")} (${settings.tl})`,
           `AR: 0x${settings.ar.toString(16).padStart(2, "0")} (${settings.ar})`,
           `D1R: 0x${settings.d1r.toString(16).padStart(2, "0")} (${settings.d1r})`,
@@ -669,7 +734,7 @@
         chip.writeRegister(0x30, (0 << 4) | (1 << 0));
         chip.writeRegister(0x34, (0 << 4) | (1 << 0));
         chip.writeRegister(0x38, (0 << 4) | (1 << 0));
-        chip.writeRegister(0x3c, (0 << 4) | (settings.multi << 0));
+        chip.writeRegister(0x3c, (settings.dt << 4) | (settings.multi << 0));
 
         // Operators 1-3 stay quiet. Operator 4 is the audible one.
         chip.writeRegister(0x40, 0x7f);
