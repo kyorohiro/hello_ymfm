@@ -873,9 +873,12 @@
         nextPlaybackTime += chunkDuration;
 
         if (releaseRequested) {
-          const tail = envelopes[3].slice(Math.max(0, envelopes[3].length - 64));
-          const peak = tail.reduce((max, value) => Math.max(max, value), 0);
-          if (peak < 0.01) {
+          const tailStart = Math.max(0, left.length - 128);
+          let peak = 0;
+          for (let index = tailStart; index < left.length; index += 1) {
+            peak = Math.max(peak, Math.abs(left[index]), Math.abs(right[index]));
+          }
+          if (peak < 0.0005) {
             stopStreamingPlayback("Ready.");
             return false;
           }
