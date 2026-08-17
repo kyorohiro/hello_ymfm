@@ -39,6 +39,15 @@
  */
 
 /**
+ * @typedef {Object} Ym2612PcmRamWriteInfo
+ * @property {number} type
+ * @property {number} readOffset
+ * @property {number} writeOffset
+ * @property {number} size
+ * @property {number} commandOffset
+ */
+
+/**
  * @param {DataView} view
  * @param {number} offset
  * @returns {number}
@@ -123,6 +132,8 @@ export class Ym2612VGM {
     this.dataBankCursor = 0;
     /** @type {{ port: number, value: number } | null} */
     this.pendingYm2612DataBankWrite = null;
+    /** @type {Ym2612PcmRamWriteInfo[]} */
+    this.pcmRamWrites = [];
   }
 
   /**
@@ -261,6 +272,13 @@ export class Ym2612VGM {
   }
 
   /**
+   * @returns {Ym2612PcmRamWriteInfo[]}
+   */
+  pcmRamWriteSummary() {
+    return this.pcmRamWrites.slice();
+  }
+
+  /**
    * @param {number} targetCommand
    * @param {number} [contextRadius]
    * @returns {Array<string>}
@@ -367,7 +385,7 @@ export class Ym2612VGM {
 
     if (command === 0x68) {
       this.#ensureAvailable(12);
-      this.#warn("Skipping unsupported VGM PCM RAM write command 0x68");
+      this.#storePcmRamWrite(this.position);
       this.position += 12;
       return this.step();
     }
@@ -392,6 +410,14 @@ export class Ym2612VGM {
       this.#ensureAvailable(5);
       this.dataBankCursor = readUint32LE(this.view, this.position + 1);
       this.position += 5;
+      return this.step();
+    }
+
+    const ignoredLength = ignoredCommandLength(command);
+    if (ignoredLength !== null) {
+      this.#ensureAvailable(ignoredLength);
+      this.#warn(`Skipping known unsupported VGM command ${formatHexNumber(command)} (${ignoredLength} bytes)`);
+      this.position += ignoredLength;
       return this.step();
     }
 
@@ -830,6 +856,27 @@ export class Ym2612VGM {
   }
 
   /**
+   * @param {number} position
+   * @returns {void}
+   */
+  #storePcmRamWrite(position) {
+    const dataType = this.bytes[position + 2];
+    const readOffset = readUint24LE(this.bytes, position + 3);
+    const writeOffset = readUint24LE(this.bytes, position + 6);
+    const size = readUint24LE(this.bytes, position + 9);
+    this.pcmRamWrites.push({
+      type: dataType,
+      readOffset,
+      writeOffset,
+      size,
+      commandOffset: position,
+    });
+    this.#warn(
+      `Parsed VGM PCM RAM write 0x68 (type=${formatHexNumber(dataType)}, readOffset=${formatHexNumber(readOffset, 6)}, writeOffset=${formatHexNumber(writeOffset, 6)}, size=${size}) but playback is not implemented yet`,
+    );
+  }
+
+  /**
    * @param {number} dataType
    * @param {number} dataOffset
    * @param {number} size
@@ -931,5 +978,29 @@ function rawCommandLength(bytes, view, position) {
   if (command === 0xe0) {
     return 5;
   }
+  const ignoredLength = ignoredCommandLength(command);
+  if (ignoredLength !== null) {
+    return ignoredLength;
+  }
   throw new Error(`Unsupported raw VGM command 0x${command.toString(16).padStart(2, "0")}`);
+}
+
+/**
+ * @param {number} command
+ * @returns {number | null}
+ */
+function ignoredCommandLength(command) {
+  if ((command >= 0x30 && command <= 0x3f) || command === 0x4f) {
+    return 2;
+  }
+  if ((command >= 0x40 && command <= 0x4e) || command === 0x5d || (command >= 0xb0 && command <= 0xbf)) {
+    return 3;
+  }
+  if ((command >= 0xc0 && command <= 0xcf) || (command >= 0xd0 && command <= 0xdf)) {
+    return 4;
+  }
+  if ((command >= 0xe1 && command <= 0xff)) {
+    return 5;
+  }
+  return null;
 }

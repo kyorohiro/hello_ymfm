@@ -155,6 +155,9 @@
         <h2>Special Command Details</h2>
         <pre id="specialCommandsOutput">No special command details yet.</pre>
 
+        <h2>0x68 PCM RAM Write</h2>
+        <pre id="pcmRamWriteOutput">No 0x68 PCM RAM write details yet.</pre>
+
         <h2>0x92 Context</h2>
         <pre id="command92ContextOutput">No 0x92 context yet.</pre>
       </section>
@@ -180,6 +183,7 @@
       const commandUsageOutput = document.getElementById("commandUsageOutput");
       const dataBlocksOutput = document.getElementById("dataBlocksOutput");
       const specialCommandsOutput = document.getElementById("specialCommandsOutput");
+      const pcmRamWriteOutput = document.getElementById("pcmRamWriteOutput");
       const command92ContextOutput = document.getElementById("command92ContextOutput");
 
       let currentBuffer = null;
@@ -236,6 +240,22 @@
         return blocks.map((block) => {
           const preview = block.preview === "" ? "(empty)" : block.preview;
           return `block ${block.index}: offset=0x${block.offset.toString(16).padStart(8, "0")} type=${formatHex(block.type)} size=${block.size} preview=${preview}`;
+        }).join("\n");
+      }
+
+      function renderPcmRamWrites(entries) {
+        if (entries.length === 0) {
+          return "No 0x68 PCM RAM write commands were found.";
+        }
+        return entries.map((entry, index) => {
+          return [
+            `entry ${index}:`,
+            `  commandOffset=${formatHex(entry.commandOffset, 8)}`,
+            `  type=${formatHex(entry.type)}`,
+            `  readOffset=${formatHex(entry.readOffset, 6)}`,
+            `  writeOffset=${formatHex(entry.writeOffset, 6)}`,
+            `  size=${entry.size}`,
+          ].join("\n");
         }).join("\n");
       }
 
@@ -468,6 +488,7 @@
         commandUsageOutput.textContent += "\n";
         dataBlocksOutput.textContent = renderDataBlocks(vgm.dataBlockSummary());
         specialCommandsOutput.textContent = vgm.analyzeSpecialCommands().join("\n");
+        pcmRamWriteOutput.textContent = renderPcmRamWrites(vgm.pcmRamWriteSummary());
         command92ContextOutput.textContent = vgm.analyzeCommandContext(0x92).join("\n");
 
         const events = [];

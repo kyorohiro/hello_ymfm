@@ -1,6 +1,6 @@
 # Save Point
 
-Last updated: 2026-08-15
+Last updated: 2026-08-17
 
 ## Current UI / YM2612 learning demo status
 
@@ -222,6 +222,111 @@ Last updated: 2026-08-15
   - browser / WASM playback
   - support for a practical subset of Genesis / DefleMask-oriented VGM data
   - clear documentation about what is supported and what is not
+
+## `examples/vgmrender` vs `web/ym2612vgm.js`
+
+- `examples/vgmrender`
+  - broader as a general VGM renderer
+  - supports many `ymfm` chips, not only `YM2612`
+  - renders to WAV offline
+  - good as a reference for classic VGM command handling
+- `web/ym2612vgm.js`
+  - narrower, but closer to this repository's browser goal
+  - focused on `YM2612 + PSG`
+  - already has browser-oriented streaming playback
+  - already has practical `0x90-0x95` DAC stream handling that is useful for some Genesis / DefleMask files
+
+## What can still be borrowed from `examples/vgmrender`
+
+- Priority 1: improve docs/comments around the classic YM2612 DAC route
+  - explain `0x67` type `0x00` as the YM2612 PCM data bank
+  - explain `0xE0` as seek within that PCM bank
+  - explain `0x80-0x8f` as "write one DAC byte to `0x2A` and wait"
+- Priority 2: make `0x68` more than a skip
+  - current `web/ym2612vgm.js` only logs and skips `0x68`
+  - first useful step is to parse and store:
+    - data type
+    - read offset
+    - write offset
+    - size
+  - after that, decide whether target Genesis files actually need full behavior
+- Priority 3: strengthen unsupported-command handling
+  - when a command is not implemented, prefer:
+    - known byte length
+    - safe skip
+    - clear log
+  - this is safer than hard-failing on every uncommon command
+
+## Important difference to remember
+
+- `examples/vgmrender` is not automatically "better" for this repository's goal.
+- It is a stronger general VGM reference.
+- But for this repository:
+  - browser playback
+  - `YM2612 + PSG`
+  - DefleMask-oriented Genesis subset
+  are more important than full generic coverage.
+
+## Suggested next implementation order for `web/ym2612vgm.js`
+
+1. Add clearer comments/doc for `0x67`, `0x80-0x8f`, and `0xE0`.
+2. Add a structured `0x68` parser instead of pure skip.
+3. Extend the raw command length table only for commands likely to appear in Genesis VGM files.
+4. Only after that, decide whether to import more behavior from `vgmrender`.
+
+## Progress added on 2026-08-17
+
+- `0x68` is no longer only "skip and forget".
+- `web/ym2612vgm.js` and `docs/ym2612vgm.js` now parse and store `0x68` PCM RAM write metadata:
+  - `type`
+  - `readOffset`
+  - `writeOffset`
+  - `size`
+  - `commandOffset`
+- A helper now exists:
+  - `pcmRamWriteSummary()`
+- Playback for `0x68` is still not implemented.
+- But the parser can now preserve enough information to inspect real files and decide whether implementation is needed.
+
+## `docs/vgm.html` status for `0x68`
+
+- `docs/vgm.html` now has a dedicated section:
+  - `0x68 PCM RAM Write`
+- After loading a file, the page can now show:
+  - where each `0x68` appears
+  - its parsed offsets
+  - its size
+- This makes browser-side inspection possible before adding playback behavior.
+
+## Safe-skip improvement added on 2026-08-17
+
+- `web/ym2612vgm.js` and `docs/ym2612vgm.js` now have a small `ignoredCommandLength()` helper.
+- Some known unsupported commands no longer hard-fail immediately.
+- They are now:
+  - length-checked
+  - warned
+  - safely skipped
+- Current safe-skip coverage includes:
+  - `0x30-0x3f`
+  - `0x4f`
+  - `0x40-0x4e`
+  - `0x5d`
+  - `0xb0-0xbf`
+  - `0xc0-0xdf`
+  - `0xe1-0xff`
+
+## Why this matters
+
+- This does not make the player "more correct" yet.
+- It makes the parser more robust for mixed or broader VGM files.
+- It reduces unnecessary hard parser stops when a file contains unrelated commands that this repository does not intend to render yet.
+
+## Still intentionally not done
+
+- `0x68` playback behavior
+- full generic VGM compatibility
+- broad support for non-Genesis chips
+- automatic interpretation of every skipped command
 
 ## DefleMask-oriented finding
 
