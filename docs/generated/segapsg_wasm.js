@@ -98,9 +98,6 @@ var _scriptName = import.meta.url;
 // `/` should be present at the end if `scriptDirectory` is not empty
 var scriptDirectory = '';
 function locateFile(path) {
-  if (Module['locateFile']) {
-    return Module['locateFile'](path, scriptDirectory);
-  }
   return scriptDirectory + path;
 }
 
@@ -108,6 +105,54 @@ function locateFile(path) {
 var readAsync, readBinary;
 
 if (ENVIRONMENT_IS_SHELL) {
+
+  readBinary = (f) => {
+    if (globalThis.readbuffer) {
+      return new Uint8Array(readbuffer(f));
+    }
+    let data = read(f, 'binary');
+    assert(typeof data == 'object');
+    return data;
+  };
+
+  readAsync = async (f) => readBinary(f);
+
+  globalThis.clearTimeout ??= (id) => {};
+
+  // v8 and jsc both use `arguments`. spidermonkey uses `scriptArgs`
+  programArgs = globalThis.arguments ?? globalThis.scriptArgs;
+
+  if (globalThis.quit) {
+    quit_ = (status, toThrow) => {
+      // Unlike node which has process.exitCode, d8 has no such mechanism. So we
+      // have no way to set the exit code and then let the program exit with
+      // that code when it naturally stops running (say, when all setTimeouts
+      // have completed). For that reason, we must call `quit` - the only way to
+      // set the exit code - but quit also halts immediately.  To increase
+      // consistency with node (and the web) we schedule the actual quit call
+      // using a setTimeout to give the current stack and any exception handlers
+      // a chance to run.  This enables features such as addOnPostRun (which
+      // expected to be able to run code after main returns).
+      setTimeout(() => {
+        if (!(toThrow instanceof ExitStatus)) {
+          let toLog = toThrow;
+          if (toThrow && typeof toThrow == 'object' && toThrow.stack) {
+            toLog = [toThrow, toThrow.stack];
+          }
+          err(`exiting due to exception: ${toLog}`);
+        }
+        quit(status);
+      });
+      throw toThrow;
+    };
+  }
+
+  if (globalThis.print) {
+    // Use `print` to implement console.log/error/warn as needed.
+    globalThis.console ??= /** @type{!Console} */({});
+    console.log ??= /** @type{!function(this:Console, ...*): undefined} */ (print);
+    console.warn ??= console.error ??= /** @type{!function(this:Console, ...*): undefined} */ (globalThis.printErr ?? print);
+  }
 
 } else
 
@@ -168,8 +213,6 @@ var NODEFS = 'NODEFS is no longer included by default; build with -lnodefs.js';
 // if an assertion fails it cannot print the message
 
 assert(!ENVIRONMENT_IS_NODE, 'node environment detected but not enabled at build time (add `node` to `-sENVIRONMENT` to enable)');
-
-assert(!ENVIRONMENT_IS_SHELL, 'shell environment detected but not enabled at build time (add `shell` to `-sENVIRONMENT` to enable)');
 
 // end include: shell.js
 
@@ -409,15 +452,7 @@ assert(globalThis.Int32Array && globalThis.Float64Array && Int32Array.prototype.
        'JS engine does not provide full typed array support');
 
 function preRun() {
-  var preRun = Module['preRun'];
-  if (preRun) {
-    if (typeof preRun == 'function') preRun = [preRun];
-    onPreRuns.push(...preRun);
-  }
-  consumedModuleProp('preRun');
-  // Begin ATPRERUNS hooks
-  callRuntimeCallbacks(onPreRuns);
-  // End ATPRERUNS hooks
+  // No ATPRERUNS hooks
 }
 
 function initRuntime() {
@@ -438,23 +473,13 @@ function initRuntime() {
 function postRun() {
   checkStackCookie();
 
-  var postRun = Module['postRun'];
-  if (postRun) {
-    if (typeof postRun == 'function') postRun = [postRun];
-    onPostRuns.push(...postRun);
-  }
-  consumedModuleProp('postRun');
-
-  // Begin ATPOSTRUNS hooks
-  callRuntimeCallbacks(onPostRuns);
-  // End ATPOSTRUNS hooks
+  // No ATPOSTRUNS hooks
 }
 
 /**
  * @param {string|number=} what
  */
 function abort(what) {
-  Module['onAbort']?.(what);
 
   what = `Aborted(${what})`;
   // TODO(sbc): Should we remove printing and leave it up to whoever
@@ -516,6 +541,10 @@ var wasmBinaryFile;
 
 function findWasmBinary() {
 
+  if (ENVIRONMENT_IS_SHELL) {
+    return 'segapsg_wasm.wasm';
+  }
+
   if (Module['locateFile']) {
     return locateFile('segapsg_wasm.wasm');
   }
@@ -526,6 +555,9 @@ function findWasmBinary() {
 }
 
 function getBinarySync(file) {
+  if (file == wasmBinaryFile && wasmBinary) {
+    return new Uint8Array(wasmBinary);
+  }
   if (readBinary) {
     return readBinary(file);
   }
@@ -568,6 +600,8 @@ async function instantiateArrayBuffer(binaryFile, imports) {
 
 async function instantiateAsync(binary, binaryFile, imports) {
   if (!binary
+      // Shell environments don't have fetch.
+      && !ENVIRONMENT_IS_SHELL
      ) {
     try {
       var response = fetch(binaryFile, { credentials: 'same-origin' });
@@ -626,24 +660,6 @@ async function createWasm() {
 
   var info = getWasmImports();
 
-  // User shell pages can write their own Module.instantiateWasm = function(imports, successCallback) callback
-  // to manually instantiate the Wasm module themselves. This allows pages to
-  // run the instantiation parallel to any other async startup actions they are
-  // performing.
-  // Also pthreads and wasm workers initialize the wasm instance through this
-  // path.
-  var instantiateWasm = Module['instantiateWasm'];
-  if (instantiateWasm) {
-    return new Promise((resolve) => {
-      try {
-        instantiateWasm(info, (inst) => resolve(receiveInstance(inst)));
-      } catch(e) {
-        err(`Module.instantiateWasm callback failed with error: ${e}`);
-        throw e;
-      }
-    });
-  }
-
   wasmBinaryFile ??= findWasmBinary();
   var result = await instantiateAsync(wasmBinary, wasmBinaryFile, info);
   var exports = receiveInstantiationResult(result);
@@ -699,12 +715,6 @@ async function createWasm() {
         callbacks.shift()(Module);
       }
     };
-  var onPostRuns = [];
-  var addOnPostRun = (cb) => onPostRuns.push(cb);
-
-  var onPreRuns = [];
-  var addOnPreRun = (cb) => onPreRuns.push(cb);
-
 
   
   
@@ -731,8 +741,6 @@ async function createWasm() {
       default: abort(`invalid type for getValue: ${type}`);
     }
   }
-
-  var noExitRuntime = true;
 
   function ptrToString(ptr) {
       assert(typeof ptr === 'number', `ptrToString expects a number, got ${typeof ptr}`);
@@ -1179,9 +1187,7 @@ async function createWasm() {
 {
 
   // Begin ATMODULES hooks
-  if (Module['noExitRuntime']) noExitRuntime = Module['noExitRuntime'];
-if (Module['print']) out = Module['print'];
-if (Module['printErr']) err = Module['printErr'];
+  if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
 
 Module['FS_createDataFile'] = FS.createDataFile;
 Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
@@ -1190,8 +1196,8 @@ Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
 
   checkIncomingModuleAPI();
 
-  if (Module['arguments']) programArgs = Module['arguments'];
-  if (Module['thisProgram']) thisProgram = Module['thisProgram'];
+  
+  
 
   // Assertions on removed incoming Module JS APIs.
   assert(typeof Module['memoryInitializerPrefixURL'] == 'undefined', 'Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead');
@@ -1209,16 +1215,6 @@ Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
   assert(typeof Module['wasmMemory'] == 'undefined', 'Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally');
   assert(typeof Module['INITIAL_MEMORY'] == 'undefined', 'Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically');
 
-  var preInit = Module['preInit'];
-  if (preInit) {
-    if (typeof preInit == 'function') Module['preInit'] = preInit = [preInit];
-    // Written as a loop so that preInit functions that themselves add more
-    // preInit functions.  Is this actually needed?
-    while (preInit.length > 0) {
-      preInit.shift()();
-    }
-  }
-  consumedModuleProp('preInit');
 }
 
 // Begin runtime exports
@@ -1236,13 +1232,8 @@ Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
   Module['HEAPU32'] = HEAPU32;
   Module['HEAPU64'] = HEAPU64;
   Module['HEAPU8'] = HEAPU8;
-  Module['addOnPostRun'] = addOnPostRun;
-  Module['onPostRuns'] = onPostRuns;
   Module['callRuntimeCallbacks'] = callRuntimeCallbacks;
-  Module['addOnPreRun'] = addOnPreRun;
-  Module['onPreRuns'] = onPreRuns;
   Module['getValue'] = getValue;
-  Module['noExitRuntime'] = noExitRuntime;
   Module['ptrToString'] = ptrToString;
   Module['setValue'] = setValue;
   Module['stackRestore'] = stackRestore;
@@ -1281,6 +1272,32 @@ Module['FS_createPreloadedFile'] = FS.createPreloadedFile;
 // end include: postlibrary.js
 
 function checkIncomingModuleAPI() {
+  ignoredModuleProp('ENVIRONMENT');
+  ignoredModuleProp('arguments');
+  ignoredModuleProp('canvas');
+  ignoredModuleProp('dynamicLibraries');
+  ignoredModuleProp('elementPointerLock');
+  ignoredModuleProp('instantiateWasm');
+  ignoredModuleProp('locateFile');
+  ignoredModuleProp('monitorRunDependencies');
+  ignoredModuleProp('noExitRuntime');
+  ignoredModuleProp('noInitialRun');
+  ignoredModuleProp('onAbort');
+  ignoredModuleProp('onExit');
+  ignoredModuleProp('onRuntimeInitialized');
+  ignoredModuleProp('postRun');
+  ignoredModuleProp('preInit');
+  ignoredModuleProp('preRun');
+  ignoredModuleProp('print');
+  ignoredModuleProp('printErr');
+  ignoredModuleProp('setStatus');
+  ignoredModuleProp('statusMessage');
+  ignoredModuleProp('stderr');
+  ignoredModuleProp('stdin');
+  ignoredModuleProp('stdout');
+  ignoredModuleProp('thisProgram');
+  ignoredModuleProp('wasm');
+  ignoredModuleProp('websocket');
   ignoredModuleProp('fetchSettings');
   ignoredModuleProp('logReadFiles');
   ignoredModuleProp('loadSplitModule');
@@ -1307,7 +1324,6 @@ function checkIncomingModuleAPI() {
   ignoredModuleProp('onFullScreen');
   ignoredModuleProp('INITIAL_MEMORY');
   ignoredModuleProp('wasmMemory');
-  ignoredModuleProp('wasmBinary');
 }
 
 // Imports from the Wasm binary.
@@ -1409,21 +1425,9 @@ async function run() {
 
   preRun();
 
-  var setStatus = Module['setStatus'];
-  if (setStatus) {
-    setStatus('Running...');
-    // Yield to the event loop to allow the browser to paint "Running..."
-    await new Promise((resolve) => setTimeout(resolve, 1));
-    // Then we want to clear the status text, but only after the rest of this function runs.
-    setTimeout(setStatus, 1, '');
-  }
-
   if (ABORT) return;
 
   initRuntime();
-
-  Module['onRuntimeInitialized']?.();
-  consumedModuleProp('onRuntimeInitialized');
 
   assert(!Module['_main'], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
 

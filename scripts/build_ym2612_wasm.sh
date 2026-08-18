@@ -21,7 +21,8 @@ em++ -std=c++14 \
   src/ymfm_ssg.cpp \
   -sMODULARIZE=1 \
   -sEXPORT_ES6=1 \
-  -sENVIRONMENT=web,worker \
+  -sINCOMING_MODULE_JS_API='["wasmBinary"]' \
+  -sENVIRONMENT=web,worker,shell \
   -sALLOW_MEMORY_GROWTH=1 \
   -sEXPORT_ALL=1 \
   -sEXPORTED_FUNCTIONS='["_ym2612_create","_ym2612_destroy","_ym2612_reset","_ym2612_write","_ym2612_sample_rate","_ym2612_generate","_ym2612_generate_with_internal_envelope","_malloc","_free"]' \

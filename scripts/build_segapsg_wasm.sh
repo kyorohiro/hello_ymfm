@@ -13,7 +13,8 @@ em++ -std=c++14 \
   src/segapsg.cpp \
   -sMODULARIZE=1 \
   -sEXPORT_ES6=1 \
-  -sENVIRONMENT=web,worker \
+  -sINCOMING_MODULE_JS_API='["wasmBinary"]' \
+  -sENVIRONMENT=web,worker,shell \
   -sALLOW_MEMORY_GROWTH=1 \
   -sEXPORT_ALL=1 \
   -sEXPORTED_FUNCTIONS='["_segapsg_create","_segapsg_destroy","_segapsg_reset","_segapsg_write","_segapsg_sample_rate","_segapsg_generate","_malloc","_free"]' \
