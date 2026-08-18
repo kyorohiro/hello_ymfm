@@ -86,6 +86,27 @@ export class YM2612DirectTransport {
   }
 }
 
+export class YM2612WorkletTransport {
+  constructor(node) {
+    this.node = node;
+  }
+
+  reset() {
+    this.node.port.postMessage({
+      type: "reset",
+    });
+  }
+
+  write(port, register, value) {
+    this.node.port.postMessage({
+      type: "write",
+      port,
+      register,
+      value,
+    });
+  }
+}
+
 export class YM2612Synth {
   /**
    * @param {{
@@ -439,3 +460,4 @@ function validateRange(name, value, min, max) {
   }
   return value;
 }
+
