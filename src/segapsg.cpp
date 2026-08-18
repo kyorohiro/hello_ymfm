@@ -1,6 +1,5 @@
 #include "segapsg.h"
 
-#include <algorithm>
 #include <array>
 
 namespace
@@ -25,6 +24,8 @@ constexpr std::array<float, 16> VOLUME_TABLE = {
     0.0f,
 };
 
+constexpr float OUTPUT_GAIN = 0.2f;
+
 } // namespace
 
 SegaPSG::SegaPSG(uint32_t sample_rate, uint32_t clock) :
@@ -48,9 +49,10 @@ void SegaPSG::reset()
 
     for (auto &channel : m_tone)
     {
-        channel.period = 0x10;
-        channel.counter = 0x10;
-        channel.output_high = false;
+        // Sega VDP PSG tone registers reset to 0.
+        channel.period = 0;
+        channel.counter = 1;
+        channel.output_high = true;
         channel.volume = 0x0f;
     }
 
@@ -59,6 +61,7 @@ void SegaPSG::reset()
     m_noise_volume = 0x0f;
     m_noise_counter = 0x10;
     m_noise_output_high = false;
+
     m_latched_channel = 0;
     m_latched_volume = false;
 }
@@ -71,6 +74,7 @@ void SegaPSG::write(uint8_t data)
         m_latched_volume = (data & 0x10) != 0;
 
         const uint8_t nibble = data & 0x0f;
+
         if (m_latched_channel < 3)
         {
             if (m_latched_volume)
@@ -80,10 +84,16 @@ void SegaPSG::write(uint8_t data)
             else
             {
                 m_tone[m_latched_channel].period =
-                    static_cast<uint16_t>((m_tone[m_latched_channel].period & 0x03f0) | nibble);
-                if (m_tone[m_latched_channel].counter > tone_period(m_latched_channel))
+                    static_cast<uint16_t>(
+                        (m_tone[m_latched_channel].period & 0x03f0) |
+                        nibble
+                    );
+
+                if (m_tone[m_latched_channel].counter >
+                    tone_period(m_latched_channel))
                 {
-                    m_tone[m_latched_channel].counter = tone_period(m_latched_channel);
+                    m_tone[m_latched_channel].counter =
+                        tone_period(m_latched_channel);
                 }
             }
         }
@@ -97,9 +107,11 @@ void SegaPSG::write(uint8_t data)
             {
                 m_noise_control = nibble & 0x07;
                 m_noise_lfsr = 0x8000;
+                m_noise_output_high = false;
                 reload_noise_counter();
             }
         }
+
         return;
     }
 
@@ -112,25 +124,46 @@ void SegaPSG::write(uint8_t data)
         else
         {
             m_tone[m_latched_channel].period =
-                static_cast<uint16_t>((m_tone[m_latched_channel].period & 0x000f) | ((data & 0x3f) << 4));
-            if (m_tone[m_latched_channel].counter > tone_period(m_latched_channel))
+                static_cast<uint16_t>(
+                    (m_tone[m_latched_channel].period & 0x000f) |
+                    ((data & 0x3f) << 4)
+                );
+
+            if (m_tone[m_latched_channel].counter >
+                tone_period(m_latched_channel))
             {
-                m_tone[m_latched_channel].counter = tone_period(m_latched_channel);
+                m_tone[m_latched_channel].counter =
+                    tone_period(m_latched_channel);
             }
         }
+
+        return;
     }
-    else if (m_latched_volume)
+
+    // Channel 3 is the noise channel.
+    // Data bytes must also update the currently latched noise register.
+    if (m_latched_volume)
     {
         m_noise_volume = data & 0x0f;
+    }
+    else
+    {
+        m_noise_control = data & 0x07;
+        m_noise_lfsr = 0x8000;
+        m_noise_output_high = false;
+        reload_noise_counter();
     }
 }
 
 void SegaPSG::generate(float *left, float *right, uint32_t frames)
 {
+    // The SN76489 tone/noise generators run at input clock / 16.
     const uint32_t clocks_per_tick = m_sample_rate * 16;
+
     for (uint32_t index = 0; index < frames; index++)
     {
         m_clock_accumulator += m_clock;
+
         while (m_clock_accumulator >= clocks_per_tick)
         {
             m_clock_accumulator -= clocks_per_tick;
@@ -138,12 +171,15 @@ void SegaPSG::generate(float *left, float *right, uint32_t frames)
         }
 
         float mixed = 0.0f;
+
         mixed += tone_level(0);
         mixed += tone_level(1);
         mixed += tone_level(2);
         mixed += noise_level();
-        mixed *= 0.2f;
 
+        mixed *= OUTPUT_GAIN;
+
+        // Genesis PSG output is mono.
         left[index] = mixed;
         right[index] = mixed;
     }
@@ -154,10 +190,20 @@ void SegaPSG::clock_generator()
     for (uint32_t index = 0; index < 3; index++)
     {
         auto &channel = m_tone[index];
+
+        // Tone period 0 or 1 produces a constant +1 output.
+        if (channel.period <= 1)
+        {
+            channel.output_high = true;
+            channel.counter = 1;
+            continue;
+        }
+
         if (channel.counter > 0)
         {
             channel.counter--;
         }
+
         if (channel.counter == 0)
         {
             channel.counter = tone_period(index);
@@ -169,24 +215,59 @@ void SegaPSG::clock_generator()
     {
         m_noise_counter--;
     }
+
     if (m_noise_counter == 0)
     {
         reload_noise_counter();
 
-        const bool white_noise = (m_noise_control & 0x04) != 0;
-        const uint16_t bit0 = m_noise_lfsr & 0x0001;
-        const uint16_t feedback = white_noise ? ((bit0 ^ ((m_noise_lfsr >> 3) & 0x0001)) & 0x0001) : bit0;
-        m_noise_lfsr = static_cast<uint16_t>((m_noise_lfsr >> 1) | (feedback << 15));
-        m_noise_output_high = (m_noise_lfsr & 0x0001) != 0;
+        /*
+         * The noise generator has an internal divider output.
+         * The LFSR is clocked only on the 0 -> 1 transition,
+         * not on every counter expiration.
+         */
+        m_noise_output_high = !m_noise_output_high;
+
+        if (m_noise_output_high)
+        {
+            const bool white_noise =
+                (m_noise_control & 0x04) != 0;
+
+            const uint16_t bit0 =
+                m_noise_lfsr & 0x0001;
+
+            const uint16_t feedback =
+                white_noise
+                    ? static_cast<uint16_t>(
+                        (
+                            bit0 ^
+                            ((m_noise_lfsr >> 3) & 0x0001)
+                        ) & 0x0001
+                    )
+                    : bit0;
+
+            m_noise_lfsr =
+                static_cast<uint16_t>(
+                    (m_noise_lfsr >> 1) |
+                    (feedback << 15)
+                );
+        }
     }
 }
 
 void SegaPSG::reload_noise_counter()
 {
-    static constexpr uint16_t NOISE_PERIODS[4] = { 0x10, 0x20, 0x40, 0x00 };
+    static constexpr uint16_t NOISE_PERIODS[4] = {
+        0x10,
+        0x20,
+        0x40,
+        0x00,
+    };
+
     const uint8_t mode = m_noise_control & 0x03;
+
     if (mode == 0x03)
     {
+        // Noise frequency follows tone channel 2.
         m_noise_counter = tone_period(2);
     }
     else
@@ -202,17 +283,38 @@ void SegaPSG::reload_noise_counter()
 
 uint16_t SegaPSG::tone_period(uint32_t channel) const
 {
-    return std::max<uint16_t>(m_tone[channel].period, 1);
+    const uint16_t period = m_tone[channel].period;
+
+    // Internally keep the counter valid even though period 0/1
+    // has special constant-output behaviour.
+    return period == 0 ? 1 : period;
 }
 
 float SegaPSG::tone_level(uint32_t channel) const
 {
-    const float amplitude = VOLUME_TABLE[m_tone[channel].volume & 0x0f];
-    return m_tone[channel].output_high ? amplitude : -amplitude;
+    const auto &tone = m_tone[channel];
+
+    const float amplitude =
+        VOLUME_TABLE[tone.volume & 0x0f];
+
+    // SN76489 period 0 or 1 behaves as constant +1 output.
+    if (tone.period <= 1)
+    {
+        return amplitude;
+    }
+
+    return tone.output_high
+        ? amplitude
+        : -amplitude;
 }
 
 float SegaPSG::noise_level() const
 {
-    const float amplitude = VOLUME_TABLE[m_noise_volume & 0x0f];
-    return m_noise_output_high ? amplitude : -amplitude;
+    const float amplitude =
+        VOLUME_TABLE[m_noise_volume & 0x0f];
+
+    // The PSG noise output is taken from bit 0 of the LFSR.
+    return (m_noise_lfsr & 0x0001) != 0
+        ? amplitude
+        : -amplitude;
 }
