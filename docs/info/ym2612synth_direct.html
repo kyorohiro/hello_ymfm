@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612Synth Direct Demo</title>
+
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.35rem;
+      }
+
+      p,
+      li {
+        line-height: 1.6;
+      }
+
+      ul {
+        margin: 0 0 16px 20px;
+      }
+
+      pre,
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 24px 0 18px;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612Synth Direct Demo</h1>
+
+        <p>
+          This example uses <code>YM2612Synth</code> with
+          <code>YM2612DirectTransport</code>, generates PCM directly from the
+          YM2612 WASM wrapper, and plays it through Web Audio.
+        </p>
+
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612synth.js">
+            docs/ym2612synth.js
+          </a>
+          |
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612.js">
+            docs/ym2612.js
+          </a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/info/ym2612synth_direct.html">
+            docs/info/ym2612synth_direct.html
+          </a>
+        </p>
+
+        <h2>Minimal Usage</h2>
+
+        <pre>const transport =
+  new YM2612DirectTransport(ym2612);
+
+const synth =
+  new YM2612Synth({ transport });
+
+synth.setOperator(0, 1, { tl: 0x7f });
+synth.setOperator(0, 2, { tl: 0x7f });
+synth.setOperator(0, 3, { tl: 0x7f });
+
+synth.setOperator(0, 4, {
+  dt: 0,
+  multi: 1,
+  tl: 8,
+  ar: 22,
+  d1r: 6,
+  d2r: 3,
+  sl: 3,
+  rr: 8,
+});
+
+synth.setAlgo(0, 7, 0);
+synth.setPan(0, true, true);
+
+synth.noteOn(0, 4, 553);
+
+const { left, right } =
+  ym2612.generateStereo(frames);
+
+synth.noteOff(0);</pre>
+
+        <div class="actions">
+          <button id="playButton" type="button">Play</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+
+        <div class="status" id="status">Ready.</div>
+
+        <h2>Data Flow</h2>
+
+        <pre>YM2612Synth
+    |
+    v
+YM2612DirectTransport
+    |
+    v
+Ym2612
+    |
+    v
+YM2612 / ymfm WASM
+    |
+    v
+generateStereo()
+    |
+    v
+Float32 PCM
+    |
+    v
+AudioBufferSourceNode
+    |
+    v
+AudioContext.destination</pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import ym2612ModuleFactory from "../../generated/ym2612_wasm.js";
+      import {
+        createYm2612,
+        YM2612_CLOCK,
+      } from "../../ym2612.js";
+
+      import {
+        YM2612DirectTransport,
+        YM2612Synth,
+      } from "../../ym2612synth.js";
+
+      const playButton = document.getElementById("playButton");
+      const status = document.getElementById("status");
+
+      let audioContext = null;
+      let ym2612 = null;
+      let synth = null;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      async function ensureReady() {
+        if (!audioContext) {
+          audioContext = new AudioContext();
+        }
+
+        if (audioContext.state !== "running") {
+          await audioContext.resume();
+        }
+
+        if (!ym2612) {
+          setStatus("Loading YM2612 WASM...");
+
+          ym2612 =
+            await createYm2612(
+              ym2612ModuleFactory
+            );
+
+          const transport =
+            new YM2612DirectTransport(
+              ym2612
+            );
+
+          synth =
+            new YM2612Synth({
+              transport,
+            });
+        }
+      }
+
+      function configureSynth() {
+        synth.reset();
+
+        synth.setOperator(0, 1, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 2, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 3, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 4, {
+          dt: 0,
+          multi: 1,
+          tl: 8,
+          ar: 22,
+          d1r: 6,
+          d2r: 3,
+          sl: 3,
+          rr: 8,
+        });
+
+        synth.setAlgo(
+          0,
+          7,
+          0
+        );
+
+        synth.setPan(
+          0,
+          true,
+          true
+        );
+      }
+
+      async function play() {
+        playButton.disabled = true;
+
+        try {
+          await ensureReady();
+
+          configureSynth();
+
+          synth.noteOn(
+            0,
+            4,
+            553
+          );
+
+          const sampleRate =
+            ym2612.sampleRate(
+              YM2612_CLOCK
+            );
+
+          const seconds = 1;
+          const frames =
+            Math.floor(
+              sampleRate * seconds
+            );
+
+          const {
+            left,
+            right,
+          } =
+            ym2612.generateStereo(
+              frames
+            );
+
+          synth.noteOff(0);
+
+          const audioBuffer =
+            audioContext.createBuffer(
+              2,
+              frames,
+              sampleRate
+            );
+
+          audioBuffer.copyToChannel(
+            left,
+            0
+          );
+
+          audioBuffer.copyToChannel(
+            right,
+            1
+          );
+
+          const source =
+            audioContext.createBufferSource();
+
+          source.buffer =
+            audioBuffer;
+
+          source.connect(
+            audioContext.destination
+          );
+
+          source.start();
+
+          setStatus(
+            `Playing at ${sampleRate} Hz.`
+          );
+
+          source.addEventListener(
+            "ended",
+            () => {
+              setStatus("Ready.");
+            },
+            {
+              once: true,
+            }
+          );
+        } catch (error) {
+          console.error(error);
+
+          setStatus(
+            `Error: ${error.message}`
+          );
+        } finally {
+          playButton.disabled = false;
+        }
+      }
+
+      playButton.addEventListener(
+        "click",
+        () => {
+          void play();
+        }
+      );
+    </script>
+  </body>
+</html>
