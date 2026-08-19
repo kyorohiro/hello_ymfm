@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>YM2612Synth AudioWorklet Demo</title>
+
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.35rem;
+      }
+
+      p,
+      li {
+        line-height: 1.6;
+      }
+
+      ul {
+        margin: 0 0 16px 20px;
+      }
+
+      pre,
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      pre {
+        margin: 0 0 16px;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 24px 0 18px;
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612Synth AudioWorklet Demo</h1>
+
+        <p>
+          This example uses <code>YM2612Synth</code> with
+          <code>YM2612WorkletTransport</code>.
+          YM2612 register writes are sent to an AudioWorklet, where the
+          YM2612 WASM instance generates PCM continuously.
+        </p>
+
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612synth.js">
+            docs/ym2612synth.js
+          </a>
+          |
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612-worklet.js">
+            docs/ym2612-worklet.js
+          </a>
+          |
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612.js">
+            docs/ym2612.js
+          </a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/info/ym2612synth_audioworklet.html">
+            docs/info/ym2612synth_audioworklet.html
+          </a>
+        </p>
+
+        <h2>Minimal Usage</h2>
+
+        <pre>const audioContext = new AudioContext();
+
+await audioContext.audioWorklet.addModule(
+  "../../ym2612-worklet.js"
+);
+
+const wasmResponse = await fetch(
+  "../../generated/ym2612_wasm.wasm"
+);
+
+const wasmBinary =
+  await wasmResponse.arrayBuffer();
+
+const node = new AudioWorkletNode(
+  audioContext,
+  "ym2612-processor",
+  {
+    numberOfInputs: 0,
+    numberOfOutputs: 1,
+    outputChannelCount: [2],
+  }
+);
+
+node.connect(audioContext.destination);
+
+const ready = waitForWorkletReady(node);
+
+node.port.postMessage(
+  {
+    type: "initialize",
+    wasmBinary,
+  },
+  [wasmBinary]
+);
+
+await ready;
+
+const transport =
+  new YM2612WorkletTransport(node);
+
+const synth =
+  new YM2612Synth({ transport });
+
+synth.setOperator(0, 4, {
+  dt: 0,
+  multi: 1,
+  tl: 8,
+  ar: 22,
+  d1r: 6,
+  d2r: 3,
+  sl: 3,
+  rr: 8,
+});
+
+synth.setAlgo(0, 7, 0);
+synth.setPan(0, true, true);
+
+synth.noteOn(0, 4, 553);
+synth.noteOff(0);</pre>
+
+        <div class="actions">
+          <button id="playButton" type="button">Play</button>
+          <a class="link-button" href="./index.html">Back</a>
+        </div>
+
+        <div class="status" id="status">Ready.</div>
+
+        <h2>Data Flow</h2>
+
+        <pre>Main Thread
+
+YM2612Synth
+    |
+    v
+YM2612WorkletTransport
+    |
+    v
+postMessage(register write)
+
+-------------------------------
+ Main Thread / AudioWorklet
+-------------------------------
+
+AudioWorklet
+    |
+    v
+YM2612Processor
+    |
+    v
+Ym2612
+    |
+    v
+YM2612 / ymfm WASM
+    |
+    v
+generateStereo()
+    |
+    v
+AudioWorklet output
+    |
+    v
+AudioContext.destination</pre>
+
+        <h2>Why Transfer the WASM Binary?</h2>
+
+        <p>
+          The Emscripten-generated module cannot load the
+          <code>.wasm</code> file normally from the AudioWorklet environment.
+          The main thread therefore loads the binary with <code>fetch()</code>
+          and transfers its <code>ArrayBuffer</code> to the AudioWorklet.
+        </p>
+
+        <pre>fetch("ym2612_wasm.wasm")
+    |
+    v
+ArrayBuffer
+    |
+    v
+postMessage(..., [wasmBinary])
+    |
+    v
+AudioWorklet
+    |
+    v
+createYm2612(
+  ym2612ModuleFactory,
+  { wasmBinary }
+)</pre>
+
+        <h2>Direct vs AudioWorklet</h2>
+
+        <pre>Direct
+
+YM2612Synth
+    |
+    v
+YM2612DirectTransport
+    |
+    v
+Ym2612
+    |
+    v
+generateStereo() on Main Thread
+
+
+AudioWorklet
+
+YM2612Synth
+    |
+    v
+YM2612WorkletTransport
+    |
+    v
+postMessage()
+    |
+    v
+Ym2612 inside AudioWorklet
+    |
+    v
+generateStereo() in process()</pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import {
+        YM2612Synth,
+        YM2612WorkletTransport,
+      } from "../../ym2612synth.js";
+
+      const playButton =
+        document.getElementById("playButton");
+
+      const status =
+        document.getElementById("status");
+
+      let audioContext = null;
+      let node = null;
+      let synth = null;
+      let readyPromise = null;
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function waitForWorkletReady(workletNode) {
+        return new Promise((resolve, reject) => {
+          const handleMessage = (event) => {
+            const message = event.data;
+
+            if (message?.type === "ready") {
+              workletNode.port.removeEventListener(
+                "message",
+                handleMessage
+              );
+
+              resolve(message);
+              return;
+            }
+
+            if (message?.type === "error") {
+              workletNode.port.removeEventListener(
+                "message",
+                handleMessage
+              );
+
+              reject(
+                new Error(
+                  message.message ||
+                  "YM2612 AudioWorklet initialization failed"
+                )
+              );
+            }
+          };
+
+          workletNode.port.addEventListener(
+            "message",
+            handleMessage
+          );
+
+          workletNode.port.start();
+        });
+      }
+
+      async function ensureReady() {
+        if (!audioContext) {
+          audioContext =
+            new AudioContext();
+        }
+
+        if (
+          audioContext.state !== "running"
+        ) {
+          await audioContext.resume();
+        }
+
+        if (readyPromise) {
+          await readyPromise;
+          return;
+        }
+
+        readyPromise = (async () => {
+          setStatus(
+            "Loading YM2612 AudioWorklet..."
+          );
+
+          await audioContext.audioWorklet.addModule(
+            "../../ym2612-worklet.js"
+          );
+
+          const response = await fetch(
+            "../../generated/ym2612_wasm.wasm"
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Failed to load YM2612 WASM: ${response.status} ${response.statusText}`
+            );
+          }
+
+          const wasmBinary =
+            await response.arrayBuffer();
+
+          node =
+            new AudioWorkletNode(
+              audioContext,
+              "ym2612-processor",
+              {
+                numberOfInputs: 0,
+                numberOfOutputs: 1,
+                outputChannelCount: [2],
+              }
+            );
+
+          node.connect(
+            audioContext.destination
+          );
+
+          const workletReady =
+            waitForWorkletReady(node);
+
+          node.port.postMessage(
+            {
+              type: "initialize",
+              wasmBinary,
+            },
+            [
+              wasmBinary,
+            ]
+          );
+
+          const result =
+            await workletReady;
+
+          const transport =
+            new YM2612WorkletTransport(
+              node
+            );
+
+          synth =
+            new YM2612Synth({
+              transport,
+            });
+
+          setStatus(
+            result.sampleRate
+              ? `Audio ready. YM2612 at ${result.sampleRate} Hz.`
+              : "Audio ready."
+          );
+        })();
+
+        try {
+          await readyPromise;
+        } catch (error) {
+          readyPromise = null;
+          throw error;
+        }
+      }
+
+      function configureSynth() {
+        synth.reset();
+
+        // Use operator 4 only.
+        synth.setOperator(0, 1, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 2, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 3, {
+          tl: 0x7f,
+        });
+
+        synth.setOperator(0, 4, {
+          dt: 0,
+          multi: 1,
+          tl: 8,
+          ar: 22,
+          d1r: 6,
+          d2r: 3,
+          sl: 3,
+          rr: 8,
+        });
+
+        synth.setAlgo(
+          0,
+          7,
+          0
+        );
+
+        synth.setPan(
+          0,
+          true,
+          true
+        );
+      }
+
+      async function play() {
+        playButton.disabled = true;
+
+        try {
+          await ensureReady();
+
+          configureSynth();
+
+          synth.noteOn(
+            0,
+            4,
+            553
+          );
+
+          setStatus("Playing...");
+
+          setTimeout(() => {
+            synth.noteOff(0);
+            setStatus("Ready.");
+          }, 1000);
+        } catch (error) {
+          console.error(error);
+
+          setStatus(
+            `Error: ${error.message}`
+          );
+        } finally {
+          playButton.disabled = false;
+        }
+      }
+
+      playButton.addEventListener(
+        "click",
+        () => {
+          void play();
+        }
+      );
+    </script>
+  </body>
+</html>
