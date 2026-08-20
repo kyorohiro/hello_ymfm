@@ -9,10 +9,9 @@ DOCS_JS_DIR="${ROOT_DIR}/docs/js"
 # Copy only the browser-side runtime files that are intended to stay shared
 # between `web/` and `docs/js/`.
 #
-# `megasynth.js` is intentionally excluded for now because the docs-side copy
-# currently has demo/runtime behavior that has not been unified with `web/`.
 SYNC_FILES="
 genesisaudioengine.js
+megasynth.js
 megadrive-fm-presets.js
 segapsg.js
 vgmplayer.js

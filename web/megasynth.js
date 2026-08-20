@@ -2,6 +2,10 @@ import {
   YM2612Synth,
   YM2612WorkletTransport,
 } from "./ym2612synth.js";
+export {
+  MEGADRIVE_FM_PRESETS,
+  MEGADRIVE_FM_PRESET_ORDER,
+} from "./megadrive-fm-presets.js";
 
 /**
  * Browser-side Mega Drive synth runtime.
@@ -36,6 +40,9 @@ export class MegaDriveSynth {
     this.audioContext =
       options.audioContext ?? null;
 
+    this.outputNode =
+      options.outputNode ?? null;
+
     this.node = null;
 
     /**
@@ -46,6 +53,7 @@ export class MegaDriveSynth {
     this.fm = null;
 
     this.readyPromise = null;
+    this.state = "idle";
   }
 
   /**
@@ -61,16 +69,19 @@ export class MegaDriveSynth {
       return this;
     }
 
+    this.state = "starting";
     this.readyPromise = this.#initialize();
 
     try {
       await this.readyPromise;
     } catch (error) {
       this.readyPromise = null;
+      this.state = "error";
       throw error;
     }
 
     await this.resume();
+    this.state = "ready";
 
     return this;
   }
@@ -105,6 +116,7 @@ export class MegaDriveSynth {
 
     this.fm = null;
     this.readyPromise = null;
+    this.state = "closed";
 
     if (
       this.audioContext &&
@@ -113,6 +125,14 @@ export class MegaDriveSynth {
       await this.audioContext.close();
       this.audioContext = null;
     }
+  }
+
+  isReady() {
+    return this.state === "ready" && !!this.fm;
+  }
+
+  isStarting() {
+    return this.state === "starting";
   }
 
   async #initialize() {
@@ -153,6 +173,7 @@ export class MegaDriveSynth {
       );
 
     this.node.connect(
+      this.outputNode ??
       this.audioContext.destination
     );
 
