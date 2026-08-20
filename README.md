@@ -78,6 +78,22 @@ Test:
 
 See `web/README.md` for a minimal usage example.
 
+## package release
+Create the current web runtime release zip:
+
+```sh
+sh scripts/package_web_runtime_release.sh v0.0.1
+```
+
+This creates:
+
+- `release/hello_ymfm_wasm_v0.0.1_web_runtime.zip`
+
+Current package contents:
+
+- `web/`
+- `docs/generated/`
+
 
 # ymfm
 
