@@ -271,6 +271,9 @@ function createParamControl(config) {
   let currentValue = value;
   let dragStartX = 0;
   let dragStartValue = value;
+  const valueRange =
+    Math.max(step, max - min);
+  const dragPixelsForFullRange = 160;
 
   const applyValue =
     (nextValue) => {
@@ -326,7 +329,10 @@ function createParamControl(config) {
       const deltaX =
         event.clientX - dragStartX;
       const deltaSteps =
-        Math.round(deltaX / 12);
+        Math.round(
+          (deltaX / dragPixelsForFullRange) *
+          (valueRange / step)
+        );
 
       applyValue(
         dragStartValue +
