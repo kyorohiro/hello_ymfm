@@ -143,18 +143,46 @@
         gap: 10px;
       }
 
+      .operator-header-row {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 6px;
+        align-items: end;
+      }
+
+      .operator-header-spacer {
+        min-width: 0;
+      }
+
+      .operator-header-strip {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .operator-header-cell {
+        min-width: 0;
+        text-align: center;
+        font-size: 0.48rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        color: rgba(31, 27, 22, 0.64);
+        text-transform: uppercase;
+      }
+
       .operator-row {
         display: grid;
-        grid-template-columns: 62px minmax(0, 1fr);
-        gap: 10px;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 6px;
         align-items: center;
       }
 
       .operator-name {
-        font-size: 0.82rem;
+        font-size: 0.72rem;
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;
+        min-width: 0;
       }
 
       .operator-name.op-color-1,
@@ -168,7 +196,15 @@
         display: flex;
         gap: 6px;
         overflow-x: auto;
+        flex-wrap: nowrap;
         padding-bottom: 2px;
+      }
+
+      #operatorControls .param-strip {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 4px;
+        overflow: visible;
       }
 
       .param-control {
@@ -177,7 +213,7 @@
         align-items: center;
         gap: 4px;
         flex: 0 0 auto;
-        min-width: 92px;
+        min-width: 82px;
         padding: 2px 5px 2px 7px;
         border-radius: 999px;
         border: 1.5px solid var(--pill-border);
@@ -189,9 +225,17 @@
           0 1px 5px rgba(30, 24, 18, 0.14);
       }
 
+      #operatorControls .param-control {
+        min-width: 0;
+        width: 100%;
+        grid-template-columns: minmax(0, 1fr) 12px minmax(16px, auto) 12px;
+        gap: 2px;
+        padding: 2px 4px 2px 5px;
+      }
+
       .param-label {
-        min-width: 18px;
-        font-size: 0.52rem;
+        min-width: 14px;
+        font-size: 0.48rem;
         font-weight: 800;
         letter-spacing: 0.06em;
         text-align: left;
@@ -221,13 +265,13 @@
       }
 
       .param-value {
-        min-width: 24px;
+        min-width: 20px;
         padding: 0;
         border: 0;
         background: transparent;
         text-align: center;
         color: var(--pill-ink);
-        font-size: 0.66rem;
+        font-size: 0.6rem;
         font-weight: 800;
         letter-spacing: 0.02em;
         user-select: none;
@@ -373,6 +417,63 @@
       }
 
       @media (max-width: 760px) {
+        .operator-header-row {
+          grid-template-columns: 36px minmax(0, 1fr);
+          gap: 4px;
+        }
+
+        .operator-header-strip {
+          gap: 3px;
+        }
+
+        .operator-header-cell {
+          font-size: 0.42rem;
+        }
+
+        .operator-row {
+          grid-template-columns: 36px minmax(0, 1fr);
+          gap: 4px;
+        }
+
+        .operator-name {
+          font-size: 0.62rem;
+        }
+
+        .param-strip {
+          gap: 4px;
+        }
+
+        #operatorControls .param-strip {
+          gap: 3px;
+        }
+
+        .param-control {
+          min-width: 70px;
+          padding: 1px 4px 1px 5px;
+        }
+
+        #operatorControls .param-control {
+          min-width: 0;
+          padding: 1px 3px 1px 4px;
+          grid-template-columns: minmax(0, 1fr) 10px minmax(14px, auto) 10px;
+        }
+
+        .param-label {
+          min-width: 12px;
+          font-size: 0.42rem;
+        }
+
+        .param-button {
+          width: 14px;
+          height: 14px;
+          font-size: 0.8rem;
+        }
+
+        .param-value {
+          min-width: 16px;
+          font-size: 0.54rem;
+        }
+
         .key {
           padding: 4px 3px;
         }
@@ -411,6 +512,10 @@
                 <select id="presetSelect"></select>
               </div>
               <div class="operator-stack">
+                <div class="operator-header-row">
+                  <div class="operator-header-spacer"></div>
+                  <div class="operator-header-strip" id="operatorHeader"></div>
+                </div>
                 <div class="operator-row">
                   <div class="operator-name">Common</div>
                   <div class="param-strip" id="commonControls"></div>

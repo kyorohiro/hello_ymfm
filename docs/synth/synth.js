@@ -10,6 +10,8 @@ const commonControlsRoot =
   document.getElementById("commonControls");
 const operatorControlsRoot =
   document.getElementById("operatorControls");
+const operatorHeaderRoot =
+  document.getElementById("operatorHeader");
 const presetSelect =
   document.getElementById("presetSelect");
 const envelopeCanvas =
@@ -684,6 +686,7 @@ function createParamControl(config) {
     step,
     value,
     onChange,
+    showLabel = true,
   } = config;
 
   const wrapper =
@@ -832,7 +835,9 @@ function createParamControl(config) {
     { passive: false }
   );
 
-  wrapper.appendChild(labelElement);
+  if (showLabel) {
+    wrapper.appendChild(labelElement);
+  }
   wrapper.appendChild(minusButton);
   wrapper.appendChild(valueElement);
   wrapper.appendChild(plusButton);
@@ -881,6 +886,24 @@ function buildCommonControls() {
   }
 }
 
+function buildOperatorHeader() {
+  if (!operatorHeaderRoot) {
+    return;
+  }
+
+  operatorHeaderRoot.innerHTML = "";
+
+  for (const config of OPERATOR_PARAM_DEFS) {
+    const cell =
+      document.createElement("div");
+    cell.className =
+      "operator-header-cell";
+    cell.textContent =
+      config.label;
+    operatorHeaderRoot.appendChild(cell);
+  }
+}
+
 function buildOperatorControls() {
   operatorControlsRoot.innerHTML = "";
 
@@ -908,6 +931,7 @@ function buildOperatorControls() {
       const control =
         createParamControl({
           ...config,
+          showLabel: false,
           value:
             operatorStates[operator][
               config.id
@@ -1363,6 +1387,7 @@ window.addEventListener(
 );
 
 buildCommonControls();
+buildOperatorHeader();
 buildOperatorControls();
 buildPresetSelect();
 buildKeyboard();
