@@ -240,7 +240,8 @@
 
       .keyboard {
         display: grid;
-        gap: 8px;
+        gap: clamp(4px, 1vw, 8px);
+        overflow-x: hidden;
       }
 
       .visual-card {
@@ -292,7 +293,7 @@
 
       .key-row {
         display: grid;
-        gap: 8px;
+        gap: clamp(4px, 1vw, 8px);
       }
 
       .key-row[data-count="10"] {
@@ -310,12 +311,13 @@
       .key {
         appearance: none;
         border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 10px 8px;
+        border-radius: clamp(8px, 1.6vw, 14px);
+        padding: clamp(5px, 1.2vw, 10px) clamp(4px, 1vw, 8px);
         text-align: left;
         background: rgba(255, 255, 255, 0.52);
         color: var(--ink);
         cursor: pointer;
+        min-width: 0;
       }
 
       .key:hover {
@@ -335,19 +337,19 @@
       }
 
       .key strong {
-        font-size: 1rem;
+        font-size: clamp(0.72rem, 1.8vw, 1rem);
         line-height: 1;
       }
 
       .key span {
-        margin-top: 4px;
-        font-size: 0.84rem;
+        margin-top: clamp(2px, 0.5vw, 4px);
+        font-size: clamp(0.62rem, 1.5vw, 0.84rem);
         font-weight: 700;
       }
 
       .key small {
-        margin-top: 4px;
-        font-size: 0.72rem;
+        margin-top: clamp(2px, 0.5vw, 4px);
+        font-size: clamp(0.54rem, 1.2vw, 0.72rem);
         opacity: 0.82;
       }
 
@@ -371,16 +373,20 @@
       }
 
       @media (max-width: 760px) {
-        .key-row[data-count="10"] {
-          grid-template-columns: repeat(5, minmax(0, 1fr));
+        .key {
+          padding: 4px 3px;
         }
 
-        .key-row[data-count="9"] {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+        .key strong {
+          font-size: 0.62rem;
         }
 
-        .key-row[data-count="7"] {
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+        .key span {
+          font-size: 0.54rem;
+        }
+
+        .key small {
+          font-size: 0.46rem;
         }
       }
     </style>
