@@ -136,6 +136,21 @@ const operatorStates = {
 
 const commonControls = new Map();
 const operatorControls = new Map();
+const envelopeDescription =
+  document.getElementById(
+    "envelopeDescription"
+  );
+
+const ALGORITHM_DESCRIPTIONS = [
+  "ALGO 0\nOP1 -> OP2 -> OP3 -> OP4 -> OUT",
+  "ALGO 1\n(OP1 + OP2) -> OP3 -> OP4 -> OUT",
+  "ALGO 2\n(OP1 + (OP2 -> OP3)) -> OP4 -> OUT",
+  "ALGO 3\n((OP1 -> OP2) + OP3) -> OP4 -> OUT",
+  "ALGO 4\n(OP1 -> OP2) + (OP3 -> OP4) -> OUT",
+  "ALGO 5\n(OP1 -> OP2) + (OP1 -> OP3) + (OP1 -> OP4) -> OUT",
+  "ALGO 6\n(OP1 -> OP2) + OP3 + OP4 -> OUT",
+  "ALGO 7\nOP1 + OP2 + OP3 + OP4 -> OUT",
+];
 
 let audioContext = null;
 let audioReadyPromise = null;
@@ -229,6 +244,29 @@ function clampValue(value, min, max) {
     max,
     Math.max(min, value)
   );
+}
+
+function renderAlgorithmDiagram() {
+  if (!envelopeDescription) {
+    return;
+  }
+
+  const algorithm =
+    commonState.algorithm;
+  const feedback =
+    commonState.feedback;
+  const description =
+    ALGORITHM_DESCRIPTIONS[
+      algorithm
+    ] || `ALGO ${algorithm}`;
+
+  const feedbackText =
+    feedback === 0
+      ? "FB off"
+      : `OP1 feedback ${feedback}.`;
+
+  envelopeDescription.textContent =
+    `${description.replaceAll("\n", " ")} ${feedbackText}`;
 }
 
 function clearCanvas(
@@ -748,6 +786,7 @@ function buildCommonControls() {
         onChange: (nextValue) => {
           commonState[config.id] =
             nextValue;
+          renderAlgorithmDiagram();
           if (synth) {
             applyPatchToVoices();
           }
@@ -1360,3 +1399,4 @@ buildCommonControls();
 buildOperatorControls();
 buildKeyboard();
 drawEnvelopeGuide();
+renderAlgorithmDiagram();
