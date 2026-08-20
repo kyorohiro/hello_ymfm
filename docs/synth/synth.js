@@ -43,7 +43,7 @@ const COMMON_PARAM_DEFS = [
   { id: "feedback", label: "FB", min: 0, max: 7, step: 1 },
 ];
 
-const VOICE_COUNT = 4;
+const VOICE_COUNT = 6;
 
 const REFERENCE_MIDI = 62;
 const REFERENCE_BLOCK = 4;
