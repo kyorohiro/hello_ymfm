@@ -166,13 +166,14 @@ let audioContext = null;
 let audioReadyPromise = null;
 let megaSynth = null;
 let synth = null;
-let analyser = null;
-let analyserTimeData = null;
 let visualFrame = 0;
 let outputEnvelopeHistory = [];
+let outputEnvelopeHeldVoicePeak = 1;
+const OUTPUT_ENVELOPE_HISTORY_SIZE =
+  640;
 const OUTPUT_ENVELOPE_SILENCE_FLOOR =
   0.002;
-const OUTPUT_ENVELOPE_VISUAL_SCALE =
+const OUTPUT_ENVELOPE_SLOW_SCALE =
   0.12;
 let audioInitStarted = false;
 
@@ -209,6 +210,89 @@ function updateKeyboardAvailability() {
   prepareOverlay?.setAttribute(
     "aria-hidden",
     String(!isInitializing)
+  );
+}
+
+function appendOutputEnvelopePoints(
+  rmsValues
+) {
+  const heldVoiceCount = voices.filter(
+    (voice) => voice.held
+  ).length;
+  const anyVoiceHeld =
+    heldVoiceCount > 0;
+  let chunkPeak = 0;
+
+  if (
+    heldVoiceCount >
+    outputEnvelopeHeldVoicePeak
+  ) {
+    outputEnvelopeHeldVoicePeak =
+      heldVoiceCount;
+  }
+
+  for (const value of rmsValues) {
+    if (value > chunkPeak) {
+      chunkPeak = value;
+    }
+  }
+
+  const treatAsSilentTail =
+    !anyVoiceHeld &&
+    chunkPeak <
+      OUTPUT_ENVELOPE_SILENCE_FLOOR * 2;
+
+  for (const value of rmsValues) {
+    const nextValue =
+      treatAsSilentTail ? 0 : value;
+    outputEnvelopeHistory.push(nextValue);
+  }
+
+  while (
+    outputEnvelopeHistory.length >
+    OUTPUT_ENVELOPE_HISTORY_SIZE
+  ) {
+    outputEnvelopeHistory.shift();
+  }
+}
+
+function attachMegaSynthVisualTap() {
+  if (!megaSynth?.node) {
+    return;
+  }
+
+  megaSynth.node.port.addEventListener(
+    "message",
+    (event) => {
+      const message = event.data;
+
+      if (
+        message?.type !==
+        "output-envelope"
+      ) {
+        return;
+      }
+
+      if (
+        message.rmsValues instanceof
+        Float32Array
+      ) {
+        appendOutputEnvelopePoints(
+          message.rmsValues
+        );
+        return;
+      }
+
+      if (
+        Array.isArray(
+          message.rmsValues
+        )
+      ) {
+        appendOutputEnvelopePoints(
+          message.rmsValues
+        );
+      }
+    }
   );
 }
 
@@ -387,35 +471,65 @@ function clearCanvas(
 }
 
 function buildNormalizedHistory(
-  history
+  history,
+  scale
 ) {
   if (history.length < 2) {
     return [];
   }
 
-  return history.map((value) =>
-    value <
-    OUTPUT_ENVELOPE_SILENCE_FLOOR
-      ? 0
-      : Math.min(
-          1,
-          value /
-            OUTPUT_ENVELOPE_VISUAL_SCALE
-        )
+  return history.map((value) => {
+    if (
+      value <
+      OUTPUT_ENVELOPE_SILENCE_FLOOR
+    ) {
+      return 0;
+    }
+
+    return Math.min(
+      1,
+      value / scale
+    );
+  });
+}
+
+function currentEnvelopeScale(
+  baseScale
+) {
+  if (
+    outputEnvelopeHeldVoicePeak <= 1
+  ) {
+    return baseScale;
+  }
+
+  // Hold the largest simultaneous voice count seen in the current run.
+  // Do not shrink the scale again just because some notes were released.
+  return (
+    baseScale *
+    Math.sqrt(
+      outputEnvelopeHeldVoicePeak
+    )
   );
 }
 
 function drawOutputEnvelopeOverlay(
   points,
-  layout
+  layout,
+  style = {}
 ) {
   if (!points || points.length < 2) {
     return;
   }
 
   envelopeContext.strokeStyle =
+    style.color ??
     "#7be0d6";
-  envelopeContext.lineWidth = 2;
+  envelopeContext.lineWidth =
+    style.lineWidth ?? 2;
+  if (style.alpha !== undefined) {
+    envelopeContext.globalAlpha =
+      style.alpha;
+  }
   envelopeContext.beginPath();
 
   for (
@@ -441,6 +555,7 @@ function drawOutputEnvelopeOverlay(
   }
 
   envelopeContext.stroke();
+  envelopeContext.globalAlpha = 1;
 }
 
 function drawOperatorGuide(
@@ -623,11 +738,19 @@ function drawEnvelopeGuide() {
 
   const normalizedHistory =
     buildNormalizedHistory(
-      outputEnvelopeHistory
+      outputEnvelopeHistory,
+      currentEnvelopeScale(
+        OUTPUT_ENVELOPE_SLOW_SCALE
+      )
     );
   drawOutputEnvelopeOverlay(
     normalizedHistory,
-    layout
+    layout,
+    {
+      color: "#7be0d6",
+      lineWidth: 3,
+      alpha: 0.95,
+    }
   );
 
   envelopeContext.fillStyle =
@@ -653,43 +776,13 @@ function drawEnvelopeGuide() {
   envelopeContext.fillStyle =
     "#d6b184";
   envelopeContext.fillText(
-    "Orange/Pink/Green/Blue: OP1-OP4 guides. Cyan: recent output level.",
+    "Cyan: main envelope. Orange/Pink/Green/Blue: OP1-OP4 guides.",
     18,
     28
   );
 }
 
-function sampleOutputEnvelope() {
-  if (!analyser || !analyserTimeData) {
-    return;
-  }
-
-  analyser.getFloatTimeDomainData(
-    analyserTimeData
-  );
-
-  let sum = 0;
-  for (
-    let index = 0;
-    index < analyserTimeData.length;
-    index += 1
-  ) {
-    const value = analyserTimeData[index];
-    sum += value * value;
-  }
-
-  const rms = Math.sqrt(
-    sum / analyserTimeData.length
-  );
-
-  outputEnvelopeHistory.push(rms);
-  if (outputEnvelopeHistory.length > 160) {
-    outputEnvelopeHistory.shift();
-  }
-}
-
 function updateVisuals() {
-  sampleOutputEnvelope();
   drawEnvelopeGuide();
   visualFrame =
     requestAnimationFrame(
@@ -1050,6 +1143,7 @@ function clearInputState() {
   heldKeys.clear();
   activePointers.clear();
   resetVoiceState();
+  outputEnvelopeHeldVoicePeak = 1;
 }
 
 function stopAllNotes() {
@@ -1094,24 +1188,9 @@ async function initializeDirectAudio() {
   );
   updateKeyboardAvailability();
 
-  if (!analyser) {
-    analyser =
-      audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.75;
-    analyserTimeData = new Float32Array(
-      analyser.fftSize
-    );
-  }
-
-  analyser.connect(
-    audioContext.destination
-  );
-
   megaSynth =
     new MegaDriveSynth({
       audioContext,
-      outputNode: analyser,
       workletUrl:
         "../js/ym2612-worklet.js",
       ym2612WasmUrl:
@@ -1121,6 +1200,7 @@ async function initializeDirectAudio() {
   await megaSynth.start();
 
   synth = megaSynth.fm;
+  attachMegaSynthVisualTap();
 
   applyPatchToVoices();
   stopAllNotes();
