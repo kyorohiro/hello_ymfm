@@ -14,6 +14,10 @@ const commonControlsRoot =
   document.getElementById("commonControls");
 const operatorControlsRoot =
   document.getElementById("operatorControls");
+const envelopeCanvas =
+  document.getElementById("envelopeCanvas");
+const envelopeContext =
+  envelopeCanvas.getContext("2d");
 const heldKeys = new Set();
 
 const OPERATOR_NUMBERS = [
@@ -138,7 +142,11 @@ let audioReadyPromise = null;
 let ym2612 = null;
 let synth = null;
 let processor = null;
+let analyser = null;
+let analyserTimeData = null;
+let visualFrame = 0;
 let active = false;
+let outputEnvelopeHistory = [];
 
 const voices = Array.from(
   { length: VOICE_COUNT },
@@ -221,6 +229,343 @@ function clampValue(value, min, max) {
     max,
     Math.max(min, value)
   );
+}
+
+function clearCanvas(
+  context,
+  canvas
+) {
+  context.fillStyle = "#241d16";
+  context.fillRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+}
+
+function buildNormalizedHistory(
+  history
+) {
+  if (history.length < 2) {
+    return [];
+  }
+
+  let peak = 0;
+  for (const value of history) {
+    if (value > peak) {
+      peak = value;
+    }
+  }
+
+  if (peak <= 0.000001) {
+    return history.map(() => 0);
+  }
+
+  return history.map((value) =>
+    Math.min(1, value / peak)
+  );
+}
+
+function drawOutputEnvelopeOverlay(
+  points,
+  layout
+) {
+  if (!points || points.length < 2) {
+    return;
+  }
+
+  envelopeContext.strokeStyle =
+    "#7be0d6";
+  envelopeContext.lineWidth = 2;
+  envelopeContext.beginPath();
+
+  for (
+    let index = 0;
+    index < points.length;
+    index += 1
+  ) {
+    const x =
+      layout.left +
+      (layout.innerWidth * index) /
+        (points.length - 1);
+    const y =
+      layout.bottom -
+      points[index] *
+        layout.innerHeight *
+        0.94;
+
+    if (index === 0) {
+      envelopeContext.moveTo(x, y);
+    } else {
+      envelopeContext.lineTo(x, y);
+    }
+  }
+
+  envelopeContext.stroke();
+}
+
+function drawOperatorGuide(
+  layout,
+  settings,
+  style
+) {
+  const attackPortion =
+    0.06 +
+    ((31 - settings.ar) / 31) * 0.22;
+  const decayPortion =
+    0.08 +
+    ((31 - settings.d1r) / 31) * 0.16;
+  const sustainPortion =
+    0.16 +
+    ((31 - settings.d2r) / 31) * 0.18;
+  const releasePortion =
+    0.10 +
+    ((15 - settings.rr) / 15) * 0.20;
+  const tailPortion = Math.max(
+    0.08,
+    1 -
+      (attackPortion +
+        decayPortion +
+        sustainPortion +
+        releasePortion)
+  );
+
+  const x0 = layout.left;
+  const x1 =
+    layout.left +
+    layout.innerWidth * attackPortion;
+  const x2 =
+    x1 +
+    layout.innerWidth * decayPortion;
+  const x3 =
+    x2 +
+    layout.innerWidth * sustainPortion;
+  const x4 =
+    x3 +
+    layout.innerWidth * tailPortion;
+  const x5 = layout.right;
+
+  const intensity =
+    1 -
+    (settings.tl / 127) * 0.75 -
+    (settings.dt / 7) * 0.04;
+  const peakLevel =
+    0.08 +
+    (1 - intensity) * 0.12 +
+    style.verticalBias;
+  const decayLevel = Math.min(
+    0.90,
+    peakLevel +
+      0.12 +
+      (settings.d1r / 31) * 0.18 +
+      style.verticalBias
+  );
+  const sustainLevel = Math.max(
+    decayLevel,
+    0.10 +
+      (settings.sl / 15) * 0.70 +
+      (settings.d2r / 31) * 0.04 +
+      style.verticalBias
+  );
+  const tailLevel = Math.min(
+    0.94,
+    sustainLevel +
+      0.04 +
+      (settings.rr / 15) * 0.04
+  );
+  const peakY =
+    layout.top +
+    layout.innerHeight * peakLevel;
+  const decayY =
+    layout.top +
+    layout.innerHeight * decayLevel;
+  const sustainY =
+    layout.top +
+    layout.innerHeight * sustainLevel;
+  const tailY =
+    layout.top +
+    layout.innerHeight * tailLevel;
+
+  envelopeContext.strokeStyle =
+    style.color;
+  envelopeContext.lineWidth =
+    style.lineWidth;
+  envelopeContext.beginPath();
+  envelopeContext.moveTo(
+    x0,
+    layout.bottom
+  );
+  envelopeContext.lineTo(x1, peakY);
+  envelopeContext.lineTo(x2, decayY);
+  envelopeContext.lineTo(x3, sustainY);
+  envelopeContext.lineTo(x4, tailY);
+  envelopeContext.lineTo(
+    x5,
+    layout.bottom
+  );
+  envelopeContext.stroke();
+}
+
+function drawEnvelopeGuide() {
+  clearCanvas(
+    envelopeContext,
+    envelopeCanvas
+  );
+
+  const width = envelopeCanvas.width;
+  const height = envelopeCanvas.height;
+  const left = 22;
+  const right = width - 18;
+  const top = 16;
+  const bottom = height - 20;
+  const innerWidth = right - left;
+  const innerHeight = bottom - top;
+  const layout = {
+    left,
+    right,
+    top,
+    bottom,
+    innerWidth,
+    innerHeight,
+  };
+
+  envelopeContext.strokeStyle =
+    "#514233";
+  envelopeContext.lineWidth = 1;
+  envelopeContext.beginPath();
+  envelopeContext.moveTo(left, bottom);
+  envelopeContext.lineTo(right, bottom);
+  envelopeContext.moveTo(left, top);
+  envelopeContext.lineTo(left, bottom);
+  envelopeContext.stroke();
+
+  for (let index = 1; index <= 4; index += 1) {
+    const x =
+      left +
+      (innerWidth * index) / 5;
+    envelopeContext.strokeStyle =
+      "rgba(214, 177, 132, 0.18)";
+    envelopeContext.beginPath();
+    envelopeContext.moveTo(x, top);
+    envelopeContext.lineTo(x, bottom);
+    envelopeContext.stroke();
+  }
+
+  const guideStyles = [
+    {
+      color: "#f2c078",
+      lineWidth: 2.6,
+      verticalBias: 0,
+    },
+    {
+      color: "#ff93bc",
+      lineWidth: 2,
+      verticalBias: -0.015,
+    },
+    {
+      color: "#9dff9b",
+      lineWidth: 2,
+      verticalBias: 0.015,
+    },
+    {
+      color: "#89b7ff",
+      lineWidth: 2,
+      verticalBias: -0.03,
+    },
+  ];
+
+  for (const operator of OPERATOR_NUMBERS) {
+    drawOperatorGuide(
+      layout,
+      operatorStates[operator],
+      guideStyles[operator - 1]
+    );
+  }
+
+  const normalizedHistory =
+    buildNormalizedHistory(
+      outputEnvelopeHistory
+    );
+  drawOutputEnvelopeOverlay(
+    normalizedHistory,
+    layout
+  );
+
+  envelopeContext.fillStyle =
+    "#f6ead7";
+  envelopeContext.font =
+    "13px sans-serif";
+  envelopeContext.fillText(
+    "attack",
+    left + 6,
+    bottom - 8
+  );
+  envelopeContext.fillText(
+    "hold",
+    left + innerWidth * 0.28,
+    top + 18
+  );
+  envelopeContext.fillText(
+    "release",
+    left + innerWidth * 0.72,
+    top + 18
+  );
+
+  envelopeContext.fillStyle =
+    "#d6b184";
+  envelopeContext.fillText(
+    "Orange/Pink/Green/Blue: OP1-OP4 guides. Cyan: recent output level.",
+    18,
+    28
+  );
+}
+
+function sampleOutputEnvelope() {
+  if (!analyser || !analyserTimeData) {
+    return;
+  }
+
+  analyser.getFloatTimeDomainData(
+    analyserTimeData
+  );
+
+  let sum = 0;
+  for (
+    let index = 0;
+    index < analyserTimeData.length;
+    index += 1
+  ) {
+    const value = analyserTimeData[index];
+    sum += value * value;
+  }
+
+  const rms = Math.sqrt(
+    sum / analyserTimeData.length
+  );
+
+  outputEnvelopeHistory.push(rms);
+  if (outputEnvelopeHistory.length > 160) {
+    outputEnvelopeHistory.shift();
+  }
+}
+
+function updateVisuals() {
+  sampleOutputEnvelope();
+  drawEnvelopeGuide();
+  visualFrame =
+    requestAnimationFrame(
+      updateVisuals
+    );
+}
+
+function ensureVisualLoop() {
+  if (!visualFrame) {
+    visualFrame =
+      requestAnimationFrame(
+        updateVisuals
+      );
+  }
 }
 
 function createParamControl(config) {
@@ -554,6 +899,16 @@ async function initializeDirectAudio() {
     transport,
   });
 
+  if (!analyser) {
+    analyser =
+      audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.75;
+    analyserTimeData = new Float32Array(
+      analyser.fftSize
+    );
+  }
+
   processor =
     audioContext.createScriptProcessor(
       1024,
@@ -581,11 +936,13 @@ async function initializeDirectAudio() {
     rightOut.set(right);
   };
 
-  processor.connect(
+  processor.connect(analyser);
+  analyser.connect(
     audioContext.destination
   );
 
   applyPatchToVoices();
+  ensureVisualLoop();
 
   const sampleRate =
     ym2612.sampleRate(YM2612_CLOCK);
@@ -668,6 +1025,16 @@ async function initializeWorkletAudio() {
   const wasmBinary =
     await loadYm2612WasmBinary();
 
+  if (!analyser) {
+    analyser =
+      audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.75;
+    analyserTimeData = new Float32Array(
+      analyser.fftSize
+    );
+  }
+
   processor = new AudioWorkletNode(
     audioContext,
     "ym2612-processor",
@@ -678,7 +1045,8 @@ async function initializeWorkletAudio() {
     }
   );
 
-  processor.connect(
+  processor.connect(analyser);
+  analyser.connect(
     audioContext.destination
   );
 
@@ -711,6 +1079,7 @@ async function initializeWorkletAudio() {
   });
 
   applyPatchToVoices();
+  ensureVisualLoop();
 
   if (result.sampleRate) {
     setStatus(
@@ -990,3 +1359,4 @@ window.addEventListener(
 buildCommonControls();
 buildOperatorControls();
 buildKeyboard();
+drawEnvelopeGuide();

@@ -208,6 +208,29 @@
         gap: 8px;
       }
 
+      .visual-card {
+        padding: 12px;
+      }
+
+      .visual-card h2 {
+        margin-bottom: 8px;
+      }
+
+      .visual-card p {
+        margin: 0 0 10px;
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 220px;
+        border-radius: 14px;
+        background: #241d16;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
       .key-row {
         display: grid;
         gap: 8px;
@@ -325,6 +348,12 @@
 
         <div class="layout">
           <section class="controls-stack">
+            <div class="card visual-card">
+              <h2>Envelope / Output</h2>
+              <p>Guide lines come from the current operator settings. The cyan line shows recent output level from the actual synth audio.</p>
+              <canvas id="envelopeCanvas" width="720" height="220"></canvas>
+            </div>
+
             <div class="control-section">
               <h2>YM2612 Knobs</h2>
               <div class="operator-stack">
