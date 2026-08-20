@@ -1,4 +1,8 @@
-import { MegaDriveSynth } from "../js/megasynth.js";
+import {
+  MegaDriveSynth,
+  MEGADRIVE_FM_PRESETS,
+  MEGADRIVE_FM_PRESET_ORDER,
+} from "../js/megasynth.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -6,6 +10,8 @@ const commonControlsRoot =
   document.getElementById("commonControls");
 const operatorControlsRoot =
   document.getElementById("operatorControls");
+const presetSelect =
+  document.getElementById("presetSelect");
 const envelopeCanvas =
   document.getElementById("envelopeCanvas");
 const envelopeContext =
@@ -82,6 +88,9 @@ const commonState = {
   algorithm: 7,
   feedback: 0,
 };
+
+let currentPresetName =
+  "one-op-basic";
 
 const operatorStates = {
   1: {
@@ -226,6 +235,75 @@ function applyPatchToVoices() {
     );
 
     synth.setPan(channel, true, true);
+  }
+}
+
+function syncControlsFromState() {
+  for (const config of COMMON_PARAM_DEFS) {
+    commonControls
+      .get(config.id)
+      ?.updateVisual(
+        commonState[config.id]
+      );
+  }
+
+  for (const operator of OPERATOR_NUMBERS) {
+    const rowControls =
+      operatorControls.get(operator);
+
+    for (const config of OPERATOR_PARAM_DEFS) {
+      rowControls
+        ?.get(config.id)
+        ?.updateVisual(
+          operatorStates[operator][
+            config.id
+          ]
+        );
+    }
+  }
+
+  if (presetSelect) {
+    presetSelect.value =
+      currentPresetName;
+  }
+}
+
+function applyPresetState(
+  presetName
+) {
+  const preset =
+    MEGADRIVE_FM_PRESETS[
+      presetName
+    ];
+
+  if (!preset) {
+    return;
+  }
+
+  currentPresetName =
+    presetName;
+  commonState.algorithm =
+    preset.algorithm ?? 7;
+  commonState.feedback =
+    preset.feedback ?? 0;
+
+  for (const operator of OPERATOR_NUMBERS) {
+    const nextOperator =
+      preset.operators?.[operator] ||
+      {};
+
+    operatorStates[operator] = {
+      ...operatorStates[operator],
+      ...nextOperator,
+    };
+  }
+
+  syncControlsFromState();
+  renderAlgorithmDiagram();
+  drawEnvelopeGuide();
+
+  if (synth) {
+    applyPatchToVoices();
   }
 }
 
@@ -778,7 +856,14 @@ function buildCommonControls() {
         onChange: (nextValue) => {
           commonState[config.id] =
             nextValue;
+          currentPresetName =
+            "custom";
+          if (presetSelect) {
+            presetSelect.value =
+              "custom";
+          }
           renderAlgorithmDiagram();
+          drawEnvelopeGuide();
           if (synth) {
             applyPatchToVoices();
           }
@@ -831,6 +916,13 @@ function buildOperatorControls() {
             operatorStates[operator][
               config.id
             ] = nextValue;
+            currentPresetName =
+              "custom";
+            if (presetSelect) {
+              presetSelect.value =
+                "custom";
+            }
+            drawEnvelopeGuide();
             if (synth) {
               applyPatchToVoices();
             }
@@ -1165,6 +1257,58 @@ function buildKeyboard() {
   }
 }
 
+function buildPresetSelect() {
+  if (!presetSelect) {
+    return;
+  }
+
+  presetSelect.innerHTML = "";
+
+  const customOption =
+    document.createElement("option");
+  customOption.value = "custom";
+  customOption.textContent =
+    "Custom";
+  presetSelect.appendChild(
+    customOption
+  );
+
+  for (const presetName of MEGADRIVE_FM_PRESET_ORDER) {
+    const preset =
+      MEGADRIVE_FM_PRESETS[
+        presetName
+      ];
+
+    const option =
+      document.createElement("option");
+    option.value = presetName;
+    option.textContent =
+      preset?.label || presetName;
+    presetSelect.appendChild(option);
+  }
+
+  presetSelect.addEventListener(
+    "change",
+    () => {
+      if (
+        presetSelect.value ===
+        "custom"
+      ) {
+        currentPresetName =
+          "custom";
+        return;
+      }
+
+      applyPresetState(
+        presetSelect.value
+      );
+    }
+  );
+
+  presetSelect.value =
+    currentPresetName;
+}
+
 window.addEventListener(
   "keydown",
   (event) => {
@@ -1220,6 +1364,6 @@ window.addEventListener(
 
 buildCommonControls();
 buildOperatorControls();
+buildPresetSelect();
 buildKeyboard();
-drawEnvelopeGuide();
-renderAlgorithmDiagram();
+applyPresetState(currentPresetName);

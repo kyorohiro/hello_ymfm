@@ -110,6 +110,34 @@
         background: rgba(255, 255, 255, 0.36);
       }
 
+      .preset-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+      }
+
+      .preset-row label {
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .preset-row select {
+        min-width: 156px;
+        max-width: 220px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.78rem;
+        line-height: 1.2;
+      }
+
       .operator-stack {
         display: grid;
         gap: 10px;
@@ -372,6 +400,10 @@
 
             <div class="control-section">
               <h2>YM2612 Knobs</h2>
+              <div class="preset-row">
+                <label for="presetSelect">Preset</label>
+                <select id="presetSelect"></select>
+              </div>
               <div class="operator-stack">
                 <div class="operator-row">
                   <div class="operator-name">Common</div>
