@@ -6,6 +6,10 @@ import {
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
+const prepareOverlay =
+  document.getElementById(
+    "prepareOverlay"
+  );
 const commonControlsRoot =
   document.getElementById("commonControls");
 const commonHeaderRoot =
@@ -166,6 +170,11 @@ let analyser = null;
 let analyserTimeData = null;
 let visualFrame = 0;
 let outputEnvelopeHistory = [];
+const OUTPUT_ENVELOPE_SILENCE_FLOOR =
+  0.002;
+const OUTPUT_ENVELOPE_VISUAL_SCALE =
+  0.12;
+let audioInitStarted = false;
 
 const voices = Array.from(
   { length: VOICE_COUNT },
@@ -181,6 +190,26 @@ const activeKeys = new Map();
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+function updateKeyboardAvailability() {
+  const isInitializing =
+    audioInitStarted &&
+    !synth;
+
+  keyboard.classList.toggle(
+    "is-loading",
+    isInitializing
+  );
+
+  prepareOverlay?.classList.toggle(
+    "is-visible",
+    isInitializing
+  );
+  prepareOverlay?.setAttribute(
+    "aria-hidden",
+    String(!isInitializing)
+  );
 }
 
 function midiToNoteName(midi) {
@@ -364,19 +393,15 @@ function buildNormalizedHistory(
     return [];
   }
 
-  let peak = 0;
-  for (const value of history) {
-    if (value > peak) {
-      peak = value;
-    }
-  }
-
-  if (peak <= 0.000001) {
-    return history.map(() => 0);
-  }
-
   return history.map((value) =>
-    Math.min(1, value / peak)
+    value <
+    OUTPUT_ENVELOPE_SILENCE_FLOOR
+      ? 0
+      : Math.min(
+          1,
+          value /
+            OUTPUT_ENVELOPE_VISUAL_SCALE
+        )
   );
 }
 
@@ -1021,6 +1046,12 @@ function resetVoiceState() {
   updateKeyboardVisuals();
 }
 
+function clearInputState() {
+  heldKeys.clear();
+  activePointers.clear();
+  resetVoiceState();
+}
+
 function stopAllNotes() {
   if (!synth) {
     return;
@@ -1034,7 +1065,7 @@ function stopAllNotes() {
     synth.noteOff(channel);
   }
 
-  resetVoiceState();
+  clearInputState();
 }
 
 function chooseVoice() {
@@ -1061,6 +1092,7 @@ async function initializeDirectAudio() {
   setStatus(
     "Loading YM2612 MegaDriveSynth..."
   );
+  updateKeyboardAvailability();
 
   if (!analyser) {
     analyser =
@@ -1091,7 +1123,9 @@ async function initializeDirectAudio() {
   synth = megaSynth.fm;
 
   applyPatchToVoices();
+  stopAllNotes();
   ensureVisualLoop();
+  updateKeyboardAvailability();
 
   setStatus(
     `Audio ready. YM2612 via MegaDriveSynth at ${audioContext.sampleRate} Hz.`
@@ -1111,6 +1145,8 @@ async function ensureAudioReady() {
   }
 
   if (!audioReadyPromise) {
+    audioInitStarted = true;
+    updateKeyboardAvailability();
     audioReadyPromise =
       initializeDirectAudio();
   }
@@ -1119,14 +1155,14 @@ async function ensureAudioReady() {
     await audioReadyPromise;
   } catch (error) {
     audioReadyPromise = null;
+    audioInitStarted = false;
+    updateKeyboardAvailability();
     throw error;
   }
 
 }
 
 async function pressKey(key) {
-  console.log(`pressKey: ${key}`);
-
   heldKeys.add(key);
 
   const entry = KEY_LAYOUT.find(
@@ -1137,6 +1173,16 @@ async function pressKey(key) {
     !entry ||
     activeKeys.has(key)
   ) {
+    return;
+  }
+
+  if (
+    audioReadyPromise &&
+    !synth
+  ) {
+    setStatus(
+      "Preparing audio..."
+    );
     return;
   }
 
@@ -1466,3 +1512,4 @@ buildOperatorControls();
 buildPresetSelect();
 buildKeyboard();
 applyPresetState(currentPresetName);
+updateKeyboardAvailability();
