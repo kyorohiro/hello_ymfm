@@ -142,14 +142,14 @@ const envelopeDescription =
   );
 
 const ALGORITHM_DESCRIPTIONS = [
-  "ALGO 0\nOP1 -> OP2 -> OP3 -> OP4 -> OUT",
-  "ALGO 1\n(OP1 + OP2) -> OP3 -> OP4 -> OUT",
-  "ALGO 2\n(OP1 + (OP2 -> OP3)) -> OP4 -> OUT",
-  "ALGO 3\n((OP1 -> OP2) + OP3) -> OP4 -> OUT",
-  "ALGO 4\n(OP1 -> OP2) + (OP3 -> OP4) -> OUT",
-  "ALGO 5\n(OP1 -> OP2) + (OP1 -> OP3) + (OP1 -> OP4) -> OUT",
-  "ALGO 6\n(OP1 -> OP2) + OP3 + OP4 -> OUT",
-  "ALGO 7\nOP1 + OP2 + OP3 + OP4 -> OUT",
+  'ALGO 0 <span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span> -> <span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span> -> OUT',
+  'ALGO 1 (<span class="op-color-1">OP1</span> + <span class="op-color-2">OP2</span>) -> <span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span> -> OUT',
+  'ALGO 2 (<span class="op-color-1">OP1</span> + (<span class="op-color-2">OP2</span> -> <span class="op-color-3">OP3</span>)) -> <span class="op-color-4">OP4</span> -> OUT',
+  'ALGO 3 ((<span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span>) + <span class="op-color-3">OP3</span>) -> <span class="op-color-4">OP4</span> -> OUT',
+  'ALGO 4 (<span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span>) + (<span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span>) -> OUT',
+  'ALGO 5 (<span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span>) + (<span class="op-color-1">OP1</span> -> <span class="op-color-3">OP3</span>) + (<span class="op-color-1">OP1</span> -> <span class="op-color-4">OP4</span>) -> OUT',
+  'ALGO 6 (<span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span>) + <span class="op-color-3">OP3</span> + <span class="op-color-4">OP4</span> -> OUT',
+  'ALGO 7 <span class="op-color-1">OP1</span> + <span class="op-color-2">OP2</span> + <span class="op-color-3">OP3</span> + <span class="op-color-4">OP4</span> -> OUT',
 ];
 
 let audioContext = null;
@@ -265,8 +265,10 @@ function renderAlgorithmDiagram() {
       ? "FB off"
       : `OP1 feedback ${feedback}.`;
 
-  envelopeDescription.textContent =
-    `${description.replaceAll("\n", " ")} ${feedbackText}`;
+  envelopeDescription.className =
+    "algo-inline";
+  envelopeDescription.innerHTML =
+    `${description} ${feedbackText}`;
 }
 
 function clearCanvas(
@@ -816,7 +818,7 @@ function buildOperatorControls() {
     const name =
       document.createElement("div");
     name.className =
-      "operator-name";
+      `operator-name op-color-${operator}`;
     name.textContent =
       `OP${operator}`;
 
