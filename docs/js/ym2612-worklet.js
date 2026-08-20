@@ -1,4 +1,4 @@
-import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
 import { createYm2612 } from "./ym2612.js";
 
 class YM2612Processor extends AudioWorkletProcessor {
@@ -7,10 +7,6 @@ class YM2612Processor extends AudioWorkletProcessor {
 
     this.ym2612 = null;
     this.pendingCommands = [];
-    this.envelopeRmsBuckets = [];
-    // Slow RMS shows the overall shape over a longer time span.
-    this.envelopeBucketSize = 512;
-    this.envelopeMessageSize = 16;
 
     this.port.onmessage = (event) => {
       const command = event.data;
@@ -93,86 +89,8 @@ class YM2612Processor extends AudioWorkletProcessor {
 
     leftOut.set(left);
     rightOut.set(right);
-    this.captureOutputEnvelope(
-      left,
-      right
-    );
 
     return true;
-  }
-
-  captureOutputEnvelope(left, right) {
-    const frames =
-      Math.min(
-        left.length,
-        right.length
-      );
-
-    for (
-      let start = 0;
-      start < frames;
-      start +=
-        this.envelopeBucketSize
-    ) {
-      const end = Math.min(
-        frames,
-        start +
-          this.envelopeBucketSize
-      );
-      let sum = 0;
-
-      for (
-        let index = start;
-        index < end;
-        index += 1
-      ) {
-        const mixed =
-          (left[index] +
-            right[index]) *
-          0.5;
-        sum += mixed * mixed;
-      }
-
-      const rms = Math.sqrt(
-        sum /
-          Math.max(
-            1,
-            end - start
-          )
-      );
-      this.envelopeRmsBuckets.push(rms);
-    }
-
-    if (
-      this.envelopeRmsBuckets.length >=
-      this.envelopeMessageSize
-    ) {
-      const rmsValues =
-        new Float32Array(
-          this.envelopeRmsBuckets.splice(
-            0,
-            this.envelopeMessageSize
-          )
-        );
-
-      this.port.postMessage(
-        {
-          type: "output-envelope",
-          rmsValues,
-        },
-        [rmsValues.buffer]
-      );
-    }
-
-    while (
-      this.envelopeRmsBuckets.length >
-      this.envelopeMessageSize * 8
-    ) {
-      this.envelopeRmsBuckets.splice(
-          0,
-          this.envelopeMessageSize
-      );
-    }
   }
 }
 

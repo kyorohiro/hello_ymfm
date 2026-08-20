@@ -28,21 +28,16 @@ const OPERATOR_COUNT = 4;
 //   ch1=0x00 ch2=0x01 ch3=0x02 ch4=0x04 ch5=0x05 ch6=0x06
 const KEY_CHANNEL_CODES = [0x00, 0x01, 0x02, 0x04, 0x05, 0x06];
 
-// Public operator numbers follow the operator order used by YM2612
-// algorithms: O1, O2, O3, O4.
-//
-// OPN register slots are laid out differently:
-//   O1 -> 0x30
-//   O2 -> 0x38
-//   O3 -> 0x34
-//   O4 -> 0x3c
-//
-// So the synth interface keeps the human-facing YM2612 algorithm order
-// and translates it to the register slot order internally.
+// Public operator numbers map to the register spacing used by YM2612.
+// In the common channel-1 examples this becomes:
+//   op1 -> 0x30
+//   op2 -> 0x34
+//   op3 -> 0x38
+//   op4 -> 0x3c
 const OPERATOR_SLOT_OFFSETS = {
   1: 0x00,
-  2: 0x08,
-  3: 0x04,
+  2: 0x04,
+  3: 0x08,
   4: 0x0c,
 };
 
@@ -465,3 +460,4 @@ function validateRange(name, value, min, max) {
   }
   return value;
 }
+
