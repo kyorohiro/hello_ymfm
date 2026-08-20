@@ -47,15 +47,16 @@ mkdir -p "${STAGE_DIR}/js" "${STAGE_DIR}/generated"
 cp "${SOURCE_HTML}" "${STAGE_DIR}/index.html"
 cp "${SOURCE_JS}" "${STAGE_DIR}/synth.js"
 cp "${SOURCE_JS_DIR}/megasynth.js" "${STAGE_DIR}/js/megasynth.js"
+cp "${SOURCE_JS_DIR}/ym2612.js" "${STAGE_DIR}/js/ym2612.js"
 cp "${SOURCE_JS_DIR}/ym2612synth.js" "${STAGE_DIR}/js/ym2612synth.js"
 cp "${SOURCE_JS_DIR}/ym2612-worklet.js" "${STAGE_DIR}/js/ym2612-worklet.js"
 cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.js" "${STAGE_DIR}/generated/ym2612_wasm.js"
 cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.wasm" "${STAGE_DIR}/generated/ym2612_wasm.wasm"
 
 perl -0pi -e 's#import "\\./synth\\.js";#import "./synth.js";#g' "${STAGE_DIR}/index.html"
-perl -0pi -e 's#\\.\\./js/#./js/#g; s#\\.\\./generated/#./generated/#g' "${STAGE_DIR}/synth.js"
+perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g; s#\.\./js/ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\.\./generated/#./generated/#g' "${STAGE_DIR}/synth.js"
 perl -0pi -e 's#\\./ym2612-worklet\\.js#./js/ym2612-worklet.js#g; s#\\./generated/ym2612_wasm\\.wasm#./generated/ym2612_wasm.wasm#g' "${STAGE_DIR}/js/megasynth.js"
-perl -0pi -e 's#\\.\\./generated/ym2612_wasm\\.js#../generated/ym2612_wasm.js#g' "${STAGE_DIR}/js/ym2612-worklet.js"
+perl -0pi -e 's#import ym2612ModuleFactory from "\\.\\./generated/ym2612_wasm\\.js";#import ym2612ModuleFactory from "../generated/ym2612_wasm.js";#g' "${STAGE_DIR}/js/ym2612-worklet.js"
 
 (
   cd "${STAGE_DIR}"
