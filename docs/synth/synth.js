@@ -21,6 +21,7 @@ const envelopeCanvas =
 const envelopeContext =
   envelopeCanvas.getContext("2d");
 const heldKeys = new Set();
+const activePointers = new Map();
 
 const OPERATOR_NUMBERS = [
   1,
@@ -1220,6 +1221,18 @@ function releaseKey(key) {
   updateKeyboardVisuals();
 }
 
+function releasePointerKey(pointerId) {
+  const key =
+    activePointers.get(pointerId);
+
+  if (!key) {
+    return;
+  }
+
+  activePointers.delete(pointerId);
+  releaseKey(key);
+}
+
 function buildKeyboard() {
   keyboard.innerHTML = "";
 
@@ -1260,6 +1273,13 @@ function buildKeyboard() {
         "pointerdown",
         async (event) => {
           event.preventDefault();
+          activePointers.set(
+            event.pointerId,
+            entry.key
+          );
+          button.setPointerCapture(
+            event.pointerId
+          );
 
           await pressKey(
             entry.key
@@ -1269,27 +1289,38 @@ function buildKeyboard() {
 
       button.addEventListener(
         "pointerup",
-        () => {
-          releaseKey(
-            entry.key
-          );
-        }
-      );
+        (event) => {
+          if (
+            button.hasPointerCapture(
+              event.pointerId
+            )
+          ) {
+            button.releasePointerCapture(
+              event.pointerId
+            );
+          }
 
-      button.addEventListener(
-        "pointerleave",
-        () => {
-          releaseKey(
-            entry.key
+          releasePointerKey(
+            event.pointerId
           );
         }
       );
 
       button.addEventListener(
         "pointercancel",
-        () => {
-          releaseKey(
-            entry.key
+        (event) => {
+          if (
+            button.hasPointerCapture(
+              event.pointerId
+            )
+          ) {
+            button.releasePointerCapture(
+              event.pointerId
+            );
+          }
+
+          releasePointerKey(
+            event.pointerId
           );
         }
       );
@@ -1356,6 +1387,24 @@ function buildPresetSelect() {
   presetSelect.value =
     currentPresetName;
 }
+
+window.addEventListener(
+  "pointerup",
+  (event) => {
+    releasePointerKey(
+      event.pointerId
+    );
+  }
+);
+
+window.addEventListener(
+  "pointercancel",
+  (event) => {
+    releasePointerKey(
+      event.pointerId
+    );
+  }
+);
 
 window.addEventListener(
   "keydown",
