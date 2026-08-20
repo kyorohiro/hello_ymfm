@@ -147,11 +147,11 @@
         </p>
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/embed.html">docs/embed.html</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/embed.html">docs/demos/embed.html</a>
           |
           Related code:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/genesisaudioengine.js">docs/genesisaudioengine.js</a>,
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgmplayer.js">docs/vgmplayer.js</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/genesisaudioengine.js">docs/js/genesisaudioengine.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/vgmplayer.js">docs/js/vgmplayer.js</a>
         </p>
 
         <div class="actions">
@@ -161,7 +161,7 @@
           <input id="fileInput" type="file" accept=".vgm,application/octet-stream">
           <button id="playVgmButton" type="button" disabled>Play VGM</button>
           <button id="stopVgmButton" type="button" disabled>Stop VGM</button>
-          <a class="link-button" href="./index.html">Back</a>
+          <a class="link-button" href="../index.html">Back</a>
         </div>
 
         <div class="status" id="status">Press "Init Audio" first.</div>
@@ -187,10 +187,10 @@
         </div>
 
         <h2>Minimal flow</h2>
-        <pre>import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
-import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
-import { createGenesisAudioEngine } from "./genesisaudioengine.js";
-import { VgmPlayer } from "./vgmplayer.js";
+        <pre>import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+import segaPsgModuleFactory from "../generated/segapsg_wasm.js";
+import { createGenesisAudioEngine } from "../js/genesisaudioengine.js";
+import { VgmPlayer } from "../js/vgmplayer.js";
 
 const engine = await createGenesisAudioEngine({
   ym2612ModuleFactory,
@@ -209,15 +209,15 @@ player.play();</pre>
         <h2>Notes</h2>
         <pre>- One-shot direct-control examples use AudioBufferSourceNode for readability.
 - VGM playback here uses ScriptProcessorNode because it is smaller to read.
-- The more advanced AudioWorklet-oriented path still lives in docs/vgm.html.</pre>
+- The more advanced AudioWorklet-oriented path still lives in docs/demos/vgm.html.</pre>
       </section>
     </main>
 
     <script type="module">
-      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
-      import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
-      import { createGenesisAudioEngine } from "./genesisaudioengine.js";
-      import { VgmPlayer } from "./vgmplayer.js";
+      import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+      import segaPsgModuleFactory from "../generated/segapsg_wasm.js";
+      import { createGenesisAudioEngine } from "../js/genesisaudioengine.js";
+      import { VgmPlayer } from "../js/vgmplayer.js";
 
       const initButton = document.getElementById("initButton");
       const fmButton = document.getElementById("fmButton");

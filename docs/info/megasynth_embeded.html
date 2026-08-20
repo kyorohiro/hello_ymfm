@@ -155,12 +155,12 @@
 
         <pre>import {
   MegaDriveSynth,
-} from "../../megasynth.js";
+} from "../js/megasynth.js";
 
 const megaDrive =
   new MegaDriveSynth({
-    workletUrl: "../../ym2612-worklet.js",
-    ym2612WasmUrl: "../../generated/ym2612_wasm.wasm",
+    workletUrl: "../js/ym2612-worklet.js",
+    ym2612WasmUrl: "../generated/ym2612_wasm.wasm",
   });
 
 await megaDrive.start();
@@ -238,7 +238,7 @@ Audio output</pre>
     <script type="module">
       import {
         MegaDriveSynth,
-      } from "../../megasynth.js";
+      } from "../js/megasynth.js";
 
       const playButton =
         document.getElementById("playButton");
@@ -248,8 +248,8 @@ Audio output</pre>
 
       const megaDrive =
         new MegaDriveSynth({
-          workletUrl: "../../ym2612-worklet.js",
-          ym2612WasmUrl: "../../generated/ym2612_wasm.wasm",
+          workletUrl: "../js/ym2612-worklet.js",
+          ym2612WasmUrl: "../generated/ym2612_wasm.wasm",
         });
 
       let synth = null;

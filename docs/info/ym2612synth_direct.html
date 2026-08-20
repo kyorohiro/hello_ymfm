@@ -138,12 +138,12 @@
 
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612synth.js">
-            docs/ym2612synth.js
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612synth.js">
+            docs/js/ym2612synth.js
           </a>
           |
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612.js">
-            docs/ym2612.js
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612.js">
+            docs/js/ym2612.js
           </a>
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/info/ym2612synth_direct.html">
             docs/info/ym2612synth_direct.html
@@ -218,16 +218,16 @@ AudioContext.destination</pre>
     </main>
 
     <script type="module">
-      import ym2612ModuleFactory from "../../generated/ym2612_wasm.js";
+      import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
       import {
         createYm2612,
         YM2612_CLOCK,
-      } from "../../ym2612.js";
+      } from "../js/ym2612.js";
 
       import {
         YM2612DirectTransport,
         YM2612Synth,
-      } from "../../ym2612synth.js";
+      } from "../js/ym2612synth.js";
 
       const playButton = document.getElementById("playButton");
       const status = document.getElementById("status");

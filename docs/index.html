@@ -137,34 +137,45 @@
         by Aaron Giles under the BSD 3-Clause License.
       </p>
 
+      <h2>Docs Layout</h2>
+
+      <ul>
+        <li><code>docs/demos/</code> contains runnable browser demos.</li>
+        <li><code>docs/js/</code> contains reusable browser-side runtime code.</li>
+        <li><code>docs/generated/</code> contains generated WASM files.</li>
+        <li><code>docs/info/</code> contains reading-oriented explanation pages.</li>
+        <li><code>docs/examples/</code> contains smaller code examples.</li>
+        <li><code>docs/issues/</code> contains work notes and save points.</li>
+      </ul>
+
       <h2>Demos</h2>
 
       <div class="grid">
-        <!--a class="card" href="./embed.html">
+        <!--a class="card" href="./demos/embed.html">
             <strong>Integration Sample</strong>
             Minimal browser-side sample for app or game embedding with FM SFX, PSG SFX, and VGM playback.
           </a-->
-        <a class="card" href="./beep.html">
+        <a class="card" href="./demos/beep.html">
           <strong>YM262 Beep Demo</strong>
           Play the same YM2612 beep configuration used in <code>ex03_beep.cpp</code>.
         </a>
-        <a class="card" href="./psg.html">
+        <a class="card" href="./demos/psg.html">
           <strong>Sega PSG Demo</strong>
           Play a minimal Sega PSG / SN76489-compatible tone through WebAssembly.
         </a>
-        <a class="card" href="./vgm.html">
+        <a class="card" href="./demos/vgm.html">
           <strong>YM2612 VGM Parser and Playback Demo</strong>
           Load a VGM file, inspect the header, preview parsed YM2612-oriented commands, and play it through WebAssembly.
         </a>
-        <a class="card" href="./operator1.html">
+        <a class="card" href="./demos/operator1.html">
           <strong>1 Operator Demo</strong>
           Change one audible operator first: MULTI, TL, AR, RR, and pitch.
         </a>
-        <a class="card" href="./operator2.html">
+        <a class="card" href="./demos/operator2.html">
           <strong>2 Operator Demo</strong>
           Compare parallel and serial relationships, then add feedback to operator 1.
         </a>
-        <a class="card" href="./synth.html">
+        <a class="card" href="./demos/synth.html">
           <strong>YM2612 Synth Keyboard Demo</strong>
           Try a small YM2612Synth keyboard with a guitar-like PC key layout and preset switching.
         </a>
@@ -243,44 +254,44 @@
         </li>
 
         <li>
-          <code>ym2612.js</code>
+          <code>js/ym2612.js</code>
           — Low-level JavaScript wrapper around the YM2612 WASM module.
         </li>
 
         <li>
-          <code>segapsg.js</code>
+          <code>js/segapsg.js</code>
           — Low-level JavaScript wrapper around the Sega PSG WASM module.
         </li>
 
         <li>
-          <code>ym2612synth.js</code>
+          <code>js/ym2612synth.js</code>
           — Small synth API for controlling YM2612 channels, operators,
           algorithms, notes, and register writes.
         </li>
 
         <li>
-          <code>ym2612vgm.js</code>
+          <code>js/ym2612vgm.js</code>
           — YM2612-specific helpers used by the VGM playback path.
         </li>
 
         <li>
-          <code>vgmplayer.js</code>
+          <code>js/vgmplayer.js</code>
           — VGM parser and playback control layer.
         </li>
 
         <li>
-          <code>genesisaudioengine.js</code>
+          <code>js/genesisaudioengine.js</code>
           — Genesis audio runtime combining YM2612 and Sega PSG playback.
         </li>
 
         <li>
-          <code>ym2612-worklet.js</code>
+          <code>js/ym2612-worklet.js</code>
           — AudioWorklet processor that runs the YM2612 WASM synthesizer
           on the audio rendering thread.
         </li>
 
         <li>
-          <code>vgm-output-worklet.js</code>
+          <code>js/vgm-output-worklet.js</code>
           — AudioWorklet processor used by the VGM audio output path.
         </li>
       </ul>

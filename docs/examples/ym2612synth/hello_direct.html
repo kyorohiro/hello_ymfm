@@ -138,13 +138,9 @@
 
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612synth.js">
-            docs/ym2612synth.js
-          </a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612synth.js">docs/js/ym2612synth.js</a>
           |
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612.js">
-            docs/ym2612.js
-          </a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612.js">docs/js/ym2612.js</a>
         </p>
 
         <h2>Minimal Usage</h2>
@@ -182,7 +178,7 @@ synth.noteOff(0);</pre>
 
         <div class="actions">
           <button id="playButton" type="button">Play</button>
-          <a class="link-button" href="./index.html">Back</a>
+          <a class="link-button" href="../../index.html">Back</a>
         </div>
 
         <div class="status" id="status">Ready.</div>
@@ -219,12 +215,12 @@ AudioContext.destination</pre>
       import {
         createYm2612,
         YM2612_CLOCK,
-      } from "../../ym2612.js";
+      } from "../../js/ym2612.js";
 
       import {
         YM2612DirectTransport,
         YM2612Synth,
-      } from "../../ym2612synth.js";
+      } from "../../js/ym2612synth.js";
 
       const playButton = document.getElementById("playButton");
       const status = document.getElementById("status");

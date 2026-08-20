@@ -86,16 +86,16 @@
         </p>
         <p class="meta">
           Related source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/vgmplayer.js">docs/vgmplayer.js</a>,
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/genesisaudioengine.js">docs/genesisaudioengine.js</a>,
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612vgm.js">docs/ym2612vgm.js</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/vgmplayer.js">docs/js/vgmplayer.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/genesisaudioengine.js">docs/js/genesisaudioengine.js</a>,
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612vgm.js">docs/js/ym2612vgm.js</a>
         </p>
 
         <h2>Minimal Flow</h2>
         <pre>import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
 import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
-import { createGenesisAudioEngine } from "./genesisaudioengine.js";
-import { VgmPlayer } from "./vgmplayer.js";
+import { createGenesisAudioEngine } from "../js/genesisaudioengine.js";
+import { VgmPlayer } from "../js/vgmplayer.js";
 
 const engine = await createGenesisAudioEngine({
   ym2612ModuleFactory,
@@ -135,9 +135,9 @@ player.play();</pre>
 
         <h2>Good Next Reads</h2>
         <ul>
-          <li><a href="../vgm.html">VGM Parser Demo</a></li>
+          <li><a href="../demos/vgm.html">VGM Parser Demo</a></li>
           <li><a href="./audioworklet.html">AudioWorklet Usage</a></li>
-          <li><a href="../embed.html">Integration Sample</a></li>
+          <li><a href="../demos/embed.html">Integration Sample</a></li>
         </ul>
 
         <a class="link-button" href="./index.html">Back</a>

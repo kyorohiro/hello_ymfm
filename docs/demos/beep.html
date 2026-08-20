@@ -130,7 +130,7 @@
         </p>
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/beep.html">docs/beep.html</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/beep.html">docs/demos/beep.html</a>
           |
           Related code:
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>,
@@ -138,7 +138,7 @@
         </p>
         <div class="actions">
           <button id="playButton" type="button">Play Beep</button>
-          <a class="link-button" href="./index.html">Back</a>
+          <a class="link-button" href="../index.html">Back</a>
         </div>
         <div class="status" id="status">Ready.</div>
         <div class="code">
@@ -148,8 +148,8 @@
     </main>
 
     <script type="module">
-      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
-      import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+      import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+      import { createYm2612, YM2612_CLOCK } from "../js/ym2612.js";
 
       const playButton = document.getElementById("playButton");
       const status = document.getElementById("status");

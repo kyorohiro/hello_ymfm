@@ -1,9 +1,9 @@
 import ym2612ModuleFactory from "../../generated/ym2612_wasm.js";
-import { createYm2612 } from "../../ym2612.js";
+import { createYm2612 } from "../../js/ym2612.js";
 import {
   YM2612DirectTransport,
   YM2612Synth,
-} from "../../ym2612synth.js";
+} from "../../js/ym2612synth.js";
 
 const ym2612 = await createYm2612(ym2612ModuleFactory);
 

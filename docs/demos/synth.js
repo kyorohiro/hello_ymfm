@@ -1,10 +1,10 @@
-import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
-import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+import { createYm2612, YM2612_CLOCK } from "../js/ym2612.js";
 import {
   YM2612DirectTransport,
   YM2612WorkletTransport,
   YM2612Synth,
-} from "./ym2612synth.js";
+} from "../js/ym2612synth.js";
 
 const useWorklet = true;
 
@@ -374,7 +374,7 @@ function waitForWorkletReady(node) {
 
 async function loadYm2612WasmBinary() {
   const response = await fetch(
-    "./generated/ym2612_wasm.wasm"
+    "../generated/ym2612_wasm.wasm"
   );
 
   if (!response.ok) {
@@ -400,7 +400,7 @@ async function initializeWorkletAudio() {
    * and transferred to the worklet explicitly.
    */
   await audioContext.audioWorklet.addModule(
-    "./ym2612-worklet.js"
+    "../js/ym2612-worklet.js"
   );
 
   const wasmBinary =

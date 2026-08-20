@@ -1,11 +1,11 @@
 import {
   YM2612Synth,
   YM2612WorkletTransport,
-} from "./ym2612synth.js";
+} from "../../js/ym2612synth.js";
 
 const audioContext = new AudioContext();
 
-await audioContext.audioWorklet.addModule("./ym2612-worklet.js");
+await audioContext.audioWorklet.addModule("../../js/ym2612-worklet.js");
 
 const node = new AudioWorkletNode(
   audioContext,

@@ -122,7 +122,7 @@
         </p>
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/psg.html">docs/psg.html</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/psg.html">docs/demos/psg.html</a>
           |
           Related code:
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/src/segapsg.cpp">src/segapsg.cpp</a>,
@@ -130,7 +130,7 @@
         </p>
         <div class="actions">
           <button id="playButton" type="button">Play PSG Tone</button>
-          <a class="link-button" href="./index.html">Back</a>
+          <a class="link-button" href="../index.html">Back</a>
         </div>
         <div class="status" id="status">Ready.</div>
         <div class="code">
@@ -140,8 +140,8 @@
     </main>
 
     <script type="module">
-      import segaPsgModuleFactory from "./generated/segapsg_wasm.js";
-      import { createSegaPSG } from "./segapsg.js";
+      import segaPsgModuleFactory from "../generated/segapsg_wasm.js";
+      import { createSegaPSG } from "../js/segapsg.js";
 
       const playButton = document.getElementById("playButton");
       const status = document.getElementById("status");

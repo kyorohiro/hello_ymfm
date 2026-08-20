@@ -77,7 +77,7 @@ async function Module(moduleArg = {}) {
 
 // Attempt to auto-detect the environment
 var ENVIRONMENT_IS_WEB = !!globalThis.window;
-var ENVIRONMENT_IS_WORKER = !!globalThis.WorkerGlobalScope;
+var ENVIRONMENT_IS_WORKER = !!globalThis.WorkerGlobalScope || !!globalThis.AudioWorkletGlobalScope;
 // N.b. Electron.js environment is simultaneously a NODE-environment, but
 // also a web environment.
 var ENVIRONMENT_IS_NODE = globalThis.process?.versions?.node && globalThis.process?.type != 'renderer';
@@ -167,7 +167,7 @@ if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
     // infer anything from them.
   }
 
-  if (!(globalThis.window || globalThis.WorkerGlobalScope)) throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
+  if (!(globalThis.window || globalThis.WorkerGlobalScope || globalThis.AudioWorkletGlobalScope)) throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
 
   {
 // include: web_or_worker_shell_read.js
@@ -1509,4 +1509,3 @@ for (const prop of Object.keys(Module)) {
 
 // Export using a UMD style export, or ES6 exports if selected
 export default Module;
-

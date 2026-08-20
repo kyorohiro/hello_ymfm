@@ -1,4 +1,4 @@
-import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
+import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
 import { createYm2612 } from "./ym2612.js";
 
 class YM2612Processor extends AudioWorkletProcessor {

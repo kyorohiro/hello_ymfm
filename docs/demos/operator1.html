@@ -263,7 +263,7 @@
         </p>
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/operator1.html">docs/operator1.html</a>
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/operator1.html">docs/demos/operator1.html</a>
           |
           Related code:
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
@@ -343,7 +343,7 @@
         <div class="actions">
           <button id="playButton" type="button">Hold to Play</button>
           <button id="stopButton" type="button">Stop</button>
-          <a class="link-button" href="./index.html">Back</a>
+          <a class="link-button" href="../index.html">Back</a>
         </div>
 
         <div class="status" id="status">Ready.</div>
@@ -365,8 +365,8 @@
     </main>
 
     <script type="module">
-      import ym2612ModuleFactory from "./generated/ym2612_wasm.js";
-      import { createYm2612, YM2612_CLOCK } from "./ym2612.js";
+      import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
+      import { createYm2612, YM2612_CLOCK } from "../js/ym2612.js";
 
       const controls = {
         dt: document.getElementById("dt"),

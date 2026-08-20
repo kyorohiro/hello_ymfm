@@ -140,16 +140,16 @@
 
         <p class="meta">
           Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612synth.js">
-            docs/ym2612synth.js
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612synth.js">
+            docs/js/ym2612synth.js
           </a>
           |
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612-worklet.js">
-            docs/ym2612-worklet.js
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612-worklet.js">
+            docs/js/ym2612-worklet.js
           </a>
           |
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/ym2612.js">
-            docs/ym2612.js
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/js/ym2612.js">
+            docs/js/ym2612.js
           </a>
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/info/ym2612synth_audioworklet.html">
             docs/info/ym2612synth_audioworklet.html
@@ -161,11 +161,11 @@
         <pre>const audioContext = new AudioContext();
 
 await audioContext.audioWorklet.addModule(
-  "../../ym2612-worklet.js"
+  "../js/ym2612-worklet.js"
 );
 
 const wasmResponse = await fetch(
-  "../../generated/ym2612_wasm.wasm"
+  "../generated/ym2612_wasm.wasm"
 );
 
 const wasmBinary =
@@ -325,7 +325,7 @@ generateStereo() in process()</pre>
       import {
         YM2612Synth,
         YM2612WorkletTransport,
-      } from "../../ym2612synth.js";
+      } from "../js/ym2612synth.js";
 
       const playButton =
         document.getElementById("playButton");
@@ -404,11 +404,11 @@ generateStereo() in process()</pre>
           );
 
           await audioContext.audioWorklet.addModule(
-            "../../ym2612-worklet.js"
+            "../js/ym2612-worklet.js"
           );
 
           const response = await fetch(
-            "../../generated/ym2612_wasm.wasm"
+            "../generated/ym2612_wasm.wasm"
           );
 
           if (!response.ok) {
