@@ -8,6 +8,8 @@ const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
 const commonControlsRoot =
   document.getElementById("commonControls");
+const commonHeaderRoot =
+  document.getElementById("commonHeader");
 const operatorControlsRoot =
   document.getElementById("operatorControls");
 const operatorHeaderRoot =
@@ -692,6 +694,9 @@ function createParamControl(config) {
   const wrapper =
     document.createElement("div");
   wrapper.className = "param-control";
+  if (!showLabel) {
+    wrapper.classList.add("no-label");
+  }
 
   const labelElement =
     document.createElement("div");
@@ -857,6 +862,7 @@ function buildCommonControls() {
     const control =
       createParamControl({
         ...config,
+        showLabel: false,
         value: commonState[config.id],
         onChange: (nextValue) => {
           commonState[config.id] =
@@ -883,6 +889,24 @@ function buildCommonControls() {
     commonControlsRoot.appendChild(
       control.element
     );
+  }
+}
+
+function buildCommonHeader() {
+  if (!commonHeaderRoot) {
+    return;
+  }
+
+  commonHeaderRoot.innerHTML = "";
+
+  for (const config of COMMON_PARAM_DEFS) {
+    const cell =
+      document.createElement("div");
+    cell.className =
+      "operator-header-cell";
+    cell.textContent =
+      config.label;
+    commonHeaderRoot.appendChild(cell);
   }
 }
 
@@ -1386,6 +1410,7 @@ window.addEventListener(
   }
 );
 
+buildCommonHeader();
 buildCommonControls();
 buildOperatorHeader();
 buildOperatorControls();

@@ -225,12 +225,23 @@
           0 1px 5px rgba(30, 24, 18, 0.14);
       }
 
+      .param-control.no-label {
+        grid-template-columns: 16px minmax(0, 1fr) 16px;
+        justify-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+      }
+
       #operatorControls .param-control {
         min-width: 0;
         width: 100%;
-        grid-template-columns: minmax(0, 1fr) 12px minmax(16px, auto) 12px;
+      }
+
+      #operatorControls .param-control.no-label {
+        grid-template-columns: 12px minmax(0, 1fr) 12px;
+        justify-items: center;
         gap: 2px;
-        padding: 2px 4px 2px 5px;
+        padding: 2px 4px;
       }
 
       .param-label {
@@ -452,10 +463,18 @@
           padding: 1px 4px 1px 5px;
         }
 
+        .param-control.no-label {
+          grid-template-columns: 14px minmax(0, 1fr) 14px;
+          padding: 1px 4px;
+        }
+
         #operatorControls .param-control {
           min-width: 0;
-          padding: 1px 3px 1px 4px;
-          grid-template-columns: minmax(0, 1fr) 10px minmax(14px, auto) 10px;
+        }
+
+        #operatorControls .param-control.no-label {
+          padding: 1px 3px;
+          grid-template-columns: 10px minmax(0, 1fr) 10px;
         }
 
         .param-label {
@@ -514,11 +533,15 @@
               <div class="operator-stack">
                 <div class="operator-header-row">
                   <div class="operator-header-spacer"></div>
-                  <div class="operator-header-strip" id="operatorHeader"></div>
+                  <div class="operator-header-strip" id="commonHeader"></div>
                 </div>
                 <div class="operator-row">
                   <div class="operator-name">Common</div>
                   <div class="param-strip" id="commonControls"></div>
+                </div>
+                <div class="operator-header-row">
+                  <div class="operator-header-spacer"></div>
+                  <div class="operator-header-strip" id="operatorHeader"></div>
                 </div>
                 <div id="operatorControls" class="operator-stack"></div>
               </div>
