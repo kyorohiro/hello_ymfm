@@ -24,12 +24,12 @@ This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles und
 See `LICENSE` for the license text included with this repository.
 
 ## tutorials
-- [ex00.md](./ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
-- [ex00_ja.md](./ex00_ja.md): Japanese notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
-- [ex00_vgm.md](./ex00_vgm.md): English notes about VGM Format.
-- `ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
-- `ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
-- `ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
+- [tutorials/ex00.md](./tutorials/ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
+- [tutorials/ex00_ja.md](./tutorials/ex00_ja.md): Japanese notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
+- [tutorials/ex00_vgm.md](./tutorials/ex00_vgm.md): English notes about VGM Format.
+- `tutorials/ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
+- `tutorials/ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
+- `tutorials/ex03_beep.cpp`: writes YM2612 registers directly and generates a simple beep sound.
 - `docs/embed.html`: a small browser-side integration sample that shows two separate browser-side paths:
   VGM playback and direct chip control.
 
