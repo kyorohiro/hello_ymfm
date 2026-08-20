@@ -15,6 +15,10 @@
         --line: #d7c8ac;
         --code: #2b241d;
         --code-ink: #f6ead7;
+        --pill-bg: #343a4a;
+        --pill-border: #6e7a92;
+        --pill-ink: #f7f3ea;
+        --pill-muted: #bfc9db;
       }
 
       * {
@@ -88,7 +92,7 @@
 
       .layout {
         display: grid;
-        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+        grid-template-columns: 1fr;
         gap: 16px;
         align-items: start;
       }
@@ -106,34 +110,97 @@
         background: rgba(255, 255, 255, 0.36);
       }
 
-      .controls {
+      .operator-stack {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-        gap: 8px;
+        gap: 10px;
       }
 
-      .control {
-        padding: 8px 10px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.45);
+      .operator-row {
+        display: grid;
+        grid-template-columns: 62px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
       }
 
-      .control label {
-        display: block;
-        margin-bottom: 4px;
-        font-size: 0.84rem;
-        font-weight: 700;
+      .operator-name {
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
 
-      .control input[type="range"] {
-        width: 100%;
+      .param-strip {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
       }
 
-      .value {
-        display: inline-block;
-        min-width: 2ch;
-        font-weight: 700;
+      .param-control {
+        display: grid;
+        grid-template-columns: auto auto auto auto;
+        align-items: center;
+        gap: 4px;
+        flex: 0 0 auto;
+        min-width: 92px;
+        padding: 2px 5px 2px 7px;
+        border-radius: 999px;
+        border: 1.5px solid var(--pill-border);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 45%),
+          var(--pill-bg);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 1px 5px rgba(30, 24, 18, 0.14);
+      }
+
+      .param-label {
+        min-width: 18px;
+        font-size: 0.52rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-align: left;
+        color: var(--pill-muted);
+      }
+
+      .param-button,
+      .param-value {
+        font: inherit;
+      }
+
+      .param-button {
+        width: 16px;
+        height: 16px;
+        padding: 0;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--pill-ink);
+        cursor: pointer;
+        font-size: 0.92rem;
+        line-height: 1;
+      }
+
+      .param-button:hover {
+        color: white;
+      }
+
+      .param-value {
+        min-width: 24px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        text-align: center;
+        color: var(--pill-ink);
+        font-size: 0.66rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        user-select: none;
+        cursor: ew-resize;
+      }
+
+      .param-value.is-dragging {
+        color: #ffe3b6;
       }
 
       .keyboard {
@@ -260,48 +327,13 @@
         <div class="layout">
           <section class="controls-stack">
             <div class="control-section">
-              <h2>Operator 4</h2>
-              <div class="controls">
-                <div class="control">
-                  <label for="dt">DT <span class="value" id="dtValue">0</span></label>
-                  <input id="dt" type="range" min="0" max="7" step="1" value="0">
+              <h2>YM2612 Knobs</h2>
+              <div class="operator-stack">
+                <div class="operator-row">
+                  <div class="operator-name">Common</div>
+                  <div class="param-strip" id="commonControls"></div>
                 </div>
-                <div class="control">
-                  <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
-                  <input id="multi" type="range" min="0" max="15" step="1" value="1">
-                </div>
-                <div class="control">
-                  <label for="tl">TL <span class="value" id="tlValue">8</span></label>
-                  <input id="tl" type="range" min="0" max="127" step="1" value="8">
-                </div>
-                <div class="control">
-                  <label for="ar">AR <span class="value" id="arValue">22</span></label>
-                  <input id="ar" type="range" min="0" max="31" step="1" value="22">
-                </div>
-                <div class="control">
-                  <label for="d1r">D1R <span class="value" id="d1rValue">6</span></label>
-                  <input id="d1r" type="range" min="0" max="31" step="1" value="6">
-                </div>
-                <div class="control">
-                  <label for="d2r">D2R <span class="value" id="d2rValue">3</span></label>
-                  <input id="d2r" type="range" min="0" max="31" step="1" value="3">
-                </div>
-                <div class="control">
-                  <label for="sl">SL <span class="value" id="slValue">3</span></label>
-                  <input id="sl" type="range" min="0" max="15" step="1" value="3">
-                </div>
-                <div class="control">
-                  <label for="rr">RR <span class="value" id="rrValue">8</span></label>
-                  <input id="rr" type="range" min="0" max="15" step="1" value="8">
-                </div>
-                <div class="control">
-                  <label for="algorithm">ALGO <span class="value" id="algorithmValue">7</span></label>
-                  <input id="algorithm" type="range" min="0" max="7" step="1" value="7">
-                </div>
-                <div class="control">
-                  <label for="feedback">FB <span class="value" id="feedbackValue">0</span></label>
-                  <input id="feedback" type="range" min="0" max="7" step="1" value="0">
-                </div>
+                <div id="operatorControls" class="operator-stack"></div>
               </div>
             </div>
 
@@ -311,24 +343,6 @@
             </div>
           </section>
 
-          <section class="controls-stack">
-            <div class="card">
-              <h2>Rows</h2>
-              <pre>1-0 : G row
-Q-P : D row
-A-L : A row
-Z-M : E row</pre>
-            </div>
-
-            <div class="card">
-              <h2>API Flow</h2>
-              <pre id="codeOutput">const synth = new YM2612Synth({ transport });
-synth.setOperator(0, 4, { tl: 8, ar: 22, d1r: 6, d2r: 3, sl: 3, rr: 8 });
-synth.setAlgo(0, 7, 0);
-synth.noteOn(0, 4, 553);
-synth.noteOff(0);</pre>
-            </div>
-          </section>
         </div>
       </section>
     </main>

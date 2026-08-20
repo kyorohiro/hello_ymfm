@@ -161,7 +161,7 @@ if (ENVIRONMENT_IS_SHELL) {
 // ENVIRONMENT_IS_NODE.
 if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   try {
-    scriptDirectory = new URL('.', _scriptName).href; // includes trailing slash
+    scriptDirectory = _scriptName.slice(0, _scriptName.lastIndexOf('/') + 1); // includes trailing slash
   } catch {
     // Must be a `blob:` or `data:` URL (e.g. `blob:http://site.com/etc/etc`), we cannot
     // infer anything from them.
@@ -549,8 +549,7 @@ function findWasmBinary() {
     return locateFile('ym2612_wasm.wasm');
   }
 
-  // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('ym2612_wasm.wasm', import.meta.url).href;
+  return scriptDirectory + 'ym2612_wasm.wasm';
 
 }
 

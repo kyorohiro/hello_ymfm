@@ -1260,9 +1260,7 @@
         chip.writeRegister(base80, (sl << 4) | rr);
       }
 
-      function configureTwoOperators(chip, settings) {
-        chip.reset();
-
+      function applyTwoOperatorSettings(chip, settings) {
         chip.writeRegister(0x30, (settings.op1dt << 4) | settings.op1multi);
         chip.writeRegister(0x34, (0 << 4) | 1);
         chip.writeRegister(0x38, (settings.op2dt << 4) | settings.op2multi);
@@ -1293,7 +1291,20 @@
         const low = settings.fnum & 0xff;
         chip.writeRegister(0xa4, high);
         chip.writeRegister(0xa0, low);
+      }
 
+      function configureTwoOperators(chip, settings) {
+        chip.reset();
+        applyTwoOperatorSettings(chip, settings);
+      }
+
+      function updateTwoOperatorLive() {
+        if (!playbackActive || !ym2612) {
+          return;
+        }
+
+        const settings = readSettings();
+        applyTwoOperatorSettings(ym2612, settings);
       }
 
       function keyOnTwoOperators(chip) {
@@ -1536,8 +1547,13 @@
           input.addEventListener("input", () => {
             controls.preset.value = "custom";
             updateLabelsAndSummary();
+            updateTwoOperatorLive();
           });
         }
+      });
+      controls.mode.addEventListener("change", () => {
+        updateLabelsAndSummary();
+        updateTwoOperatorLive();
       });
       playButton.addEventListener("pointerdown", (event) => {
         event.preventDefault();

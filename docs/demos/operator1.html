@@ -727,9 +727,7 @@
         drawEnvelope(settings);
       }
 
-      function configureSingleOperator(chip, settings) {
-        chip.reset();
-
+      function applySingleOperatorSettings(chip, settings) {
         // All operators start with no detune and MULTI=1.
         chip.writeRegister(0x30, (0 << 4) | (1 << 0));
         chip.writeRegister(0x34, (0 << 4) | (1 << 0));
@@ -769,6 +767,20 @@
         const low = settings.fnum & 0xff;
         chip.writeRegister(0xa4, high);
         chip.writeRegister(0xa0, low);
+      }
+
+      function configureSingleOperator(chip, settings) {
+        chip.reset();
+        applySingleOperatorSettings(chip, settings);
+      }
+
+      function updateSingleOperatorLive() {
+        if (!playbackActive || !ym2612) {
+          return;
+        }
+
+        const settings = readSettings();
+        applySingleOperatorSettings(ym2612, settings);
       }
 
       function keyOnSingleOperator(chip) {
@@ -993,7 +1005,10 @@
       }
 
       Object.values(controls).forEach((input) => {
-        input.addEventListener("input", updateLabelsAndSummary);
+        input.addEventListener("input", () => {
+          updateLabelsAndSummary();
+          updateSingleOperatorLive();
+        });
       });
 
       playButton.addEventListener("pointerdown", (event) => {

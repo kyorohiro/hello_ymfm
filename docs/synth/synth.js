@@ -10,29 +10,34 @@ const useWorklet = true;
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
-const codeOutput = document.getElementById("codeOutput");
+const commonControlsRoot =
+  document.getElementById("commonControls");
+const operatorControlsRoot =
+  document.getElementById("operatorControls");
 const heldKeys = new Set();
 
-const CONTROL_IDS = [
-  "dt",
-  "multi",
-  "tl",
-  "ar",
-  "d1r",
-  "d2r",
-  "sl",
-  "rr",
-  "algorithm",
-  "feedback",
+const OPERATOR_NUMBERS = [
+  1,
+  2,
+  3,
+  4,
 ];
 
-const controls = Object.fromEntries(
-  CONTROL_IDS.map((id) => [id, document.getElementById(id)])
-);
+const OPERATOR_PARAM_DEFS = [
+  { id: "dt", label: "DT", min: 0, max: 7, step: 1 },
+  { id: "multi", label: "MULTI", min: 0, max: 15, step: 1 },
+  { id: "tl", label: "TL", min: 0, max: 127, step: 1 },
+  { id: "ar", label: "AR", min: 0, max: 31, step: 1 },
+  { id: "d1r", label: "D1R", min: 0, max: 31, step: 1 },
+  { id: "d2r", label: "D2R", min: 0, max: 31, step: 1 },
+  { id: "sl", label: "SL", min: 0, max: 15, step: 1 },
+  { id: "rr", label: "RR", min: 0, max: 15, step: 1 },
+];
 
-const values = Object.fromEntries(
-  CONTROL_IDS.map((id) => [id, document.getElementById(`${id}Value`)])
-);
+const COMMON_PARAM_DEFS = [
+  { id: "algorithm", label: "ALGO", min: 0, max: 7, step: 1 },
+  { id: "feedback", label: "FB", min: 0, max: 7, step: 1 },
+];
 
 const VOICE_COUNT = 4;
 
@@ -77,18 +82,56 @@ const KEY_LAYOUT = ROW_DEFS.flatMap((row) => {
   });
 });
 
-const patchState = {
-  dt: 0,
-  multi: 1,
-  tl: 8,
-  ar: 22,
-  d1r: 6,
-  d2r: 3,
-  sl: 3,
-  rr: 8,
+const commonState = {
   algorithm: 7,
   feedback: 0,
 };
+
+const operatorStates = {
+  1: {
+    dt: 0,
+    multi: 1,
+    tl: 127,
+    ar: 31,
+    d1r: 0,
+    d2r: 0,
+    sl: 0,
+    rr: 15,
+  },
+  2: {
+    dt: 0,
+    multi: 1,
+    tl: 127,
+    ar: 31,
+    d1r: 0,
+    d2r: 0,
+    sl: 0,
+    rr: 15,
+  },
+  3: {
+    dt: 0,
+    multi: 1,
+    tl: 127,
+    ar: 31,
+    d1r: 0,
+    d2r: 0,
+    sl: 0,
+    rr: 15,
+  },
+  4: {
+    dt: 0,
+    multi: 1,
+    tl: 8,
+    ar: 22,
+    d1r: 6,
+    d2r: 3,
+    sl: 3,
+    rr: 8,
+  },
+};
+
+const commonControls = new Map();
+const operatorControls = new Map();
 
 let audioContext = null;
 let audioReadyPromise = null;
@@ -145,22 +188,6 @@ function createPitchFromMidi(midi) {
   };
 }
 
-function syncControlLabels() {
-  for (const id of CONTROL_IDS) {
-    values[id].textContent = controls[id].value;
-  }
-}
-
-function renderCodeSample() {
-  codeOutput.textContent = [
-    "const synth = new YM2612Synth({ transport });",
-    `synth.setOperator(0, 4, { dt: ${patchState.dt}, multi: ${patchState.multi}, tl: ${patchState.tl}, ar: ${patchState.ar}, d1r: ${patchState.d1r}, d2r: ${patchState.d2r}, sl: ${patchState.sl}, rr: ${patchState.rr} });`,
-    `synth.setAlgo(0, ${patchState.algorithm}, ${patchState.feedback});`,
-    "synth.noteOn(0, block, fnum);",
-    "synth.noteOff(0);",
-  ].join("\n");
-}
-
 function applyPatchToVoices() {
   if (!synth) {
     return;
@@ -171,54 +198,283 @@ function applyPatchToVoices() {
     channel < VOICE_COUNT;
     channel += 1
   ) {
-    synth.setOperator(channel, 1, {
-      tl: 0x7f,
-      multi: 1,
-      ar: 31,
-      d1r: 0,
-      d2r: 0,
-      sl: 0,
-      rr: 15,
-    });
-
-    synth.setOperator(channel, 2, {
-      tl: 0x7f,
-      multi: 1,
-      ar: 31,
-      d1r: 0,
-      d2r: 0,
-      sl: 0,
-      rr: 15,
-    });
-
-    synth.setOperator(channel, 3, {
-      tl: 0x7f,
-      multi: 1,
-      ar: 31,
-      d1r: 0,
-      d2r: 0,
-      sl: 0,
-      rr: 15,
-    });
-
-    synth.setOperator(channel, 4, {
-      dt: patchState.dt,
-      multi: patchState.multi,
-      tl: patchState.tl,
-      ar: patchState.ar,
-      d1r: patchState.d1r,
-      d2r: patchState.d2r,
-      sl: patchState.sl,
-      rr: patchState.rr,
-    });
+    for (const operator of OPERATOR_NUMBERS) {
+      synth.setOperator(
+        channel,
+        operator,
+        operatorStates[operator]
+      );
+    }
 
     synth.setAlgo(
       channel,
-      patchState.algorithm,
-      patchState.feedback
+      commonState.algorithm,
+      commonState.feedback
     );
 
     synth.setPan(channel, true, true);
+  }
+}
+
+function clampValue(value, min, max) {
+  return Math.min(
+    max,
+    Math.max(min, value)
+  );
+}
+
+function createParamControl(config) {
+  const {
+    label,
+    min,
+    max,
+    step,
+    value,
+    onChange,
+  } = config;
+
+  const wrapper =
+    document.createElement("div");
+  wrapper.className = "param-control";
+
+  const labelElement =
+    document.createElement("div");
+  labelElement.className = "param-label";
+  labelElement.textContent = label;
+
+  const minusButton =
+    document.createElement("button");
+  minusButton.type = "button";
+  minusButton.className = "param-button";
+  minusButton.textContent = "-";
+
+  const valueElement =
+    document.createElement("button");
+  valueElement.type = "button";
+  valueElement.className = "param-value";
+  valueElement.setAttribute(
+    "aria-label",
+    label
+  );
+
+  const plusButton =
+    document.createElement("button");
+  plusButton.type = "button";
+  plusButton.className = "param-button";
+  plusButton.textContent = "+";
+
+  const updateVisual =
+    (nextValue) => {
+      valueElement.textContent = String(nextValue);
+    };
+
+  let currentValue = value;
+  let dragStartX = 0;
+  let dragStartValue = value;
+
+  const applyValue =
+    (nextValue) => {
+      currentValue =
+        clampValue(
+          nextValue,
+          min,
+          max
+        );
+      updateVisual(currentValue);
+      onChange(currentValue);
+    };
+
+  minusButton.addEventListener(
+    "click",
+    () => {
+      applyValue(currentValue - step);
+    }
+  );
+
+  plusButton.addEventListener(
+    "click",
+    () => {
+      applyValue(currentValue + step);
+    }
+  );
+
+  valueElement.addEventListener(
+    "pointerdown",
+    (event) => {
+      dragStartX = event.clientX;
+      dragStartValue = currentValue;
+      valueElement.classList.add(
+        "is-dragging"
+      );
+      valueElement.setPointerCapture(
+        event.pointerId
+      );
+    }
+  );
+
+  valueElement.addEventListener(
+    "pointermove",
+    (event) => {
+      if (
+        valueElement.hasPointerCapture(
+          event.pointerId
+        ) === false
+      ) {
+        return;
+      }
+
+      const deltaX =
+        event.clientX - dragStartX;
+      const deltaSteps =
+        Math.round(deltaX / 12);
+
+      applyValue(
+        dragStartValue +
+        deltaSteps * step
+      );
+    }
+  );
+
+  const endDrag =
+    (event) => {
+      if (
+        valueElement.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        valueElement.releasePointerCapture(
+          event.pointerId
+        );
+      }
+      valueElement.classList.remove(
+        "is-dragging"
+      );
+    };
+
+  valueElement.addEventListener(
+    "pointerup",
+    endDrag
+  );
+  valueElement.addEventListener(
+    "pointercancel",
+    endDrag
+  );
+
+  wrapper.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      const direction =
+        event.deltaY < 0
+          ? step
+          : -step;
+      applyValue(currentValue + direction);
+    },
+    { passive: false }
+  );
+
+  wrapper.appendChild(labelElement);
+  wrapper.appendChild(minusButton);
+  wrapper.appendChild(valueElement);
+  wrapper.appendChild(plusButton);
+
+  updateVisual(value);
+
+  return {
+    element: wrapper,
+    updateVisual,
+  };
+}
+
+function buildCommonControls() {
+  commonControlsRoot.innerHTML = "";
+
+  for (const config of COMMON_PARAM_DEFS) {
+    const control =
+      createParamControl({
+        ...config,
+        value: commonState[config.id],
+        onChange: (nextValue) => {
+          commonState[config.id] =
+            nextValue;
+          if (synth) {
+            applyPatchToVoices();
+          }
+        },
+      });
+
+    commonControls.set(
+      config.id,
+      control
+    );
+
+    commonControlsRoot.appendChild(
+      control.element
+    );
+  }
+}
+
+function buildOperatorControls() {
+  operatorControlsRoot.innerHTML = "";
+
+  for (const operator of OPERATOR_NUMBERS) {
+    const row =
+      document.createElement("div");
+    row.className =
+      "operator-row";
+
+    const name =
+      document.createElement("div");
+    name.className =
+      "operator-name";
+    name.textContent =
+      `OP${operator}`;
+
+    const strip =
+      document.createElement("div");
+    strip.className = "param-strip";
+
+    const rowControls =
+      new Map();
+
+    for (const config of OPERATOR_PARAM_DEFS) {
+      const control =
+        createParamControl({
+          ...config,
+          value:
+            operatorStates[operator][
+              config.id
+            ],
+          onChange: (nextValue) => {
+            operatorStates[operator][
+              config.id
+            ] = nextValue;
+            if (synth) {
+              applyPatchToVoices();
+            }
+          },
+        });
+
+      rowControls.set(
+        config.id,
+        control
+      );
+
+      strip.appendChild(
+        control.element
+      );
+    }
+
+    operatorControls.set(
+      operator,
+      rowControls
+    );
+
+    row.appendChild(name);
+    row.appendChild(strip);
+    operatorControlsRoot.appendChild(
+      row
+    );
   }
 }
 
@@ -672,25 +928,6 @@ function buildKeyboard() {
   }
 }
 
-for (const id of CONTROL_IDS) {
-  controls[id].addEventListener(
-    "input",
-    () => {
-      patchState[id] =
-        Number(
-          controls[id].value
-        );
-
-      syncControlLabels();
-      renderCodeSample();
-
-      if (synth) {
-        applyPatchToVoices();
-      }
-    }
-  );
-}
-
 window.addEventListener(
   "keydown",
   (event) => {
@@ -744,6 +981,6 @@ window.addEventListener(
   }
 );
 
+buildCommonControls();
+buildOperatorControls();
 buildKeyboard();
-syncControlLabels();
-renderCodeSample();
