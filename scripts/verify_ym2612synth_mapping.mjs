@@ -1,0 +1,74 @@
+import { YM2612Synth } from "../web/ym2612synth.js";
+
+function collectWrites() {
+  const writes = [];
+  const transport = {
+    write(port, register, value) {
+      writes.push({ port, register, value });
+    },
+    reset() {},
+  };
+
+  const synth = new YM2612Synth({ transport });
+  return { synth, writes };
+}
+
+function expectEqual(actual, expected, message) {
+  if (actual !== expected) {
+    throw new Error(`${message}: expected ${expected}, got ${actual}`);
+  }
+}
+
+function verifyOperatorRegisterOrder() {
+  const { synth, writes } = collectWrites();
+
+  synth.setOperator(0, 1, { dt: 0, multi: 1 });
+  synth.setOperator(0, 2, { dt: 0, multi: 1 });
+  synth.setOperator(0, 3, { dt: 0, multi: 1 });
+  synth.setOperator(0, 4, { dt: 0, multi: 1 });
+
+  const registers = writes.map((entry) => entry.register);
+  const expected = [0x30, 0x38, 0x34, 0x3c];
+
+  expectEqual(registers.length, expected.length, "register count");
+
+  for (let index = 0; index < expected.length; index += 1) {
+    expectEqual(
+      registers[index],
+      expected[index],
+      `operator ${index + 1} register`
+    );
+  }
+}
+
+function verifyChannel4RegisterOrder() {
+  const { synth, writes } = collectWrites();
+
+  synth.setOperator(3, 1, { tl: 10 });
+  synth.setOperator(3, 2, { tl: 20 });
+  synth.setOperator(3, 3, { tl: 30 });
+  synth.setOperator(3, 4, { tl: 40 });
+
+  const targets = writes.map((entry) => ({
+    port: entry.port,
+    register: entry.register,
+  }));
+  const expected = [
+    { port: 1, register: 0x40 },
+    { port: 1, register: 0x48 },
+    { port: 1, register: 0x44 },
+    { port: 1, register: 0x4c },
+  ];
+
+  expectEqual(targets.length, expected.length, "channel 4 register count");
+
+  for (let index = 0; index < expected.length; index += 1) {
+    expectEqual(targets[index].port, expected[index].port, `channel 4 operator ${index + 1} port`);
+    expectEqual(targets[index].register, expected[index].register, `channel 4 operator ${index + 1} register`);
+  }
+}
+
+verifyOperatorRegisterOrder();
+verifyChannel4RegisterOrder();
+
+console.log("YM2612Synth operator mapping OK");

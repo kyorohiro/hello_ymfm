@@ -37,4 +37,7 @@ for file in ${SYNC_FILES}; do
   echo "synced ${file}"
 done
 
+perl -0pi -e 's#"\./generated/ym2612_wasm\.js"#"../generated/ym2612_wasm.js"#g' \
+  "${DOCS_JS_DIR}/ym2612-worklet.js"
+
 echo "done: synced shared web runtime files into docs/js"
