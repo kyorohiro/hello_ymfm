@@ -24,6 +24,9 @@ import {
  */
 export class MegaDriveSynth {
   constructor(options = {}) {
+    this.ownsAudioContext =
+      !options.audioContext;
+
     this.workletUrl =
       options.workletUrl ?? "./ym2612-worklet.js";
 
@@ -103,7 +106,10 @@ export class MegaDriveSynth {
     this.fm = null;
     this.readyPromise = null;
 
-    if (this.audioContext) {
+    if (
+      this.audioContext &&
+      this.ownsAudioContext
+    ) {
       await this.audioContext.close();
       this.audioContext = null;
     }
