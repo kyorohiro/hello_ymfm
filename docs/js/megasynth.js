@@ -33,6 +33,9 @@ export class MegaDriveSynth {
     this.audioContext =
       options.audioContext ?? null;
 
+    this.outputNode =
+      options.outputNode ?? null;
+
     this.node = null;
 
     /**
@@ -147,6 +150,7 @@ export class MegaDriveSynth {
       );
 
     this.node.connect(
+      this.outputNode ??
       this.audioContext.destination
     );
 

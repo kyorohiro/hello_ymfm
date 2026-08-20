@@ -1,12 +1,4 @@
-import ym2612ModuleFactory from "../generated/ym2612_wasm.js";
-import { createYm2612, YM2612_CLOCK } from "../js/ym2612.js";
-import {
-  YM2612DirectTransport,
-  YM2612WorkletTransport,
-  YM2612Synth,
-} from "../js/ym2612synth.js";
-
-const useWorklet = true;
+import { MegaDriveSynth } from "../js/megasynth.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -154,13 +146,11 @@ const ALGORITHM_DESCRIPTIONS = [
 
 let audioContext = null;
 let audioReadyPromise = null;
-let ym2612 = null;
+let megaSynth = null;
 let synth = null;
-let processor = null;
 let analyser = null;
 let analyserTimeData = null;
 let visualFrame = 0;
-let active = false;
 let outputEnvelopeHistory = [];
 
 const voices = Array.from(
@@ -927,18 +917,9 @@ function chooseVoice() {
 }
 
 async function initializeDirectAudio() {
-  setStatus("Loading YM2612 WASM...");
-
-  ym2612 = await createYm2612(
-    ym2612ModuleFactory
+  setStatus(
+    "Loading YM2612 MegaDriveSynth..."
   );
-
-  const transport =
-    new YM2612DirectTransport(ym2612);
-
-  synth = new YM2612Synth({
-    transport,
-  });
 
   if (!analyser) {
     analyser =
@@ -950,187 +931,30 @@ async function initializeDirectAudio() {
     );
   }
 
-  processor =
-    audioContext.createScriptProcessor(
-      1024,
-      0,
-      2
-    );
-
-  processor.onaudioprocess = (event) => {
-    const leftOut =
-      event.outputBuffer.getChannelData(0);
-
-    const rightOut =
-      event.outputBuffer.getChannelData(1);
-
-    if (!active || !ym2612) {
-      leftOut.fill(0);
-      rightOut.fill(0);
-      return;
-    }
-
-    const { left, right } =
-      ym2612.generateStereo(leftOut.length);
-
-    leftOut.set(left);
-    rightOut.set(right);
-  };
-
-  processor.connect(analyser);
   analyser.connect(
     audioContext.destination
   );
 
-  applyPatchToVoices();
-  ensureVisualLoop();
+  megaSynth =
+    new MegaDriveSynth({
+      audioContext,
+      outputNode: analyser,
+      workletUrl:
+        "../js/ym2612-worklet.js",
+      ym2612WasmUrl:
+        "../generated/ym2612_wasm.wasm",
+    });
 
-  const sampleRate =
-    ym2612.sampleRate(YM2612_CLOCK);
+  await megaSynth.start();
 
-  setStatus(
-    `Audio ready. YM2612 at ${sampleRate} Hz. Direct`
-  );
-}
-
-function waitForWorkletReady(node) {
-  return new Promise((resolve, reject) => {
-    const handleMessage = (event) => {
-      const message = event.data;
-
-      if (message?.type === "ready") {
-        node.port.removeEventListener(
-          "message",
-          handleMessage
-        );
-
-        resolve(message);
-        return;
-      }
-
-      if (message?.type === "error") {
-        node.port.removeEventListener(
-          "message",
-          handleMessage
-        );
-
-        reject(
-          new Error(
-            message.message ||
-            "YM2612 AudioWorklet initialization failed"
-          )
-        );
-      }
-    };
-
-    node.port.addEventListener(
-      "message",
-      handleMessage
-    );
-
-    node.port.start();
-  });
-}
-
-async function loadYm2612WasmBinary() {
-  const response = await fetch(
-    "../generated/ym2612_wasm.wasm"
-  );
-
-  if (!response.ok) {
-    throw new Error(
-      `Failed to load YM2612 WASM: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return response.arrayBuffer();
-}
-
-async function initializeWorkletAudio() {
-  setStatus(
-    "Loading YM2612 AudioWorklet..."
-  );
-
-  /*
-   * Load the AudioWorklet JavaScript module first.
-   *
-   * The Emscripten-generated module cannot load its
-   * .wasm file directly from AudioWorkletGlobalScope,
-   * so the WASM binary is fetched on the main thread
-   * and transferred to the worklet explicitly.
-   */
-  await audioContext.audioWorklet.addModule(
-    "../js/ym2612-worklet.js"
-  );
-
-  const wasmBinary =
-    await loadYm2612WasmBinary();
-
-  if (!analyser) {
-    analyser =
-      audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = 0.75;
-    analyserTimeData = new Float32Array(
-      analyser.fftSize
-    );
-  }
-
-  processor = new AudioWorkletNode(
-    audioContext,
-    "ym2612-processor",
-    {
-      numberOfInputs: 0,
-      numberOfOutputs: 1,
-      outputChannelCount: [2],
-    }
-  );
-
-  processor.connect(analyser);
-  analyser.connect(
-    audioContext.destination
-  );
-
-  const ready =
-    waitForWorkletReady(processor);
-
-  /*
-   * Transfer ownership of the ArrayBuffer to the
-   * AudioWorklet instead of copying it.
-   */
-  processor.port.postMessage(
-    {
-      type: "initialize",
-      wasmBinary,
-    },
-    [
-      wasmBinary,
-    ]
-  );
-
-  const result = await ready;
-
-  const transport =
-    new YM2612WorkletTransport(
-      processor
-    );
-
-  synth = new YM2612Synth({
-    transport,
-  });
+  synth = megaSynth.fm;
 
   applyPatchToVoices();
   ensureVisualLoop();
 
-  if (result.sampleRate) {
-    setStatus(
-      `Audio ready. YM2612 at ${result.sampleRate} Hz. AudioWorklet`
-    );
-  } else {
-    setStatus(
-      "Audio ready. YM2612 AudioWorklet."
-    );
-  }
+  setStatus(
+    `Audio ready. YM2612 via MegaDriveSynth at ${audioContext.sampleRate} Hz.`
+  );
 }
 
 async function ensureAudioReady() {
@@ -1147,9 +971,7 @@ async function ensureAudioReady() {
 
   if (!audioReadyPromise) {
     audioReadyPromise =
-      useWorklet
-        ? initializeWorkletAudio()
-        : initializeDirectAudio();
+      initializeDirectAudio();
   }
 
   try {
@@ -1159,7 +981,6 @@ async function ensureAudioReady() {
     throw error;
   }
 
-  active = true;
 }
 
 async function pressKey(key) {
