@@ -14,6 +14,8 @@ export function createVoices(
   );
 }
 
+let nextVoiceSearchStart = 0;
+
 export function attachOutputEnvelopeTap({
   megaSynth,
   onEnvelope,
@@ -54,12 +56,25 @@ export function attachOutputEnvelopeTap({
 }
 
 export function chooseVoice(voices) {
-  const freeVoice = voices.find(
-    (voice) => !voice.held
-  );
+  if (voices.length === 0) {
+    return null;
+  }
 
-  if (freeVoice) {
-    return freeVoice;
+  for (
+    let offset = 0;
+    offset < voices.length;
+    offset += 1
+  ) {
+    const index =
+      (nextVoiceSearchStart + offset) %
+      voices.length;
+    const voice = voices[index];
+
+    if (!voice.held) {
+      nextVoiceSearchStart =
+        (index + 1) % voices.length;
+      return voice;
+    }
   }
 
   let oldest = voices[0];
@@ -72,6 +87,10 @@ export function chooseVoice(voices) {
       oldest = voice;
     }
   }
+
+  nextVoiceSearchStart =
+    (oldest.channel + 1) %
+    voices.length;
 
   return oldest;
 }
@@ -86,6 +105,8 @@ export function resetVoiceState({
     voice.key = null;
     voice.startedAt = 0;
   }
+
+  nextVoiceSearchStart = 0;
 
   activeKeys.clear();
   updateKeyboardVisuals();
