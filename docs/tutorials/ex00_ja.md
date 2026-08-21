@@ -83,27 +83,6 @@ PCM / DAC の前に、まずは YM2612 がどうやって FM の音を作るか�
 - [`YM2612 synth demo`](../synth/index.html)
   複数 operator / 複数 channel を組み合わせて、もう少し複雑な音作りを試せる demo です。
 
-## PCM / DAC on YM2612
-
-YM2612 は 6 channel の FM 音源として有名ですが、簡単な DAC playback path も持っています。
-
-- `0x2A`: DAC data
-- `0x2B`: DAC enable
-
-DAC playback を有効にすると、channel 6 を通常の FM の代わりに PCM 風の sample playback に使えます。
-
-これは後の世代の chip にあるような大きな PCM engine ではありません。
-software 側が sample byte を継続して chip に書き込む、より単純な DAC 経路です。
-
-実際には次の用途で重要です。
-
-- voice sample
-- drum hit
-- YM2612 DAC streaming を含む VGM playback
-
-この repository では、現在の browser 側 PCM 関連サポートは主に VGM playback 経由です。
-VGM の DAC/stream command を読んで、その sample byte を YM2612 の DAC register write に流しています。
-
 ## A0 と A1
 
 `A0` と `A1` は、どの制御ポートにアクセスするかを選びます。
@@ -139,6 +118,31 @@ chip.write(1, 0x01);
 
 1. address port 0 でレジスタ `0x30` を選ぶ
 2. data port 0 から、そのレジスタに `0x01` を書く
+
+つまり、software 側は抽象的に音を変えているのではなく、
+YM2612 固有の制御値をこの pin の組み合わせで chip に送り、
+YM2612 の register に書き込んで音を作っています。
+
+## PCM / DAC on YM2612
+
+YM2612 は 6 channel の FM 音源として有名ですが、簡単な DAC playback path も持っています。
+
+- `0x2A`: DAC data
+- `0x2B`: DAC enable
+
+DAC playback を有効にすると、channel 6 を通常の FM の代わりに PCM 風の sample playback に使えます。
+
+これは後の世代の chip にあるような大きな PCM engine ではありません。
+software 側が sample byte を継続して chip に書き込む、より単純な DAC 経路です。
+
+実際には次の用途で重要です。
+
+- voice sample
+- drum hit
+- YM2612 DAC streaming を含む VGM playback
+
+この repository では、現在の browser 側 PCM 関連サポートは主に VGM playback 経由です。
+VGM の DAC/stream command を読んで、その sample byte を YM2612 の DAC register write に流しています。
 
 ## よくある疑問
 
