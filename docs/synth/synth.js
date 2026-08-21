@@ -3,6 +3,13 @@ import {
   MEGADRIVE_FM_PRESETS,
   MEGADRIVE_FM_PRESET_ORDER,
 } from "../js/megasynth.js";
+import {
+  DEFAULT_ROW_DEFS,
+  buildKeyboard as buildKeyboardView,
+  createKeyLayout,
+  findLayoutEntry,
+  hasLayoutKey,
+} from "./synth_keyboard.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -56,42 +63,19 @@ const REFERENCE_MIDI = 62;
 const REFERENCE_BLOCK = 4;
 const REFERENCE_FNUM = 553;
 
-const NOTE_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-];
+const ROW_DEFS =
+  DEFAULT_ROW_DEFS;
 
-const ROW_DEFS = [
-  { keys: "1234567890", baseMidi: 67 },
-  { keys: "qwertyuiop", baseMidi: 62 },
-  { keys: "asdfghjkl", baseMidi: 57 },
-  { keys: "zxcvbnm", baseMidi: 52 },
-];
-
-const KEY_LAYOUT = ROW_DEFS.flatMap((row) => {
-  return Array.from(row.keys).map((key, index) => {
-    const midi = row.baseMidi + index;
-
-    return {
-      key,
-      label: key.toUpperCase(),
-      midi,
-      noteName: midiToNoteName(midi),
-      pitch: createPitchFromMidi(midi),
-      rowLength: row.keys.length,
-    };
+const KEY_LAYOUT =
+  createKeyLayout({
+    rowDefs: ROW_DEFS,
+    referenceMidi:
+      REFERENCE_MIDI,
+    referenceBlock:
+      REFERENCE_BLOCK,
+    referenceFnum:
+      REFERENCE_FNUM,
   });
-});
 
 const commonState = {
   algorithm: 7,
@@ -294,38 +278,6 @@ function attachMegaSynthVisualTap() {
       }
     }
   );
-}
-
-function midiToNoteName(midi) {
-  const note = NOTE_NAMES[((midi % 12) + 12) % 12];
-  const octave = Math.floor(midi / 12) - 1;
-
-  return `${note}${octave}`;
-}
-
-function createPitchFromMidi(midi) {
-  let block = REFERENCE_BLOCK;
-  let fnum =
-    REFERENCE_FNUM *
-    Math.pow(2, (midi - REFERENCE_MIDI) / 12);
-
-  while (fnum >= 1024 && block < 7) {
-    fnum /= 2;
-    block += 1;
-  }
-
-  while (fnum < 512 && block > 0) {
-    fnum *= 2;
-    block -= 1;
-  }
-
-  return {
-    block,
-    fnum: Math.max(
-      0,
-      Math.min(0x7ff, Math.round(fnum))
-    ),
-  };
 }
 
 function applyPatchToVoices() {
@@ -1245,9 +1197,11 @@ async function ensureAudioReady() {
 async function pressKey(key) {
   heldKeys.add(key);
 
-  const entry = KEY_LAYOUT.find(
-    (item) => item.key === key
-  );
+  const entry =
+    findLayoutEntry(
+      KEY_LAYOUT,
+      key
+    );
 
   if (
     !entry ||
@@ -1360,106 +1314,64 @@ function releasePointerKey(pointerId) {
 }
 
 function buildKeyboard() {
-  keyboard.innerHTML = "";
+  buildKeyboardView({
+    root: keyboard,
+    rowDefs: ROW_DEFS,
+    layout: KEY_LAYOUT,
+    onPointerDown: async (
+      event,
+      entry,
+      button
+    ) => {
+      activePointers.set(
+        event.pointerId,
+        entry.key
+      );
+      button.setPointerCapture(
+        event.pointerId
+      );
 
-  for (const row of ROW_DEFS) {
-    const rowElement =
-      document.createElement("div");
-
-    rowElement.className =
-      "key-row";
-
-    rowElement.dataset.count =
-      String(row.keys.length);
-
-    for (const keyChar of row.keys) {
-      const entry =
-        KEY_LAYOUT.find(
-          (item) =>
-            item.key === keyChar
+      await pressKey(entry.key);
+    },
+    onPointerUp: (
+      event,
+      entry,
+      button
+    ) => {
+      if (
+        button.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        button.releasePointerCapture(
+          event.pointerId
         );
+      }
 
-      const button =
-        document.createElement(
-          "button"
+      releasePointerKey(
+        event.pointerId
+      );
+    },
+    onPointerCancel: (
+      event,
+      entry,
+      button
+    ) => {
+      if (
+        button.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        button.releasePointerCapture(
+          event.pointerId
         );
+      }
 
-      button.type = "button";
-      button.className = "key";
-      button.dataset.key =
-        entry.key;
-
-      button.innerHTML = `
-        <strong>${entry.label}</strong>
-        <span>${entry.noteName}</span>
-        <small>b${entry.pitch.block} / f${entry.pitch.fnum}</small>
-      `;
-
-      button.addEventListener(
-        "pointerdown",
-        async (event) => {
-          event.preventDefault();
-          activePointers.set(
-            event.pointerId,
-            entry.key
-          );
-          button.setPointerCapture(
-            event.pointerId
-          );
-
-          await pressKey(
-            entry.key
-          );
-        }
+      releasePointerKey(
+        event.pointerId
       );
-
-      button.addEventListener(
-        "pointerup",
-        (event) => {
-          if (
-            button.hasPointerCapture(
-              event.pointerId
-            )
-          ) {
-            button.releasePointerCapture(
-              event.pointerId
-            );
-          }
-
-          releasePointerKey(
-            event.pointerId
-          );
-        }
-      );
-
-      button.addEventListener(
-        "pointercancel",
-        (event) => {
-          if (
-            button.hasPointerCapture(
-              event.pointerId
-            )
-          ) {
-            button.releasePointerCapture(
-              event.pointerId
-            );
-          }
-
-          releasePointerKey(
-            event.pointerId
-          );
-        }
-      );
-
-      rowElement.appendChild(
-        button
-      );
-    }
-
-    keyboard.appendChild(
-      rowElement
-    );
-  }
+    },
+  });
 }
 
 function buildPresetSelect() {
@@ -1539,9 +1451,9 @@ window.addEventListener(
       event.key.toLowerCase();
 
     if (
-      !KEY_LAYOUT.some(
-        (entry) =>
-          entry.key === key
+      !hasLayoutKey(
+        KEY_LAYOUT,
+        key
       )
     ) {
       return;
@@ -1564,9 +1476,9 @@ window.addEventListener(
       event.key.toLowerCase();
 
     if (
-      !KEY_LAYOUT.some(
-        (entry) =>
-          entry.key === key
+      !hasLayoutKey(
+        KEY_LAYOUT,
+        key
       )
     ) {
       return;
