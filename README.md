@@ -24,8 +24,10 @@ This project uses [ymfm](https://github.com/aaronsgiles/ymfm) by Aaron Giles und
 See `LICENSE` for the license text included with this repository.
 
 ## tutorials
-- [tutorials/ex00.md](./tutorials/ex00.md): English notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
-- [tutorials/ex00_ja.md](./tutorials/ex00_ja.md): Japanese notes about YM2612 pins, register groups, and how `ex03_beep.cpp` works.
+- [tutorials/ex00.md](./tutorials/ex00.md): English notes about YM2612 pins, ports, and register groups.
+- [tutorials/ex00_ja.md](./tutorials/ex00_ja.md): Japanese notes about YM2612 pins, ports, and register groups.
+- [tutorials/ex03.md](./tutorials/ex03.md): English walkthrough for the YM2612 beep example.
+- [tutorials/ex03_ja.md](./tutorials/ex03_ja.md): Japanese walkthrough for the YM2612 beep example.
 - [tutorials/ex00_vgm.md](./tutorials/ex00_vgm.md): English notes about VGM Format.
 - `tutorials/ex01_hello_world.cpp`: minimal example that checks that `ymfm` can be compiled and loaded.
 - `tutorials/ex02_ym2612.cpp`: creates a `ym2612` chip and prints the sample rate for a YM2612 clock.
