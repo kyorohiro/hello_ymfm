@@ -1,3 +1,15 @@
+# FM音源って何?
+
+FM音源の登場と音楽制作時代の幕開け
+
+https://web.archive.org/web/20260308101521/https://jp.yamaha.com/products/contents/music_production/synth_50th/history/chapter002.html
+
+
+M音源の原理
+
+https://web.archive.org/web/20260728024744/https://jp.yamaha.com/products/contents/music_production/synth_50th/anecdotes/004.html
+
+
 # YM2612 について
 
 
