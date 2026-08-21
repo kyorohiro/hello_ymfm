@@ -71,6 +71,36 @@
         font-size: 0.9rem;
       }
 
+      .note-box {
+        margin: 0 0 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      .note-box h2,
+      .note-box h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        letter-spacing: -0.02em;
+      }
+
+      .note-box p,
+      .note-box li {
+        margin: 0 0 8px;
+        line-height: 1.5;
+      }
+
+      .note-box ul {
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+
+      .lang-ja {
+        color: rgba(31, 27, 22, 0.9);
+      }
+
       .editor-layout {
         display: grid;
         grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1.45fr);
@@ -270,6 +300,31 @@
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
         </p>
 
+        <section class="note-box">
+          <h2>What to learn here</h2>
+          <p>
+            This page uses one audible operator so you can study the envelope first before moving to
+            more complex FM setups.
+          </p>
+          <ul>
+            <li><strong>TL</strong>: how loud this operator is.</li>
+            <li><strong>AR</strong>: how fast the sound rises after key on.</li>
+            <li><strong>D1R</strong>: how fast it falls from the attack peak.</li>
+            <li><strong>D2R</strong>: how fast it keeps falling during the later sustain area.</li>
+            <li><strong>SL</strong>: the target level for that later falling stage.</li>
+            <li><strong>RR</strong>: how fast it fades after key off.</li>
+          </ul>
+          <p>
+            A useful way to read <strong>D2R</strong> and <strong>SL</strong> together is:
+            <strong>D2R = speed</strong>, <strong>SL = destination</strong>.
+          </p>
+          <p class="lang-ja">
+            ここでは audible な operator を 1 個だけ使っています。まず envelope の動きを理解するためのページです。
+            特に <strong>D2R は下がっていく速さ</strong>、<strong>SL はどこまで下がるか</strong>、
+            という読み方をすると分かりやすいです。
+          </p>
+        </section>
+
         <div class="editor-layout">
           <div class="controls-stack">
             <section class="control-section">
@@ -319,12 +374,12 @@
                 <div class="control">
                   <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
                   <input id="d2r" type="range" min="0" max="31" value="4">
-                  <small>Sustain decay.</small>
+                  <small>How fast the level keeps falling in the later stage. 日本語: sustain 以降でどれくらいの速さで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="sl">SL <span class="value" id="slValue">4</span></label>
                   <input id="sl" type="range" min="0" max="15" value="4">
-                  <small>Sustain level.</small>
+                  <small>The target level for that later stage. 日本語: sustain 付近でどこまで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="rr">RR <span class="value" id="rrValue">15</span></label>
