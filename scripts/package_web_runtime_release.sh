@@ -16,6 +16,7 @@ genesisaudioengine.js
 megadrive-fm-presets.js
 megasynth.js
 segapsg.js
+tfi.js
 vgmplayer.js
 ym2612-worklet.js
 ym2612.js

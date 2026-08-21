@@ -24,6 +24,7 @@ synth_runtime.js
 RUNTIME_FILES="
 megasynth.js
 megadrive-fm-presets.js
+tfi.js
 ym2612.js
 ym2612synth.js
 ym2612-worklet.js

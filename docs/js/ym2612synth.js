@@ -285,7 +285,9 @@ export class YM2612Synth {
       state.d2r = sustainRate;
 
       // Sustain Rate / "D2R"
-      // base 0x70
+      // YM2612 register 0x70 is the sustain rate register.
+      // This synth keeps `d2r` for the current learning/demo naming,
+      // but also accepts `sr` so TFI import can map to the same place.
       this._write(port, 0x70 + channelOffset + slotOffset, state.d2r);
     }
 
