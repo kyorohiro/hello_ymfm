@@ -111,32 +111,6 @@
         color: var(--ink);
       }
 
-      .note-box {
-        margin: 0 0 16px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.4);
-      }
-
-      .note-box h2,
-      .note-box h3 {
-        margin: 0 0 8px;
-        font-size: 1rem;
-        letter-spacing: -0.02em;
-      }
-
-      .note-box p,
-      .note-box li {
-        margin: 0 0 8px;
-        line-height: 1.5;
-      }
-
-      .note-box ul {
-        margin: 0;
-        padding-left: 1.2rem;
-      }
-
       [data-lang] {
         display: none;
       }
@@ -361,48 +335,6 @@
             <button id="langJaButton" type="button">日本語</button>
           </div>
         </div>
-
-        <section class="note-box">
-          <div data-lang="en" class="is-visible">
-            <h2 id="learnTitleEn">What to learn here</h2>
-            <p>
-              This page uses one audible operator so you can study the envelope first before moving to
-              more complex FM setups.
-            </p>
-            <ul>
-              <li><strong>TL</strong>: how loud this operator is.</li>
-              <li><strong>AR</strong>: how fast the sound rises after key on.</li>
-              <li><strong>D1R</strong>: how fast it falls from the attack peak.</li>
-              <li><strong>D2R</strong>: how fast it keeps falling during the later stage.</li>
-              <li><strong>SL</strong>: the target level for that later falling stage.</li>
-              <li><strong>RR</strong>: how fast it fades after key off.</li>
-            </ul>
-            <p>
-              A useful way to read <strong>D2R</strong> and <strong>SL</strong> together is:
-              <strong>D2R = speed</strong>, <strong>SL = destination</strong>.
-            </p>
-          </div>
-          <div data-lang="ja">
-            <h2 id="learnTitleJa">このページで見ること</h2>
-            <p>
-              ここでは audible な operator を 1 個だけ使っています。まずは複雑な FM に入る前に、
-              1 operator の envelope の動きを見るためのページです。
-            </p>
-            <ul>
-              <li><strong>TL</strong>: この operator をどのくらいの大きさで鳴らすか。</li>
-              <li><strong>AR</strong>: key on 後、どのくらいの速さで立ち上がるか。</li>
-              <li><strong>D1R</strong>: attack の peak からどのくらいの速さで下がるか。</li>
-              <li><strong>D2R</strong>: その後の段階でどのくらいの速さで下がり続けるか。</li>
-              <li><strong>SL</strong>: その後の段階で、どこまで下がるか。</li>
-              <li><strong>RR</strong>: key off 後、どのくらいの速さで消えるか。</li>
-            </ul>
-            <p>
-              <strong>D2R は下がっていく速さ</strong>、
-              <strong>SL はどこまで下がるか</strong>
-              と読むと分かりやすいです。
-            </p>
-          </div>
-        </section>
 
         <div class="editor-layout">
           <div class="controls-stack">
