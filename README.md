@@ -51,6 +51,10 @@ See `LICENSE` for the license text included with this repository.
   - https://www.vgmpf.com/Wiki/index.php?title=YM2612
 - Genesis development discussion and practical notes:
   - https://gendev.spritesmind.net/forum/viewtopic.php?start=585&t=386
+- YM2612 music uploads:
+  - https://chipmusic.org/music#s=ym2612
+- GENajam:
+  - https://github.com/jamatarmusic/GENajam
 - VGM specification:
   - https://vgmrips.net/wiki/VGM_Specification
 - SMS Power:
