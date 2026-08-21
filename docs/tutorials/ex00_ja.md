@@ -65,6 +65,45 @@ GND |12  13| /IRQ
 - `Pin 10`: 通常用途では未使用
   資料によっては `NC`、別資料では `TEST` ピンとされています。
 
+## まず FM 側の音作りを見る
+
+PCM / DAC の前に、まずは YM2612 がどうやって FM の音を作るかを見ると理解しやすいです。
+
+基本の考え方は次の通りです。
+
+- `DT` `MULTI` `TL` `AR` `D1R` `D2R` `SL` `RR` などの値で、各 operator の音の性格を決める
+- それらの operator を複数組み合わせて、algorithm によってさらに複雑な音を作る
+
+まずは次のページを見ると流れを掴みやすいです。
+
+- [`operator1.html`](../demos/operator1.html)
+  1 つの operator のパラメータを変えた時に、どんな変化が出るかを見るページです。
+- [`operator2.html`](../demos/operator2.html)
+  2 つの operator を組み合わせて、変調や algorithm の違いを試すページです。
+- [`YM2612 synth demo`](../synth/index.html)
+  複数 operator / 複数 channel を組み合わせて、もう少し複雑な音作りを試せる demo です。
+
+## PCM / DAC on YM2612
+
+YM2612 は 6 channel の FM 音源として有名ですが、簡単な DAC playback path も持っています。
+
+- `0x2A`: DAC data
+- `0x2B`: DAC enable
+
+DAC playback を有効にすると、channel 6 を通常の FM の代わりに PCM 風の sample playback に使えます。
+
+これは後の世代の chip にあるような大きな PCM engine ではありません。
+software 側が sample byte を継続して chip に書き込む、より単純な DAC 経路です。
+
+実際には次の用途で重要です。
+
+- voice sample
+- drum hit
+- YM2612 DAC streaming を含む VGM playback
+
+この repository では、現在の browser 側 PCM 関連サポートは主に VGM playback 経由です。
+VGM の DAC/stream command を読んで、その sample byte を YM2612 の DAC register write に流しています。
+
 ## A0 と A1
 
 `A0` と `A1` は、どの制御ポートにアクセスするかを選びます。
