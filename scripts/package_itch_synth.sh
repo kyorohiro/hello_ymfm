@@ -91,7 +91,7 @@ cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.js" "${STAGE_DIR}/generated/ym2612_wasm.
 cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.wasm" "${STAGE_DIR}/generated/ym2612_wasm.wasm"
 
 perl -0pi -e 's#import "\\./synth\\.js";#import "./synth.js";#g' "${STAGE_DIR}/index.html"
-perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g; s#\.\./js/ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\.\./generated/#./generated/#g' "${STAGE_DIR}/synth.js"
+perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g; s#\.\./js/tfi\.js#./js/tfi.js#g; s#\.\./js/ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\.\./generated/#./generated/#g' "${STAGE_DIR}/synth.js"
 perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g#' "${STAGE_DIR}/synth_runtime.js"
 perl -0pi -e 's#\./ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\./generated/ym2612_wasm\.wasm#./generated/ym2612_wasm.wasm#g' "${STAGE_DIR}/js/megasynth.js"
 perl -0pi -e 's#import ym2612ModuleFactory from "\\.\\./generated/ym2612_wasm\\.js";#import ym2612ModuleFactory from "../generated/ym2612_wasm.js";#g' "${STAGE_DIR}/js/ym2612-worklet.js"
