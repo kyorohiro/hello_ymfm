@@ -1,5 +1,4 @@
 import {
-  MegaDriveSynth,
   MEGADRIVE_FM_PRESETS,
   MEGADRIVE_FM_PRESET_ORDER,
 } from "../js/megasynth.js";
@@ -18,6 +17,14 @@ import {
   buildHeader,
   buildOperatorControls as buildOperatorControlsView,
 } from "./synth_controls.js";
+import {
+  attachOutputEnvelopeTap,
+  chooseVoice,
+  clearInputState as clearRuntimeInputState,
+  createVoices,
+  initializeDirectAudio as initializeDirectAudioRuntime,
+  stopAllNotes as stopAllRuntimeNotes,
+} from "./synth_runtime.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -169,15 +176,8 @@ const OUTPUT_ENVELOPE_SLOW_SCALE =
   0.12;
 let audioInitStarted = false;
 
-const voices = Array.from(
-  { length: VOICE_COUNT },
-  (_, channel) => ({
-    channel,
-    held: false,
-    key: null,
-    startedAt: 0,
-  })
-);
+const voices =
+  createVoices(VOICE_COUNT);
 
 const activeKeys = new Map();
 
@@ -246,46 +246,6 @@ function appendOutputEnvelopePoints(
   ) {
     outputEnvelopeHistory.shift();
   }
-}
-
-function attachMegaSynthVisualTap() {
-  if (!megaSynth?.node) {
-    return;
-  }
-
-  megaSynth.node.port.addEventListener(
-    "message",
-    (event) => {
-      const message = event.data;
-
-      if (
-        message?.type !==
-        "output-envelope"
-      ) {
-        return;
-      }
-
-      if (
-        message.rmsValues instanceof
-        Float32Array
-      ) {
-        appendOutputEnvelopePoints(
-          message.rmsValues
-        );
-        return;
-      }
-
-      if (
-        Array.isArray(
-          message.rmsValues
-        )
-      ) {
-        appendOutputEnvelopePoints(
-          message.rmsValues
-        );
-      }
-    }
-  );
 }
 
 function applyPatchToVoices() {
@@ -518,79 +478,54 @@ function updateKeyboardVisuals() {
   }
 }
 
-function resetVoiceState() {
-  for (const voice of voices) {
-    voice.held = false;
-    voice.key = null;
-    voice.startedAt = 0;
-  }
-
-  activeKeys.clear();
-  updateKeyboardVisuals();
-}
-
 function clearInputState() {
-  heldKeys.clear();
-  activePointers.clear();
-  resetVoiceState();
-  outputEnvelopeHeldVoicePeak = 1;
+  clearRuntimeInputState({
+    heldKeys,
+    activePointers,
+    voices,
+    activeKeys,
+    updateKeyboardVisuals,
+    onCleared: () => {
+      outputEnvelopeHeldVoicePeak = 1;
+    },
+  });
 }
 
 function stopAllNotes() {
-  if (!synth) {
-    return;
-  }
-
-  for (
-    let channel = 0;
-    channel < VOICE_COUNT;
-    channel += 1
-  ) {
-    synth.noteOff(channel);
-  }
-
-  clearInputState();
-}
-
-function chooseVoice() {
-  const freeVoice = voices.find(
-    (voice) => !voice.held
-  );
-
-  if (freeVoice) {
-    return freeVoice;
-  }
-
-  let oldest = voices[0];
-
-  for (const voice of voices) {
-    if (voice.startedAt < oldest.startedAt) {
-      oldest = voice;
-    }
-  }
-
-  return oldest;
+  stopAllRuntimeNotes({
+    synth,
+    voices,
+    heldKeys,
+    activePointers,
+    activeKeys,
+    updateKeyboardVisuals,
+    onCleared: () => {
+      outputEnvelopeHeldVoicePeak = 1;
+    },
+  });
 }
 
 async function initializeDirectAudio() {
-  setStatus(
-    "Loading YM2612 MegaDriveSynth..."
-  );
   updateKeyboardAvailability();
 
-  megaSynth =
-    new MegaDriveSynth({
+  const runtime =
+    await initializeDirectAudioRuntime({
       audioContext,
       workletUrl:
         "../js/ym2612-worklet.js",
       ym2612WasmUrl:
         "../generated/ym2612_wasm.wasm",
+      setStatus,
     });
 
-  await megaSynth.start();
+  megaSynth = runtime.megaSynth;
+  synth = runtime.synth;
 
-  synth = megaSynth.fm;
-  attachMegaSynthVisualTap();
+  attachOutputEnvelopeTap({
+    megaSynth,
+    onEnvelope:
+      appendOutputEnvelopePoints,
+  });
 
   applyPatchToVoices();
   stopAllNotes();
