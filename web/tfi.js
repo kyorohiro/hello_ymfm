@@ -1,3 +1,48 @@
+/**
+ * One logical YM2612 operator as used by `YM2612Synth`.
+ *
+ * `sr` is accepted as an alias when exporting because TFI usually calls
+ * register `0x70` "sustain rate", while some existing demos in this repository
+ * still expose the same register as `d2r`.
+ *
+ * @typedef {object} TfiOperatorPreset
+ * @property {number} [multi]
+ * @property {number} [dt]
+ * @property {number} [tl]
+ * @property {number} [rs]
+ * @property {number} [ar]
+ * @property {number} [d1r]
+ * @property {number} [d2r]
+ * @property {number} [sr]
+ * @property {number} [rr]
+ * @property {number} [sl]
+ * @property {number} [ssg]
+ */
+
+/**
+ * Preset shape shared between `web/tfi.js` and `YM2612Synth.setPreset()`.
+ *
+ * Operators are exposed in logical order:
+ * `1, 2, 3, 4`.
+ *
+ * @typedef {object} TfiPreset
+ * @property {number} algorithm
+ * @property {number} feedback
+ * @property {{
+ *   1?: TfiOperatorPreset,
+ *   2?: TfiOperatorPreset,
+ *   3?: TfiOperatorPreset,
+ *   4?: TfiOperatorPreset,
+ * }} operators
+ */
+
+/**
+ * Minimal synth-like shape used by `applyTfiToSynth()`.
+ *
+ * @typedef {object} TfiTargetSynth
+ * @property {(channel: number, preset: TfiPreset) => void} setPreset
+ */
+
 export const TFI_FILE_SIZE = 42;
 
 // TFI stores operators in YM2612 physical slot order:
@@ -13,9 +58,19 @@ export const TFI_OPERATOR_FILE_ORDER = [1, 3, 2, 4];
 const TFI_OPERATOR_SIZE = 10;
 const TFI_OPERATOR_DATA_START = 2;
 
+/**
+ * Parse a 42-byte TFI file into a logical YM2612 preset.
+ *
+ * TFI stores operators in physical slot order `S1, S3, S2, S4`.
+ * The returned preset converts that into logical operator order `1, 2, 3, 4`.
+ *
+ * @param {Uint8Array | ArrayBuffer | ArrayLike<number>} data
+ * @returns {TfiPreset}
+ */
 export function parseTfi(data) {
   const bytes = toTfiBytes(data);
 
+  /** @type {TfiPreset} */
   const preset = {
     algorithm: validateRange("algorithm", bytes[0], 0, 7),
     feedback: validateRange("feedback", bytes[1], 0, 7),
@@ -43,6 +98,14 @@ export function parseTfi(data) {
   return preset;
 }
 
+/**
+ * Parse TFI data and immediately apply it to one synth channel.
+ *
+ * @param {TfiTargetSynth} synth
+ * @param {number} channel
+ * @param {Uint8Array | ArrayBuffer | ArrayLike<number>} data
+ * @returns {TfiPreset}
+ */
 export function applyTfiToSynth(synth, channel, data) {
   if (!synth || typeof synth.setPreset !== "function") {
     throw new Error("applyTfiToSynth requires a synth with setPreset(channel, preset)");
@@ -53,6 +116,15 @@ export function applyTfiToSynth(synth, channel, data) {
   return preset;
 }
 
+/**
+ * Build a 42-byte TFI file from a logical YM2612 preset.
+ *
+ * The input preset uses logical operator numbers `1, 2, 3, 4`.
+ * The produced TFI bytes are written in physical file order `S1, S3, S2, S4`.
+ *
+ * @param {TfiPreset} preset
+ * @returns {Uint8Array}
+ */
 export function createTfiFromPreset(preset) {
   if (!preset || typeof preset !== "object") {
     throw new Error("preset must be an object");
@@ -87,18 +159,39 @@ export function createTfiFromPreset(preset) {
   return bytes;
 }
 
+/**
+ * Convert a TFI detune value into the YM2612 register encoding.
+ *
+ * TFI detune values are stored as:
+ * `0=-3, 1=-2, 2=-1, 3=0, 4=+1, 5=+2, 6=+3`.
+ *
+ * @param {number} tfiDetune
+ * @returns {number}
+ */
 export function tfiDetuneToYm2612Detune(tfiDetune) {
   const detune = validateRange("detune", tfiDetune, 0, 6);
   const table = [7, 6, 5, 0, 1, 2, 3];
   return table[detune];
 }
 
+/**
+ * Convert a YM2612 register detune value into the TFI detune encoding.
+ *
+ * @param {number} ym2612Detune
+ * @returns {number}
+ */
 export function ym2612DetuneToTfiDetune(ym2612Detune) {
   const detune = validateRange("dt", ym2612Detune, 0, 7);
   const table = [3, 4, 5, 6, 3, 2, 1, 0];
   return table[detune];
 }
 
+/**
+ * Normalize unknown byte-like input into a real `Uint8Array`.
+ *
+ * @param {Uint8Array | ArrayBuffer | ArrayLike<number>} data
+ * @returns {Uint8Array}
+ */
 function toTfiBytes(data) {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   if (bytes.length !== TFI_FILE_SIZE) {
@@ -107,6 +200,15 @@ function toTfiBytes(data) {
   return bytes;
 }
 
+/**
+ * Validate an integer field against an inclusive range.
+ *
+ * @param {string} name
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 function validateRange(name, value, min, max) {
   if (!Number.isInteger(value) || value < min || value > max) {
     throw new Error(`${name} must be an integer in range ${min}..${max}`);

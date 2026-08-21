@@ -219,6 +219,25 @@ Special ModeではOperatorごとに異なる周波数を設定できる。
 
 YM2612内蔵Timer。
 
+
+10. docs/synth: TFI向けUIの整理
+------------------------------
+
+現在の `docs/synth` は TFI の import/export 自体はできるが、
+TFI を編集するUIとしてはまだ不完全。
+
+残っている主な作業:
+
+- `RS` (Rate Scaling) をUIから直接編集できるようにする
+- `SSG-EG` をUIから直接編集できるようにする
+- 現在の `D2R` 表示を `SR` もしくは `SR/D2R` に見直す
+
+補足:
+
+- TFIの `SR` は YM2612 の `0x70` register に対応する
+- 今の synth UI では学習向けに `D2R` と呼んでいる
+- register 的には同じ場所なので、名称の整理が必要
+
 関連Register:
 
 0x24

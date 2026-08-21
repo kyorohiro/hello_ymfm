@@ -259,6 +259,77 @@ Last updated: 2026-08-17
 
 ## Important difference to remember
 
+## 2026-08-21: TFI import/export status
+
+- `web/tfi.js`
+  - minimal TFI import/export helper now exists
+  - current scope is 42-byte TFI
+  - import:
+    - `parseTfi(data)`
+    - converts TFI operator file order `S1, S3, S2, S4` into logical operators `1, 2, 3, 4`
+    - converts TFI detune values into YM2612 register detune values
+  - export:
+    - `createTfiFromPreset(preset)`
+    - converts current logical operator preset data back into TFI byte layout
+- `scripts/verify_tfi_import.mjs`
+  - verifies:
+    - operator order mapping
+    - detune conversion
+    - import/export round-trip
+
+## `YM2612Synth` status for TFI
+
+- `web/ym2612synth.js`
+  - now accepts:
+    - `rs`
+    - `ssg`
+    - `sr` as an alias for the same `0x70` register currently exposed as `d2r`
+- important note:
+  - current demo/UI naming still says `D2R`
+  - TFI terminology would call the same register `SR`
+  - this is a naming/UI issue more than a register support issue
+
+## `docs/synth` status
+
+- `docs/synth/index.html`
+  - can now import TFI from the synth UI
+  - can now export the current synth state as `.tfi`
+- current flow:
+  - choose a preset or edit knobs
+  - import a `.tfi` file if needed
+  - continue editing
+  - export the current state back to `.tfi`
+
+## `docs/synth` remaining work for TFI-friendly editing
+
+- add `RS` control to the UI
+- add `SSG-EG` control to the UI
+- rename `D2R` to `SR` or `SR/D2R`
+- possibly make a slightly more TFI-oriented operator panel later
+
+## Packaging / release note
+
+- `scripts/package_web_runtime_release.sh`
+  - now includes `tfi.js`
+- `scripts/sync_web_js_to_docs.sh`
+  - now includes `tfi.js`
+- `scripts/package_itch_synth.sh`
+  - now includes `tfi.js`
+  - rewrite for `docs/synth/synth.js` was generalized:
+    - `../js/*.js` -> `./js/*.js`
+  - this reduces future breakage when adding another shared JS file
+
+## Important itch.io note
+
+- the error
+  - `Blocked a frame with origin ...`
+  is mostly iframe noise from itch.io itself
+- the real bug we hit was:
+  - `tfi.js` 404 in the packaged synth build
+- this was fixed by:
+  - adding `tfi.js` to the package
+  - rewriting the import path for packaged `synth.js`
+
 - `examples/vgmrender` is not automatically "better" for this repository's goal.
 - It is a stronger general VGM reference.
 - But for this repository:
