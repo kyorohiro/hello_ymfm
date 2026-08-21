@@ -75,6 +75,7 @@
         display: inline-flex;
         gap: 8px;
         align-items: center;
+        margin-left: auto;
         padding: 6px;
         border-radius: 999px;
         border: 1px solid var(--line);
@@ -449,14 +450,12 @@
                 <div class="control">
                   <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
                   <input id="d2r" type="range" min="0" max="31" value="4">
-                  <small data-lang="en" class="is-visible" id="d2rHelpEn">How fast the level keeps falling in the later stage.</small>
-                  <small data-lang="ja" id="d2rHelpJa">sustain 以降で、どれくらいの速さで下がるか。</small>
+                  <small id="d2rHelp">How fast the level keeps falling in the later stage.</small>
                 </div>
                 <div class="control">
                   <label for="sl">SL <span class="value" id="slValue">4</span></label>
                   <input id="sl" type="range" min="0" max="15" value="4">
-                  <small data-lang="en" class="is-visible" id="slHelpEn">The target level for that later stage.</small>
-                  <small data-lang="ja" id="slHelpJa">sustain 付近で、どこまで下がるか。</small>
+                  <small id="slHelp">The target level for that later stage.</small>
                 </div>
                 <div class="control">
                   <label for="rr">RR <span class="value" id="rrValue">15</span></label>
@@ -583,6 +582,8 @@
           tlHelp: "Loudness or FM depth.",
           arHelp: "Attack rate.",
           d1rHelp: "First decay.",
+          d2rHelp: "How fast the level keeps falling in the later stage.",
+          slHelp: "The target level for that later stage.",
           rrHelp: "Release rate.",
           envelopeTitle: "Envelope",
           playButton: "Hold to Play",
@@ -627,6 +628,8 @@
           tlHelp: "音量、または FM のかかり方に効きます。",
           arHelp: "立ち上がりの速さです。",
           d1rHelp: "最初の減衰の速さです。",
+          d2rHelp: "sustain 以降で、どれくらいの速さで下がるか。",
+          slHelp: "sustain 付近で、どこまで下がるか。",
           rrHelp: "key off 後の消え方の速さです。",
           envelopeTitle: "Envelope",
           playButton: "押している間再生",
@@ -638,20 +641,20 @@
           statusReady: "準備完了。",
           statusLoading: "YM2612 WASM を読み込み中...",
           statusHolding: "Key on 中...",
-          statusKeyOff: "Key off... release 中です。",
+          statusKeyOff: "Key off 後の release 中です。",
           statusStopped: "停止しました。",
           idleVisuals: "音を鳴らすと表示が更新されます。",
-          envAttack: "attack",
-          envDecay: "decay",
-          envSustain: "sustain",
-          envRelease: "release",
-          envLegend: "Orange: parameter guide. Cyan: output. Green: YM2612 internal envelope.",
+          envAttack: "立ち上がり",
+          envDecay: "減衰",
+          envSustain: "持続",
+          envRelease: "リリース",
+          envLegend: "オレンジ: parameter guide。シアン: 出力。グリーン: YM2612 内部 envelope。",
           summaryAudible: "Audible operator: channel 1, operator 4",
           summaryOtherOps: "他の operator は TL=0x7f で mute しています。",
           summaryAlgo: "Algorithm 7 を使い、すべての operator を carrier にしています。",
           summaryOrange: "Orange line: parameter guide.",
-          summaryCyan: "Cyan line: output envelope measured from generated audio.",
-          summaryGreen: "Green line: YM2612 internal envelope."
+          summaryCyan: "Cyan line: 生成した audio から測った output envelope。",
+          summaryGreen: "Green line: YM2612 内部 envelope."
         }
       };
 
@@ -683,6 +686,8 @@
         document.getElementById("tlHelp").textContent = t("tlHelp");
         document.getElementById("arHelp").textContent = t("arHelp");
         document.getElementById("d1rHelp").textContent = t("d1rHelp");
+        document.getElementById("d2rHelp").textContent = t("d2rHelp");
+        document.getElementById("slHelp").textContent = t("slHelp");
         document.getElementById("rrHelp").textContent = t("rrHelp");
         document.getElementById("envelopeTitle").textContent = t("envelopeTitle");
         playButton.textContent = t("playButton");
@@ -1079,7 +1084,7 @@
         finalizeTraceData();
       }
 
-      function stopStreamingPlayback(message = "Ready.") {
+      function stopStreamingPlayback(message = t("statusReady")) {
         playbackActive = false;
         isHolding = false;
         releaseRequested = false;
@@ -1142,7 +1147,7 @@
           ym2612.reset();
         }
         await fadeOutAndStopActiveSources();
-        stopStreamingPlayback("Stopped.");
+        stopStreamingPlayback(t("statusStopped"));
       }
 
       async function streamOneChunk(chip, sampleRate) {
@@ -1160,7 +1165,7 @@
           const tail = envelopes[3].slice(Math.max(0, envelopes[3].length - 64));
           const peak = tail.reduce((max, value) => Math.max(max, value), 0);
           if (peak < 0.01) {
-            stopStreamingPlayback("Ready.");
+            stopStreamingPlayback(t("statusReady"));
             return false;
           }
         }
