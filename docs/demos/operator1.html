@@ -618,7 +618,7 @@
           documentTitle: "YM2612 1 Operator デモ",
           introLine1: "このページでは、audible な operator を 1 個、mute された operator を 3 個だけ使います。FM 全体の複雑な話に入る前に、まず少数の parameter を触って学べるようにしています。",
           introLine2: "YM2612 の operator は固定の sine 系波形で動きます。このデモで変えているのは oscillator の種類ではなく、operator の設定です。",
-          sourceLabel: "Source",
+          sourceLabel: "ソース",
           relatedCodeLabel: "関連コード",
           commonTitle: "共通",
           pitchLabel: "Pitch",
@@ -643,21 +643,21 @@
           summaryTitle: "現在のレジスタ設定意図",
           statusReady: "準備完了。",
           statusLoading: "YM2612 WASM を読み込み中...",
-          statusHolding: "Key on 中...",
-          statusKeyOff: "Key off 後の release 中です。",
+          statusHolding: "キーを押している間の再生中です。",
+          statusKeyOff: "キーを離した後のリリース中です。",
           statusStopped: "停止しました。",
           idleVisuals: "音を鳴らすと表示が更新されます。",
           envAttack: "立ち上がり",
           envDecay: "減衰",
           envSustain: "持続",
           envRelease: "リリース",
-          envLegend: "オレンジ: parameter guide。シアン: 出力。グリーン: YM2612 内部 envelope。",
-          summaryAudible: "Audible operator: channel 1, operator 4",
-          summaryOtherOps: "他の operator は TL=0x7f で mute しています。",
+          envLegend: "オレンジ: パラメータの目安。シアン: 出力。グリーン: YM2612 内部のエンベロープ。",
+          summaryAudible: "可聴 operator: channel 1, operator 4",
+          summaryOtherOps: "他の operator は TL=0x7f でミュートしています。",
           summaryAlgo: "Algorithm 7 を使い、すべての operator を carrier にしています。",
-          summaryOrange: "Orange line: parameter guide.",
-          summaryCyan: "Cyan line: 生成した audio から測った output envelope。",
-          summaryGreen: "Green line: YM2612 内部 envelope."
+          summaryOrange: "オレンジ線: パラメータの目安。",
+          summaryCyan: "シアン線: 生成した audio から測った出力エンベロープ。",
+          summaryGreen: "グリーン線: YM2612 内部のエンベロープ。"
         }
       };
 
@@ -997,11 +997,11 @@
           `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
           `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
           "",
-          t("summaryOtherOps"),
-          t("summaryAlgo"),
-          t("summaryOrange"),
-          t("summaryCyan"),
-          t("summaryGreen"),
+         //t("summaryOtherOps"),
+         // t("summaryAlgo"),
+         // t("summaryOrange"),
+         // t("summaryCyan"),
+         // t("summaryGreen"),
         ].join("\n");
 
         drawEnvelope(settings);
