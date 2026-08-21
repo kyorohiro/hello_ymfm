@@ -508,18 +508,24 @@
       .key-row {
         display: grid;
         gap: clamp(4px, 1vw, 8px);
-      }
-
-      .key-row[data-count="10"] {
         grid-template-columns: repeat(10, minmax(0, 1fr));
+        width: 100%;
       }
 
-      .key-row[data-count="9"] {
-        grid-template-columns: repeat(9, minmax(0, 1fr));
+      .key-row[data-row="0"] {
+        margin-left: 0;
       }
 
-      .key-row[data-count="7"] {
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+      .key-row[data-row="1"] {
+        margin-left: clamp(8px, 1.2vw, 14px);
+      }
+
+      .key-row[data-row="2"] {
+        margin-left: clamp(16px, 2.4vw, 28px);
+      }
+
+      .key-row[data-row="3"] {
+        margin-left: clamp(24px, 3.6vw, 42px);
       }
 
       .key {
@@ -666,6 +672,18 @@
 
         .key small {
           font-size: 0.46rem;
+        }
+
+        .key-row[data-row="1"] {
+          margin-left: 6px;
+        }
+
+        .key-row[data-row="2"] {
+          margin-left: 12px;
+        }
+
+        .key-row[data-row="3"] {
+          margin-left: 18px;
         }
       }
     </style>

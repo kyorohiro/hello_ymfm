@@ -462,6 +462,8 @@ export function buildKeyboard({
       "key-row";
     rowElement.dataset.count =
       String(row.keys.length);
+    rowElement.dataset.row =
+      String(row.rowIndex);
     rowElement.dataset.string =
       String(row.stringNumber);
 
