@@ -8,7 +8,7 @@ export {
 } from "./megadrive-fm-presets.js";
 
 /**
- * Browser-side Mega Drive synth runtime.
+ * Browser-side Mega / Genesis-oriented synth runtime.
  *
  * This class hides:
  *
@@ -26,7 +26,7 @@ export {
  * - sample-timed scheduling
  * - VGM playback
  */
-export class MegaDriveSynth {
+export class MegaSynth {
   constructor(options = {}) {
     this.ownsAudioContext =
       !options.audioContext;
@@ -227,7 +227,7 @@ export class MegaDriveSynth {
           reject(
             new Error(
               message.message ||
-              "MegaDriveSynth AudioWorklet initialization failed"
+              "MegaSynth AudioWorklet initialization failed"
             )
           );
         }
@@ -242,3 +242,8 @@ export class MegaDriveSynth {
     });
   }
 }
+
+// Backward-compatible alias.
+// Keep this so older downloads and examples that still refer to
+// `MegaDriveSynth` continue to work.
+export const MegaDriveSynth = MegaSynth;
