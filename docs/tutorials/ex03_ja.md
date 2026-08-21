@@ -1,23 +1,40 @@
 # YM2612 で Beep を鳴らす
 
-この章では `ex03_beep.cpp` で使っている最小構成を整理します。
+このメモは `ex03_beep.cpp` のためのものです。
 
-目的は、まず「良い音色を作ること」ではなく、
-「YM2612 に何をすると beep が鳴るのか」を理解することです。
+目的は、まだ豊かな楽器音を作ることではありません。
+まずは 1 つの単純な YM2612 beep を、完成した音から逆にたどって理解することです。
 
-## やっていること
+## まず browser demo を見る
 
-手順は次の通りです。
+コードを読む前に、まずは次のページで目標の音を聞いてみてください。
 
-1. `ym2612` のオブジェクトを作る
-2. `reset()` する
-3. channel 1 の operator を設定する
-4. algorithm と左右出力を設定する
-5. 周波数を設定する
-6. `Key ON` する
-7. サンプルを生成する
+- [`YM2612 Beep Demo`](https://kyorohiro.github.io/hello_ymfm_wasm/demos/beep.html)
 
-## channel と operator
+この demo は `ex03_beep.cpp` と同じ YM2612 設定を使っています。
+
+この tutorial の問いは、次の 2 つです。
+
+- この beep を FM の考え方でどう説明するのか
+- その設定を `ymfm` や実際の chip にどう送るのか
+
+## まず FM の考え方で beep を説明する
+
+最初から register 番号を見るより先に、この beep を FM 的に言い直すと分かりやすいです。
+
+- `channel 1` を使う
+- `algorithm 7` を使う
+- 音は left / right の両方に出す
+- 4 つの operator に単純な `DT/MULTI` を入れる
+- operator 1-3 は実質ほぼ無音にする
+- operator 4 を audible な部分にする
+- `BLOCK` + `F-Number` で 1 つの音程を決める
+- 最後に `Key ON` を送る
+
+これが、この beep の本当の内容です。
+register write は、この内容を chip 固有の形式で表現しているだけです。
+
+## channel と operator の考え方
 
 YM2612 には 6 個の FM channel があります。
 各 channel には 4 個の operator があります。
@@ -38,13 +55,45 @@ Algorithm 7 では、4 個の operator がすべて carrier として動きま�
 
 唯一の方法ではありませんが、最初の beep には向いています。
 
-## `chip.reset()` は何に対応するのか
+## この beep の目標設定
 
-`chip.reset()` は、実チップの `/IC` をアサートして初期化するのに近い動きです。
-ただし `ymfm` では `/IC` ピンをそのままエミュレートしているわけではなく、
-内部の YM2612 状態を直接リセットしています。
+この beep を設定の意図として書くと、だいたい次のようになります。
 
-## `ex03_beep.cpp` で使うレジスタ
+### Channel
+
+- channel: `1`
+- algorithm: `7`
+- pan: left + right
+
+### Operators
+
+- operator 1: 単純な周波数設定、ほぼ無音
+- operator 2: 単純な周波数設定、ほぼ無音
+- operator 3: 単純な周波数設定、ほぼ無音
+- operator 4: 単純な周波数設定、audible
+
+もう少し具体的には:
+
+- operator 1-4 は `DT=0`, `MULTI=1`
+- operator 1-3 は `TL=0x7f`
+- operator 4 は `TL=0x00`
+- operator 1-4 は速い `AR`
+- operator 1-4 は単純な sustain / release 設定
+
+### Pitch
+
+- `0xa4 = 0x22`
+- `0xa0 = 0x69`
+
+### Trigger
+
+- `0x28 = 0xf0`
+
+`Key ON` を送らないと、chip の設定は終わっていても音は始まりません。
+
+## その考え方を YM2612 write に変換する
+
+FM 側の考え方が見えたら、次に chip 側の表現を見ます。
 
 各レジスタ書き込みは、次の 2 段階です。
 
@@ -64,6 +113,13 @@ chip.write(1, 0x01);
 2. レジスタ `0x30` に `0x01` を書く
 
 という意味です。
+
+つまり `ex03_beep.cpp` では、同時に 2 つのことをしています。
+
+- FM の考え方で beep を設計する
+- その内容を YM2612 register write に翻訳する
+
+## `ex03_beep.cpp` で使うレジスタ
 
 ### 全体の見取り図
 
@@ -232,25 +288,6 @@ chip.write(1, 0x01);
 - ここに channel 番号と、どの operator を有効にするかのビットを書きます
 - Key On で発音開始、Key Off で消音フェーズに入ります
 
-## レジスタごとの見方
-
-- `0x30`, `0x34`, `0x38`, `0x3c`
-  channel 1 の各 operator の detune / multiple 設定
-- `0x40`, `0x44`, `0x48`, `0x4c`
-  各 operator の音量設定
-- `0x50`, `0x54`, `0x58`, `0x5c`
-  各 operator の attack 設定
-- `0x80`, `0x84`, `0x88`, `0x8c`
-  sustain level と release rate 設定
-- `0xb0`
-  channel の algorithm 設定
-- `0xb4`
-  左右出力の有効化
-- `0xa4`, `0xa0`
-  音程の設定
-- `0x28`
-  key on / key off のトリガ
-
 ## コードをレジスタ辞書として読む
 
 YM2612 をもう一段深く理解して、自分で設定を書けるようになりたい場合は、
@@ -290,20 +327,3 @@ beep は特別な 1 命令で出るわけではありません。
 - channel を設定する
 - 周波数を設定する
 - `Key ON` で発音を始める
-
-## 自分で beep を書くときの考え方
-
-1. どの channel を使う?
-2. 4 個の operator をどう設定する?
-3. どの algorithm を使う?
-4. どの音程にする?
-5. いつ `Key ON` / `Key OFF` を送る?
-
-## 次の疑問
-
-この beep 例を理解した後に自然に出てくる疑問は、たとえば次です。
-
-- 各 operator は本当は何をしているのか?
-- `0xa4` と `0xa0` は音名にどう対応するのか?
-- `Key ON` と `Key OFF` の違いは何か?
-- beep をどうやって楽器音にしていくのか?
