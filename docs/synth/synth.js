@@ -13,6 +13,11 @@ import {
 import {
   drawEnvelopeGuide as drawEnvelopeGuideView,
 } from "./synth_envelope.js";
+import {
+  buildCommonControls as buildCommonControlsView,
+  buildHeader,
+  buildOperatorControls as buildOperatorControlsView,
+} from "./synth_controls.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -380,13 +385,6 @@ function applyPresetState(
   }
 }
 
-function clampValue(value, min, max) {
-  return Math.min(
-    max,
-    Math.max(min, value)
-  );
-}
-
 function renderAlgorithmDiagram() {
   if (!envelopeDescription) {
     return;
@@ -445,324 +443,70 @@ function ensureVisualLoop() {
   }
 }
 
-function createParamControl(config) {
-  const {
-    label,
-    min,
-    max,
-    step,
-    value,
-    onChange,
-    showLabel = true,
-  } = config;
-
-  const wrapper =
-    document.createElement("div");
-  wrapper.className = "param-control";
-  if (!showLabel) {
-    wrapper.classList.add("no-label");
-  }
-
-  const labelElement =
-    document.createElement("div");
-  labelElement.className = "param-label";
-  labelElement.textContent = label;
-
-  const minusButton =
-    document.createElement("button");
-  minusButton.type = "button";
-  minusButton.className = "param-button";
-  minusButton.textContent = "-";
-
-  const valueElement =
-    document.createElement("button");
-  valueElement.type = "button";
-  valueElement.className = "param-value";
-  valueElement.setAttribute(
-    "aria-label",
-    label
-  );
-
-  const plusButton =
-    document.createElement("button");
-  plusButton.type = "button";
-  plusButton.className = "param-button";
-  plusButton.textContent = "+";
-
-  const updateVisual =
-    (nextValue) => {
-      valueElement.textContent = String(nextValue);
-    };
-
-  let currentValue = value;
-  let dragStartX = 0;
-  let dragStartValue = value;
-  const valueRange =
-    Math.max(step, max - min);
-  const dragPixelsForFullRange = 160;
-
-  const applyValue =
-    (nextValue) => {
-      currentValue =
-        clampValue(
-          nextValue,
-          min,
-          max
-        );
-      updateVisual(currentValue);
-      onChange(currentValue);
-    };
-
-  minusButton.addEventListener(
-    "click",
-    () => {
-      applyValue(currentValue - step);
-    }
-  );
-
-  plusButton.addEventListener(
-    "click",
-    () => {
-      applyValue(currentValue + step);
-    }
-  );
-
-  valueElement.addEventListener(
-    "pointerdown",
-    (event) => {
-      dragStartX = event.clientX;
-      dragStartValue = currentValue;
-      valueElement.classList.add(
-        "is-dragging"
-      );
-      valueElement.setPointerCapture(
-        event.pointerId
-      );
-    }
-  );
-
-  valueElement.addEventListener(
-    "pointermove",
-    (event) => {
-      if (
-        valueElement.hasPointerCapture(
-          event.pointerId
-        ) === false
-      ) {
-        return;
-      }
-
-      const deltaX =
-        event.clientX - dragStartX;
-      const deltaSteps =
-        Math.round(
-          (deltaX / dragPixelsForFullRange) *
-          (valueRange / step)
-        );
-
-      applyValue(
-        dragStartValue +
-        deltaSteps * step
-      );
-    }
-  );
-
-  const endDrag =
-    (event) => {
-      if (
-        valueElement.hasPointerCapture(
-          event.pointerId
-        )
-      ) {
-        valueElement.releasePointerCapture(
-          event.pointerId
-        );
-      }
-      valueElement.classList.remove(
-        "is-dragging"
-      );
-    };
-
-  valueElement.addEventListener(
-    "pointerup",
-    endDrag
-  );
-  valueElement.addEventListener(
-    "pointercancel",
-    endDrag
-  );
-
-  wrapper.addEventListener(
-    "wheel",
-    (event) => {
-      event.preventDefault();
-      const direction =
-        event.deltaY < 0
-          ? step
-          : -step;
-      applyValue(currentValue + direction);
-    },
-    { passive: false }
-  );
-
-  if (showLabel) {
-    wrapper.appendChild(labelElement);
-  }
-  wrapper.appendChild(minusButton);
-  wrapper.appendChild(valueElement);
-  wrapper.appendChild(plusButton);
-
-  updateVisual(value);
-
-  return {
-    element: wrapper,
-    updateVisual,
-  };
-}
-
 function buildCommonControls() {
-  commonControlsRoot.innerHTML = "";
-
-  for (const config of COMMON_PARAM_DEFS) {
-    const control =
-      createParamControl({
-        ...config,
-        showLabel: false,
-        value: commonState[config.id],
-        onChange: (nextValue) => {
-          commonState[config.id] =
-            nextValue;
-          currentPresetName =
-            "custom";
-          if (presetSelect) {
-            presetSelect.value =
-              "custom";
-          }
-          renderAlgorithmDiagram();
-          drawEnvelopeGuide();
-          if (synth) {
-            applyPatchToVoices();
-          }
-        },
-      });
-
-    commonControls.set(
-      config.id,
-      control
-    );
-
-    commonControlsRoot.appendChild(
-      control.element
-    );
-  }
+  buildCommonControlsView({
+    root: commonControlsRoot,
+    defs: COMMON_PARAM_DEFS,
+    state: commonState,
+    controlsMap: commonControls,
+    onChange: (id, nextValue) => {
+      commonState[id] = nextValue;
+      currentPresetName =
+        "custom";
+      if (presetSelect) {
+        presetSelect.value =
+          "custom";
+      }
+      renderAlgorithmDiagram();
+      drawEnvelopeGuide();
+      if (synth) {
+        applyPatchToVoices();
+      }
+    },
+  });
 }
 
 function buildCommonHeader() {
-  if (!commonHeaderRoot) {
-    return;
-  }
-
-  commonHeaderRoot.innerHTML = "";
-
-  for (const config of COMMON_PARAM_DEFS) {
-    const cell =
-      document.createElement("div");
-    cell.className =
-      "operator-header-cell";
-    cell.textContent =
-      config.label;
-    commonHeaderRoot.appendChild(cell);
-  }
+  buildHeader(
+    commonHeaderRoot,
+    COMMON_PARAM_DEFS
+  );
 }
 
 function buildOperatorHeader() {
-  if (!operatorHeaderRoot) {
-    return;
-  }
-
-  operatorHeaderRoot.innerHTML = "";
-
-  for (const config of OPERATOR_PARAM_DEFS) {
-    const cell =
-      document.createElement("div");
-    cell.className =
-      "operator-header-cell";
-    cell.textContent =
-      config.label;
-    operatorHeaderRoot.appendChild(cell);
-  }
+  buildHeader(
+    operatorHeaderRoot,
+    OPERATOR_PARAM_DEFS
+  );
 }
 
 function buildOperatorControls() {
-  operatorControlsRoot.innerHTML = "";
-
-  for (const operator of OPERATOR_NUMBERS) {
-    const row =
-      document.createElement("div");
-    row.className =
-      "operator-row";
-
-    const name =
-      document.createElement("div");
-    name.className =
-      `operator-name op-color-${operator}`;
-    name.textContent =
-      `OP${operator}`;
-
-    const strip =
-      document.createElement("div");
-    strip.className = "param-strip";
-
-    const rowControls =
-      new Map();
-
-    for (const config of OPERATOR_PARAM_DEFS) {
-      const control =
-        createParamControl({
-          ...config,
-          showLabel: false,
-          value:
-            operatorStates[operator][
-              config.id
-            ],
-          onChange: (nextValue) => {
-            operatorStates[operator][
-              config.id
-            ] = nextValue;
-            currentPresetName =
-              "custom";
-            if (presetSelect) {
-              presetSelect.value =
-                "custom";
-            }
-            drawEnvelopeGuide();
-            if (synth) {
-              applyPatchToVoices();
-            }
-          },
-        });
-
-      rowControls.set(
-        config.id,
-        control
-      );
-
-      strip.appendChild(
-        control.element
-      );
-    }
-
-    operatorControls.set(
+  buildOperatorControlsView({
+    root: operatorControlsRoot,
+    operatorNumbers:
+      OPERATOR_NUMBERS,
+    defs: OPERATOR_PARAM_DEFS,
+    operatorStates,
+    controlsMap: operatorControls,
+    onChange: (
       operator,
-      rowControls
-    );
-
-    row.appendChild(name);
-    row.appendChild(strip);
-    operatorControlsRoot.appendChild(
-      row
-    );
-  }
+      id,
+      nextValue
+    ) => {
+      operatorStates[operator][id] =
+        nextValue;
+      currentPresetName =
+        "custom";
+      if (presetSelect) {
+        presetSelect.value =
+          "custom";
+      }
+      drawEnvelopeGuide();
+      if (synth) {
+        applyPatchToVoices();
+      }
+    },
+  });
 }
 
 function updateKeyboardVisuals() {
