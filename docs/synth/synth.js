@@ -7,7 +7,6 @@ import {
   buildKeyboard as buildKeyboardView,
   createKeyLayout,
   findLayoutEntry,
-  hasLayoutKey,
 } from "./synth_keyboard.js";
 import {
   drawEnvelopeGuide as drawEnvelopeGuideView,
@@ -25,6 +24,9 @@ import {
   initializeDirectAudio as initializeDirectAudioRuntime,
   stopAllNotes as stopAllRuntimeNotes,
 } from "./synth_runtime.js";
+import {
+  createSynthInputController,
+} from "./synth_input.js";
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
@@ -180,6 +182,7 @@ const voices =
   createVoices(VOICE_COUNT);
 
 const activeKeys = new Map();
+let inputController = null;
 
 function setStatus(message) {
   status.textContent = message;
@@ -567,183 +570,42 @@ async function ensureAudioReady() {
 
 }
 
-async function pressKey(key) {
-  heldKeys.add(key);
-
-  const entry =
-    findLayoutEntry(
-      KEY_LAYOUT,
-      key
-    );
-
-  if (
-    !entry ||
-    activeKeys.has(key)
-  ) {
-    return;
-  }
-
-  if (
-    audioReadyPromise &&
-    !synth
-  ) {
-    setStatus(
-      "Preparing audio..."
-    );
-    return;
-  }
-
-  try {
-    await ensureAudioReady();
-  } catch (error) {
-    console.error(error);
-
-    setStatus(
-      `Error: ${error.message}`
-    );
-
-    return;
-  }
-
-  // The key may have been released while waiting for audio initialization.
-  if (
-    heldKeys.has(key) === false
-  ) {
-    return;
-  }
-
-  const voice = chooseVoice();
-
-  if (voice.held) {
-    synth.noteOff(
-      voice.channel
-    );
-
-    if (voice.key) {
-      activeKeys.delete(
-        voice.key
-      );
-    }
-  }
-
-  synth.noteOn(
-    voice.channel,
-    entry.pitch.block,
-    entry.pitch.fnum
-  );
-
-  voice.held = true;
-  voice.key = key;
-  voice.startedAt =
-    performance.now();
-
-  activeKeys.set(
-    key,
-    voice.channel
-  );
-
-  updateKeyboardVisuals();
-
-  setStatus(
-    `Playing ${entry.noteName} on channel ${voice.channel + 1}.`
-  );
-}
-
-function releaseKey(key) {
-  heldKeys.delete(key);
-
-  if (!synth) {
-    return;
-  }
-
-  const channel =
-    activeKeys.get(key);
-
-  if (channel === undefined) {
-    return;
-  }
-
-  synth.noteOff(channel);
-
-  activeKeys.delete(key);
-
-  voices[channel].held = false;
-  voices[channel].key = null;
-  voices[channel].startedAt = 0;
-
-  updateKeyboardVisuals();
-}
-
-function releasePointerKey(pointerId) {
-  const key =
-    activePointers.get(pointerId);
-
-  if (!key) {
-    return;
-  }
-
-  activePointers.delete(pointerId);
-  releaseKey(key);
-}
-
 function buildKeyboard() {
   buildKeyboardView({
     root: keyboard,
     rowDefs: ROW_DEFS,
     layout: KEY_LAYOUT,
-    onPointerDown: async (
+    onPointerDown: (
       event,
       entry,
       button
-    ) => {
-      activePointers.set(
-        event.pointerId,
-        entry.key
-      );
-      button.setPointerCapture(
-        event.pointerId
-      );
-
-      await pressKey(entry.key);
-    },
+    ) =>
+      inputController
+        ?.handlePointerDown(
+          event,
+          entry,
+          button
+        ),
     onPointerUp: (
       event,
       entry,
       button
-    ) => {
-      if (
-        button.hasPointerCapture(
-          event.pointerId
-        )
-      ) {
-        button.releasePointerCapture(
-          event.pointerId
-        );
-      }
-
-      releasePointerKey(
-        event.pointerId
-      );
-    },
+    ) =>
+      inputController?.handlePointerUp(
+        event,
+        entry,
+        button
+      ),
     onPointerCancel: (
       event,
       entry,
       button
-    ) => {
-      if (
-        button.hasPointerCapture(
-          event.pointerId
-        )
-      ) {
-        button.releasePointerCapture(
-          event.pointerId
-        );
-      }
-
-      releasePointerKey(
-        event.pointerId
-      );
-    },
+    ) =>
+      inputController?.handlePointerCancel(
+        event,
+        entry,
+        button
+      ),
   });
 }
 
@@ -799,76 +661,32 @@ function buildPresetSelect() {
     currentPresetName;
 }
 
-window.addEventListener(
-  "pointerup",
-  (event) => {
-    releasePointerKey(
-      event.pointerId
-    );
-  }
-);
+inputController =
+  createSynthInputController({
+    keyLayout: KEY_LAYOUT,
+    findLayoutEntry,
+    hasLayoutKey: (
+      layout,
+      key
+    ) =>
+      layout.some(
+        (entry) => entry.key === key
+      ),
+    heldKeys,
+    activePointers,
+    activeKeys,
+    voices,
+    getAudioReadyPromise:
+      () => audioReadyPromise,
+    getSynth: () => synth,
+    ensureAudioReady,
+    chooseVoice,
+    updateKeyboardVisuals,
+    setStatus,
+    stopAllNotes,
+  });
 
-window.addEventListener(
-  "pointercancel",
-  (event) => {
-    releasePointerKey(
-      event.pointerId
-    );
-  }
-);
-
-window.addEventListener(
-  "keydown",
-  (event) => {
-    const key =
-      event.key.toLowerCase();
-
-    if (
-      !hasLayoutKey(
-        KEY_LAYOUT,
-        key
-      )
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.repeat) {
-      return;
-    }
-
-    void pressKey(key);
-  }
-);
-
-window.addEventListener(
-  "keyup",
-  (event) => {
-    const key =
-      event.key.toLowerCase();
-
-    if (
-      !hasLayoutKey(
-        KEY_LAYOUT,
-        key
-      )
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-
-    releaseKey(key);
-  }
-);
-
-window.addEventListener(
-  "blur",
-  () => {
-    stopAllNotes();
-  }
-);
+inputController.attachWindowInput();
 
 buildCommonHeader();
 buildCommonControls();
