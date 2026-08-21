@@ -7,9 +7,21 @@ RELEASE_DIR="${ROOT_DIR}/release"
 VERSION="${1:-dev}"
 OUTPUT_NAME="hello_ymfm_wasm_${VERSION}_web_runtime.zip"
 OUTPUT_PATH="${RELEASE_DIR}/${OUTPUT_NAME}"
+STAGE_DIR="${RELEASE_DIR}/web_runtime_${VERSION}"
 
 WEB_DIR="${ROOT_DIR}/web"
 GENERATED_DIR="${ROOT_DIR}/docs/generated"
+RUNTIME_FILES="
+genesisaudioengine.js
+megadrive-fm-presets.js
+megasynth.js
+segapsg.js
+vgmplayer.js
+ym2612-worklet.js
+ym2612.js
+ym2612synth.js
+ym2612vgm.js
+"
 
 if [ ! -d "${WEB_DIR}" ]; then
   echo "error: missing directory: ${WEB_DIR}" >&2
@@ -34,13 +46,31 @@ if [ ! -f "${GENERATED_DIR}/segapsg_wasm.js" ] || [ ! -f "${GENERATED_DIR}/segap
 fi
 
 mkdir -p "${RELEASE_DIR}"
+rm -rf "${STAGE_DIR}"
 rm -f "${OUTPUT_PATH}"
+mkdir -p "${STAGE_DIR}/generated"
 
 (
-  cd "${ROOT_DIR}"
-  zip -r "${OUTPUT_PATH}" \
-    web \
-    docs/generated
+  for file in ${RUNTIME_FILES}; do
+    src="${WEB_DIR}/${file}"
+    dst="${STAGE_DIR}/${file}"
+
+    if [ ! -f "${src}" ]; then
+      echo "error: missing runtime file: ${src}" >&2
+      exit 1
+    fi
+
+    cp "${src}" "${dst}"
+  done
+
+  cp "${GENERATED_DIR}/ym2612_wasm.js" "${STAGE_DIR}/generated/ym2612_wasm.js"
+  cp "${GENERATED_DIR}/ym2612_wasm.wasm" "${STAGE_DIR}/generated/ym2612_wasm.wasm"
+  cp "${GENERATED_DIR}/segapsg_wasm.js" "${STAGE_DIR}/generated/segapsg_wasm.js"
+  cp "${GENERATED_DIR}/segapsg_wasm.wasm" "${STAGE_DIR}/generated/segapsg_wasm.wasm"
+
+  cd "${STAGE_DIR}"
+  zip -r "${OUTPUT_PATH}" .
 )
 
 echo "created: ${OUTPUT_PATH}"
+echo "created stage: ${STAGE_DIR}"
