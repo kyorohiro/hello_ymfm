@@ -117,6 +117,79 @@
         background: rgba(255, 255, 255, 0.36);
       }
 
+      .fretboard-toolbar {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .fretboard-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .fretboard-summary {
+        gap: 8px;
+        margin-bottom: 2px;
+      }
+
+      .fretboard-label {
+        min-width: 0;
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgba(31, 27, 22, 0.66);
+      }
+
+      .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .toolbar-divider {
+        color: rgba(31, 27, 22, 0.38);
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0 2px;
+      }
+
+      .toolbar-button,
+      .fret-display {
+        min-height: 24px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--pill-border);
+        background: var(--pill-bg);
+        color: var(--pill-ink);
+        font: inherit;
+        font-size: 0.68rem;
+        line-height: 1.2;
+      }
+
+      .toolbar-button {
+        cursor: pointer;
+      }
+
+      .toolbar-button.is-selected {
+        background: linear-gradient(180deg, #4b556d, #2c3445);
+        border-color: #f0cf8e;
+        box-shadow: inset 0 0 0 1px rgba(240, 207, 142, 0.26);
+      }
+
+      .fret-display {
+        display: inline-flex;
+        align-items: center;
+        font-weight: 700;
+        min-height: 20px;
+        padding: 1px 7px;
+        font-size: 0.64rem;
+      }
+
       .preset-row {
         display: flex;
         align-items: center;
@@ -611,6 +684,19 @@
 
             <div class="control-section">
               <h2>Keyboard</h2>
+              <div class="fretboard-toolbar">
+                <div class="fretboard-row fretboard-summary">
+                  <div class="fret-display" id="fretDisplay">Fret: 0</div>
+                  <div class="fret-display" id="stringDisplay">String 6-3</div>
+                </div>
+                <div class="fretboard-row">
+                  <div class="toolbar-group" id="instrumentControls"></div>
+                  <div class="toolbar-divider">|</div>
+                  <div class="toolbar-group" id="positionControls"></div>
+                  <div class="toolbar-divider">|</div>
+                  <div class="toolbar-group" id="stringWindowControls"></div>
+                </div>
+              </div>
               <div class="keyboard-wrap">
                 <div class="keyboard" id="keyboard"></div>
                 <div class="prepare-overlay" id="prepareOverlay" aria-live="polite" aria-hidden="true">

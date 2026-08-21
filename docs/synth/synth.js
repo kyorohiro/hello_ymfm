@@ -3,10 +3,17 @@ import {
   MEGADRIVE_FM_PRESET_ORDER,
 } from "../js/megasynth.js";
 import {
-  DEFAULT_ROW_DEFS,
   buildKeyboard as buildKeyboardView,
-  createKeyLayout,
+  createFretboardLayout,
+  createFretboardState,
   findLayoutEntry,
+  hasLayoutKey,
+  renderFretboardControls,
+  setFretPosition,
+  setInstrument,
+  shiftStringWindowIndex,
+  setStringWindowIndex,
+  shiftFretPosition,
 } from "./synth_keyboard.js";
 import {
   drawEnvelopeGuide as drawEnvelopeGuideView,
@@ -30,6 +37,26 @@ import {
 
 const status = document.getElementById("status");
 const keyboard = document.getElementById("keyboard");
+const instrumentControlsRoot =
+  document.getElementById(
+    "instrumentControls"
+  );
+const positionControlsRoot =
+  document.getElementById(
+    "positionControls"
+  );
+const fretDisplayRoot =
+  document.getElementById(
+    "fretDisplay"
+  );
+const stringDisplayRoot =
+  document.getElementById(
+    "stringDisplay"
+  );
+const stringWindowControlsRoot =
+  document.getElementById(
+    "stringWindowControls"
+  );
 const prepareOverlay =
   document.getElementById(
     "prepareOverlay"
@@ -80,12 +107,11 @@ const REFERENCE_MIDI = 62;
 const REFERENCE_BLOCK = 4;
 const REFERENCE_FNUM = 553;
 
-const ROW_DEFS =
-  DEFAULT_ROW_DEFS;
-
-const KEY_LAYOUT =
-  createKeyLayout({
-    rowDefs: ROW_DEFS,
+const fretboardState =
+  createFretboardState();
+let fretboardLayout =
+  createFretboardLayout({
+    state: fretboardState,
     referenceMidi:
       REFERENCE_MIDI,
     referenceBlock:
@@ -206,6 +232,19 @@ function updateKeyboardAvailability() {
     "aria-hidden",
     String(!isInitializing)
   );
+}
+
+function rebuildFretboardLayout() {
+  fretboardLayout =
+    createFretboardLayout({
+      state: fretboardState,
+      referenceMidi:
+        REFERENCE_MIDI,
+      referenceBlock:
+        REFERENCE_BLOCK,
+      referenceFnum:
+        REFERENCE_FNUM,
+    });
 }
 
 function appendOutputEnvelopePoints(
@@ -494,6 +533,59 @@ function clearInputState() {
   });
 }
 
+function renderFretboardUi() {
+  renderFretboardControls({
+    instrumentRoot:
+      instrumentControlsRoot,
+    positionRoot:
+      positionControlsRoot,
+    fretDisplayRoot,
+    stringDisplayRoot,
+    stringWindowRoot:
+      stringWindowControlsRoot,
+    state: fretboardState,
+    onInstrumentChange: (
+      instrument
+    ) => {
+      stopAllNotes();
+      setInstrument(
+        fretboardState,
+        instrument
+      );
+      rebuildFretboardLayout();
+      buildKeyboard();
+      updateKeyboardVisuals();
+      renderFretboardUi();
+    },
+    onPositionPresetSelect: (
+      fret
+    ) => {
+      stopAllNotes();
+      setFretPosition(
+        fretboardState,
+        fret
+      );
+      rebuildFretboardLayout();
+      buildKeyboard();
+      updateKeyboardVisuals();
+      renderFretboardUi();
+    },
+    onStringWindowChange: (
+      index
+    ) => {
+      stopAllNotes();
+      setStringWindowIndex(
+        fretboardState,
+        index
+      );
+      rebuildFretboardLayout();
+      buildKeyboard();
+      updateKeyboardVisuals();
+      renderFretboardUi();
+    },
+  });
+}
+
 function stopAllNotes() {
   stopAllRuntimeNotes({
     synth,
@@ -573,8 +665,10 @@ async function ensureAudioReady() {
 function buildKeyboard() {
   buildKeyboardView({
     root: keyboard,
-    rowDefs: ROW_DEFS,
-    layout: KEY_LAYOUT,
+    rowDefs:
+      fretboardLayout.rowDefs,
+    layoutEntries:
+      fretboardLayout.entries,
     onPointerDown: (
       event,
       entry,
@@ -663,15 +757,10 @@ function buildPresetSelect() {
 
 inputController =
   createSynthInputController({
-    keyLayout: KEY_LAYOUT,
+    getKeyLayout: () =>
+      fretboardLayout.entries,
     findLayoutEntry,
-    hasLayoutKey: (
-      layout,
-      key
-    ) =>
-      layout.some(
-        (entry) => entry.key === key
-      ),
+    hasLayoutKey,
     heldKeys,
     activePointers,
     activeKeys,
@@ -684,6 +773,30 @@ inputController =
     updateKeyboardVisuals,
     setStatus,
     stopAllNotes,
+    onShiftFret: (delta) => {
+      stopAllNotes();
+      shiftFretPosition(
+        fretboardState,
+        delta
+      );
+      rebuildFretboardLayout();
+      buildKeyboard();
+      updateKeyboardVisuals();
+      renderFretboardUi();
+    },
+    onShiftStringWindow: (
+      delta
+    ) => {
+      stopAllNotes();
+      shiftStringWindowIndex(
+        fretboardState,
+        delta
+      );
+      rebuildFretboardLayout();
+      buildKeyboard();
+      updateKeyboardVisuals();
+      renderFretboardUi();
+    },
   });
 
 inputController.attachWindowInput();
@@ -693,6 +806,7 @@ buildCommonControls();
 buildOperatorHeader();
 buildOperatorControls();
 buildPresetSelect();
+renderFretboardUi();
 buildKeyboard();
 applyPresetState(currentPresetName);
 updateKeyboardAvailability();

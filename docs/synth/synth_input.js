@@ -1,5 +1,5 @@
 export function createSynthInputController({
-  keyLayout,
+  getKeyLayout,
   findLayoutEntry,
   hasLayoutKey,
   heldKeys,
@@ -13,9 +13,13 @@ export function createSynthInputController({
   updateKeyboardVisuals,
   setStatus,
   stopAllNotes,
+  onShiftFret,
+  onShiftStringWindow,
 }) {
   async function pressKey(key) {
     heldKeys.add(key);
+    const keyLayout =
+      getKeyLayout();
 
     const entry =
       findLayoutEntry(
@@ -201,6 +205,32 @@ export function createSynthInputController({
   function handleKeyDown(event) {
     const key =
       event.key.toLowerCase();
+    const keyLayout =
+      getKeyLayout();
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      onShiftFret?.(-1);
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      onShiftFret?.(1);
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      onShiftStringWindow?.(1);
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      onShiftStringWindow?.(-1);
+      return;
+    }
 
     if (
       !hasLayoutKey(
@@ -223,6 +253,18 @@ export function createSynthInputController({
   function handleKeyUp(event) {
     const key =
       event.key.toLowerCase();
+    const keyLayout =
+      getKeyLayout();
+
+    if (
+      event.key === "ArrowLeft" ||
+      event.key === "ArrowRight" ||
+      event.key === "ArrowUp" ||
+      event.key === "ArrowDown"
+    ) {
+      event.preventDefault();
+      return;
+    }
 
     if (
       !hasLayoutKey(
