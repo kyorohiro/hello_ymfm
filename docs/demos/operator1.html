@@ -75,11 +75,21 @@
         display: inline-flex;
         gap: 8px;
         align-items: center;
-        margin: 0 0 16px;
         padding: 6px;
         border-radius: 999px;
         border: 1px solid var(--line);
         background: rgba(255, 255, 255, 0.5);
+      }
+
+      .hero-header {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .hero-copy {
+        min-width: 0;
       }
 
       .lang-toggle button {
@@ -303,6 +313,15 @@
       }
 
       @media (max-width: 920px) {
+        .hero-header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .lang-toggle {
+          align-self: flex-end;
+        }
+
         .editor-layout {
           grid-template-columns: 1fr;
         }
@@ -312,32 +331,36 @@
   <body>
     <main>
       <section class="panel">
-        <h1>YM2612 1 Operator Demo</h1>
-        <p>
-          This page keeps the setup small: one audible operator, three muted operators,
-          and a few parameters you can change without reading the whole FM algorithm story first.
-        </p>
-        <p>
-          YM2612 operators use a fixed sine-based waveform. This demo changes the operator settings,
-          not a selectable oscillator shape.
-        </p>
-        <p class="meta">
-          Source:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/operator1.html">docs/demos/operator1.html</a>
-          |
-          Related code:
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
-          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
-        </p>
+        <div class="hero-header">
+          <div class="hero-copy">
+            <h1 id="pageTitle">YM2612 1 Operator Demo</h1>
+            <p id="introLine1">
+              This page keeps the setup small: one audible operator, three muted operators,
+              and a few parameters you can change without reading the whole FM algorithm story first.
+            </p>
+            <p id="introLine2">
+              YM2612 operators use a fixed sine-based waveform. This demo changes the operator settings,
+              not a selectable oscillator shape.
+            </p>
+            <p class="meta">
+              <span id="sourceLabel">Source</span>:
+              <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/docs/demos/operator1.html">docs/demos/operator1.html</a>
+              |
+              <span id="relatedCodeLabel">Related code</span>:
+              <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612.js">web/ym2612.js</a>,
+              <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
+            </p>
+          </div>
 
-        <div class="lang-toggle" aria-label="Language toggle">
-          <button id="langEnButton" class="is-active" type="button">English</button>
-          <button id="langJaButton" type="button">日本語</button>
+          <div class="lang-toggle" aria-label="Language toggle">
+            <button id="langEnButton" class="is-active" type="button">English</button>
+            <button id="langJaButton" type="button">日本語</button>
+          </div>
         </div>
 
         <section class="note-box">
           <div data-lang="en" class="is-visible">
-            <h2>What to learn here</h2>
+            <h2 id="learnTitleEn">What to learn here</h2>
             <p>
               This page uses one audible operator so you can study the envelope first before moving to
               more complex FM setups.
@@ -356,7 +379,7 @@
             </p>
           </div>
           <div data-lang="ja">
-            <h2>このページで見ること</h2>
+            <h2 id="learnTitleJa">このページで見ること</h2>
             <p>
               ここでは audible な operator を 1 個だけ使っています。まずは複雑な FM に入る前に、
               1 operator の envelope の動きを見るためのページです。
@@ -380,71 +403,71 @@
         <div class="editor-layout">
           <div class="controls-stack">
             <section class="control-section">
-              <h2>Common</h2>
+              <h2 id="commonTitle">Common</h2>
               <div class="controls compact">
                 <div class="control">
-                  <label for="fnum">Pitch <span class="value" id="fnumValue">553</span></label>
+                  <label for="fnum"><span id="pitchLabel">Pitch</span> <span class="value" id="fnumValue">553</span></label>
                   <input id="fnum" type="range" min="256" max="1023" value="553">
-                  <small>Channel frequency number.</small>
+                  <small id="pitchHelp">Channel frequency number.</small>
                 </div>
                 <div class="control">
-                  <label for="block">Block <span class="value" id="blockValue">4</span></label>
+                  <label for="block"><span id="blockLabel">Block</span> <span class="value" id="blockValue">4</span></label>
                   <input id="block" type="range" min="0" max="7" value="4">
-                  <small>Octave-like block value.</small>
+                  <small id="blockHelp">Octave-like block value.</small>
                 </div>
               </div>
             </section>
 
             <section class="control-section">
-              <h2>OP1</h2>
+              <h2 id="op1Title">OP1</h2>
               <div class="controls compact">
                 <div class="control">
                   <label for="dt">DT <span class="value" id="dtValue">0</span></label>
                   <input id="dt" type="range" min="0" max="7" value="0">
-                  <small>Detune.</small>
+                  <small id="dtHelp">Detune.</small>
                 </div>
                 <div class="control">
                   <label for="multi">MULTI <span class="value" id="multiValue">1</span></label>
                   <input id="multi" type="range" min="0" max="15" value="1">
-                  <small>Frequency multiplier.</small>
+                  <small id="multiHelp">Frequency multiplier.</small>
                 </div>
                 <div class="control">
                   <label for="tl">TL <span class="value" id="tlValue">0</span></label>
                   <input id="tl" type="range" min="0" max="127" value="0">
-                  <small>Loudness or FM depth.</small>
+                  <small id="tlHelp">Loudness or FM depth.</small>
                 </div>
                 <div class="control">
                   <label for="ar">AR <span class="value" id="arValue">31</span></label>
                   <input id="ar" type="range" min="0" max="31" value="31">
-                  <small>Attack rate.</small>
+                  <small id="arHelp">Attack rate.</small>
                 </div>
                 <div class="control">
                   <label for="d1r">D1R <span class="value" id="d1rValue">8</span></label>
                   <input id="d1r" type="range" min="0" max="31" value="8">
-                  <small>First decay.</small>
+                  <small id="d1rHelp">First decay.</small>
                 </div>
                 <div class="control">
                   <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
                   <input id="d2r" type="range" min="0" max="31" value="4">
-                  <small data-lang="en" class="is-visible">How fast the level keeps falling in the later stage.</small>
-                  <small data-lang="ja">sustain 以降で、どれくらいの速さで下がるか。</small>
+                  <small data-lang="en" class="is-visible" id="d2rHelpEn">How fast the level keeps falling in the later stage.</small>
+                  <small data-lang="ja" id="d2rHelpJa">sustain 以降で、どれくらいの速さで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="sl">SL <span class="value" id="slValue">4</span></label>
                   <input id="sl" type="range" min="0" max="15" value="4">
-                  <small data-lang="en" class="is-visible">The target level for that later stage.</small>
-                  <small data-lang="ja">sustain 付近で、どこまで下がるか。</small>
+                  <small data-lang="en" class="is-visible" id="slHelpEn">The target level for that later stage.</small>
+                  <small data-lang="ja" id="slHelpJa">sustain 付近で、どこまで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="rr">RR <span class="value" id="rrValue">15</span></label>
                   <input id="rr" type="range" min="0" max="15" value="15">
-                  <small>Release rate.</small>
+                  <small id="rrHelp">Release rate.</small>
                 </div>
               </div>
             </section>
           </div>
           <section class="visual hero-visual">
-            <h2>Envelope</h2>
+            <h2 id="envelopeTitle">Envelope</h2>
             <canvas id="envelopeCanvas" width="480" height="220"></canvas>
           </section>
         </div>
@@ -452,23 +475,23 @@
         <div class="actions">
           <button id="playButton" type="button">Hold to Play</button>
           <button id="stopButton" type="button">Stop</button>
-          <a class="link-button" href="../index.html">Back</a>
+          <a class="link-button" id="backLink" href="../index.html">Back</a>
         </div>
 
         <div class="status" id="status">Ready.</div>
 
         <div class="visuals">
           <section class="visual">
-            <h2>Waveform</h2>
+            <h2 id="waveformTitle">Waveform</h2>
             <canvas id="waveCanvas" width="480" height="180"></canvas>
           </section>
           <section class="visual">
-            <h2>Spectrum</h2>
+            <h2 id="spectrumTitle">Spectrum</h2>
             <canvas id="spectrumCanvas" width="480" height="180"></canvas>
           </section>
         </div>
 
-        <h2>Current Register Intent</h2>
+        <h2 id="summaryTitle">Current Register Intent</h2>
         <pre id="summaryOutput"></pre>
       </section>
     </main>
@@ -507,6 +530,7 @@
       const stopButton = document.getElementById("stopButton");
       const langEnButton = document.getElementById("langEnButton");
       const langJaButton = document.getElementById("langJaButton");
+      const backLink = document.getElementById("backLink");
       const status = document.getElementById("status");
       const summaryOutput = document.getElementById("summaryOutput");
       const waveCanvas = document.getElementById("waveCanvas");
@@ -540,6 +564,100 @@
       const CHUNK_FRAMES = 2048;
       const SCHEDULE_AHEAD_SECONDS = 0.12;
       const CLICK_FADE_SECONDS = 0.008;
+      const I18N = {
+        en: {
+          pageTitle: "YM2612 1 Operator Demo",
+          documentTitle: "YM2612 1 Operator Demo",
+          introLine1: "This page keeps the setup small: one audible operator, three muted operators, and a few parameters you can change without reading the whole FM algorithm story first.",
+          introLine2: "YM2612 operators use a fixed sine-based waveform. This demo changes the operator settings, not a selectable oscillator shape.",
+          sourceLabel: "Source",
+          relatedCodeLabel: "Related code",
+          commonTitle: "Common",
+          pitchLabel: "Pitch",
+          pitchHelp: "Channel frequency number.",
+          blockLabel: "Block",
+          blockHelp: "Octave-like block value.",
+          op1Title: "OP1",
+          dtHelp: "Detune.",
+          multiHelp: "Frequency multiplier.",
+          tlHelp: "Loudness or FM depth.",
+          arHelp: "Attack rate.",
+          d1rHelp: "First decay.",
+          rrHelp: "Release rate.",
+          envelopeTitle: "Envelope",
+          playButton: "Hold to Play",
+          stopButton: "Stop",
+          backLink: "Back",
+          waveformTitle: "Waveform",
+          spectrumTitle: "Spectrum",
+          summaryTitle: "Current Register Intent",
+          statusReady: "Ready.",
+          statusLoading: "Loading YM2612 WASM...",
+          statusHolding: "Holding key on...",
+          statusKeyOff: "Key off... release phase.",
+          statusStopped: "Stopped.",
+          idleVisuals: "Play a tone to update the visuals.",
+          envAttack: "attack",
+          envDecay: "decay",
+          envSustain: "sustain",
+          envRelease: "release",
+          envLegend: "Orange: parameter guide. Cyan: output. Green: YM2612 internal envelope.",
+          summaryAudible: "Audible operator: channel 1, operator 4",
+          summaryOtherOps: "Other operators are muted with TL=0x7f.",
+          summaryAlgo: "Algorithm 7 is used so all operators are carriers.",
+          summaryOrange: "Orange line: parameter guide.",
+          summaryCyan: "Cyan line: output envelope measured from generated audio.",
+          summaryGreen: "Green line: YM2612 internal envelope."
+        },
+        ja: {
+          pageTitle: "YM2612 1 Operator デモ",
+          documentTitle: "YM2612 1 Operator デモ",
+          introLine1: "このページでは、audible な operator を 1 個、mute された operator を 3 個だけ使います。FM 全体の複雑な話に入る前に、まず少数の parameter を触って学べるようにしています。",
+          introLine2: "YM2612 の operator は固定の sine 系波形で動きます。このデモで変えているのは oscillator の種類ではなく、operator の設定です。",
+          sourceLabel: "Source",
+          relatedCodeLabel: "関連コード",
+          commonTitle: "共通",
+          pitchLabel: "Pitch",
+          pitchHelp: "channel の周波数番号です。",
+          blockLabel: "Block",
+          blockHelp: "オクターブに近い区分の値です。",
+          op1Title: "OP1",
+          dtHelp: "音程の微調整です。",
+          multiHelp: "周波数の倍率です。",
+          tlHelp: "音量、または FM のかかり方に効きます。",
+          arHelp: "立ち上がりの速さです。",
+          d1rHelp: "最初の減衰の速さです。",
+          rrHelp: "key off 後の消え方の速さです。",
+          envelopeTitle: "Envelope",
+          playButton: "押している間再生",
+          stopButton: "停止",
+          backLink: "戻る",
+          waveformTitle: "波形",
+          spectrumTitle: "スペクトラム",
+          summaryTitle: "現在のレジスタ設定意図",
+          statusReady: "準備完了。",
+          statusLoading: "YM2612 WASM を読み込み中...",
+          statusHolding: "Key on 中...",
+          statusKeyOff: "Key off... release 中です。",
+          statusStopped: "停止しました。",
+          idleVisuals: "音を鳴らすと表示が更新されます。",
+          envAttack: "attack",
+          envDecay: "decay",
+          envSustain: "sustain",
+          envRelease: "release",
+          envLegend: "Orange: parameter guide. Cyan: output. Green: YM2612 internal envelope.",
+          summaryAudible: "Audible operator: channel 1, operator 4",
+          summaryOtherOps: "他の operator は TL=0x7f で mute しています。",
+          summaryAlgo: "Algorithm 7 を使い、すべての operator を carrier にしています。",
+          summaryOrange: "Orange line: parameter guide.",
+          summaryCyan: "Cyan line: output envelope measured from generated audio.",
+          summaryGreen: "Green line: YM2612 internal envelope."
+        }
+      };
+
+      function t(key) {
+        return I18N[currentLanguage][key] ?? I18N.en[key] ?? key;
+      }
 
       function updateLanguageUI() {
         document.querySelectorAll("[data-lang]").forEach((element) => {
@@ -547,6 +665,38 @@
         });
         langEnButton.classList.toggle("is-active", currentLanguage === "en");
         langJaButton.classList.toggle("is-active", currentLanguage === "ja");
+        document.documentElement.lang = currentLanguage;
+        document.title = t("documentTitle");
+        document.getElementById("pageTitle").textContent = t("pageTitle");
+        document.getElementById("introLine1").textContent = t("introLine1");
+        document.getElementById("introLine2").textContent = t("introLine2");
+        document.getElementById("sourceLabel").textContent = t("sourceLabel");
+        document.getElementById("relatedCodeLabel").textContent = t("relatedCodeLabel");
+        document.getElementById("commonTitle").textContent = t("commonTitle");
+        document.getElementById("pitchLabel").textContent = t("pitchLabel");
+        document.getElementById("pitchHelp").textContent = t("pitchHelp");
+        document.getElementById("blockLabel").textContent = t("blockLabel");
+        document.getElementById("blockHelp").textContent = t("blockHelp");
+        document.getElementById("op1Title").textContent = t("op1Title");
+        document.getElementById("dtHelp").textContent = t("dtHelp");
+        document.getElementById("multiHelp").textContent = t("multiHelp");
+        document.getElementById("tlHelp").textContent = t("tlHelp");
+        document.getElementById("arHelp").textContent = t("arHelp");
+        document.getElementById("d1rHelp").textContent = t("d1rHelp");
+        document.getElementById("rrHelp").textContent = t("rrHelp");
+        document.getElementById("envelopeTitle").textContent = t("envelopeTitle");
+        playButton.textContent = t("playButton");
+        stopButton.textContent = t("stopButton");
+        backLink.textContent = t("backLink");
+        document.getElementById("waveformTitle").textContent = t("waveformTitle");
+        document.getElementById("spectrumTitle").textContent = t("spectrumTitle");
+        document.getElementById("summaryTitle").textContent = t("summaryTitle");
+        if (!playbackActive && !releaseRequested) {
+          setStatus(t("statusReady"));
+        }
+        updateLabelsAndSummary();
+        drawIdleAudioVisuals();
+        drawEnvelope(readSettings());
       }
 
       function setStatus(message) {
@@ -571,7 +721,7 @@
 
         spectrumContext.fillStyle = "#d6b184";
         spectrumContext.font = "14px sans-serif";
-        spectrumContext.fillText("Play a tone to update the visuals.", 18, 28);
+        spectrumContext.fillText(t("idleVisuals"), 18, 28);
       }
 
       function stopVisualLoop() {
@@ -784,13 +934,13 @@
 
         envelopeContext.fillStyle = "#f6ead7";
         envelopeContext.font = "13px sans-serif";
-        envelopeContext.fillText("attack", x0 + 6, bottom - 8);
-        envelopeContext.fillText("decay", x1 + 6, top + 18);
-        envelopeContext.fillText("sustain", x2 + 6, top + 18);
-        envelopeContext.fillText("release", Math.max(x4 - 30, left + 6), top + 18);
+        envelopeContext.fillText(t("envAttack"), x0 + 6, bottom - 8);
+        envelopeContext.fillText(t("envDecay"), x1 + 6, top + 18);
+        envelopeContext.fillText(t("envSustain"), x2 + 6, top + 18);
+        envelopeContext.fillText(t("envRelease"), Math.max(x4 - 30, left + 6), top + 18);
 
         envelopeContext.fillStyle = "#d6b184";
-        envelopeContext.fillText("Orange: parameter guide. Cyan: output. Green: YM2612 internal envelope.", 18, 28);
+        envelopeContext.fillText(t("envLegend"), 18, 28);
       }
 
       function updateVisuals() {
@@ -829,7 +979,7 @@
         const low = settings.fnum & 0xff;
 
         summaryOutput.textContent = [
-          "Audible operator: channel 1, operator 4",
+          t("summaryAudible"),
           `DT/MULTI: (${settings.dt} << 4) | (${settings.multi} << 0)`,
           `TL: 0x${settings.tl.toString(16).padStart(2, "0")} (${settings.tl})`,
           `AR: 0x${settings.ar.toString(16).padStart(2, "0")} (${settings.ar})`,
@@ -839,10 +989,11 @@
           `Frequency high: 0x${high.toString(16).padStart(2, "0")}`,
           `Frequency low:  0x${low.toString(16).padStart(2, "0")}`,
           "",
-          "Other operators are muted with TL=0x7f.",
-          "Algorithm 7 is used so all operators are carriers.",
-          "Orange line: parameter guide.",
-          "Cyan line: output envelope measured from generated audio.",
+          t("summaryOtherOps"),
+          t("summaryAlgo"),
+          t("summaryOrange"),
+          t("summaryCyan"),
+          t("summaryGreen"),
         ].join("\n");
 
         drawEnvelope(settings);
@@ -1055,7 +1206,7 @@
           outputGain.connect(audioContext.destination);
         }
         if (!ym2612) {
-          setStatus("Loading YM2612 WASM...");
+          setStatus(t("statusLoading"));
           ym2612 = await createYm2612(ym2612ModuleFactory);
         }
         return ym2612;
@@ -1075,7 +1226,9 @@
 
           const sampleRate = chip.sampleRate(YM2612_CLOCK);
           if (typeof chip.generateStereoWithInternalEnvelope !== "function") {
-            setStatus("Internal envelope API unavailable until hard refresh.");
+            setStatus(currentLanguage === "ja"
+              ? "Internal envelope API は hard refresh 後に使えます。"
+              : "Internal envelope API unavailable until hard refresh.");
             playButton.disabled = false;
             return;
           }
@@ -1094,7 +1247,7 @@
           updateVisuals();
           playButton.disabled = false;
           stopButton.disabled = false;
-          setStatus("Holding key on...");
+          setStatus(t("statusHolding"));
           await runScheduler(chip, sampleRate);
         } catch (error) {
           console.error(error);
@@ -1122,7 +1275,7 @@
         if (ym2612) {
           keyOffSingleOperator(ym2612);
         }
-        setStatus("Key off... release phase.");
+        setStatus(t("statusKeyOff"));
       }
 
       Object.values(controls).forEach((input) => {
