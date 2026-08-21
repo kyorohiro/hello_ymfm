@@ -9,6 +9,17 @@ YM2612 の細かい話に入る前に、FM音源そのものの考え方を見�
 
 # YM2612 について
 
+YM2612 は Yamaha が開発した sound chip です。
+Sega Mega Drive / Genesis で使われました。
+
+この chip には次のような機能があります。
+
+- 6 channel の 4-operator FM 音源
+- 2 つの interval timer
+- 正弦波の low-frequency oscillator (LFO)
+- stereo output
+- channel 6 で PCM 風の sample playback に使える簡単な DAC playback path
+
 
 ```text
 http://www.chipdir.nl/pinusr/ym2612.txt
