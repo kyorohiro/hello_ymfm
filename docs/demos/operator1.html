@@ -71,6 +71,32 @@
         font-size: 0.9rem;
       }
 
+      .lang-toggle {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        margin: 0 0 16px;
+        padding: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .lang-toggle button {
+        padding: 8px 14px;
+        box-shadow: none;
+      }
+
+      .lang-toggle button.is-active {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: white;
+      }
+
+      .lang-toggle button:not(.is-active) {
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--ink);
+      }
+
       .note-box {
         margin: 0 0 16px;
         padding: 14px 16px;
@@ -97,8 +123,12 @@
         padding-left: 1.2rem;
       }
 
-      .lang-ja {
-        color: rgba(31, 27, 22, 0.9);
+      [data-lang] {
+        display: none;
+      }
+
+      [data-lang].is-visible {
+        display: block;
       }
 
       .editor-layout {
@@ -300,29 +330,51 @@
           <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/ex03_beep.cpp">ex03_beep.cpp</a>
         </p>
 
+        <div class="lang-toggle" aria-label="Language toggle">
+          <button id="langEnButton" class="is-active" type="button">English</button>
+          <button id="langJaButton" type="button">日本語</button>
+        </div>
+
         <section class="note-box">
-          <h2>What to learn here</h2>
-          <p>
-            This page uses one audible operator so you can study the envelope first before moving to
-            more complex FM setups.
-          </p>
-          <ul>
-            <li><strong>TL</strong>: how loud this operator is.</li>
-            <li><strong>AR</strong>: how fast the sound rises after key on.</li>
-            <li><strong>D1R</strong>: how fast it falls from the attack peak.</li>
-            <li><strong>D2R</strong>: how fast it keeps falling during the later sustain area.</li>
-            <li><strong>SL</strong>: the target level for that later falling stage.</li>
-            <li><strong>RR</strong>: how fast it fades after key off.</li>
-          </ul>
-          <p>
-            A useful way to read <strong>D2R</strong> and <strong>SL</strong> together is:
-            <strong>D2R = speed</strong>, <strong>SL = destination</strong>.
-          </p>
-          <p class="lang-ja">
-            ここでは audible な operator を 1 個だけ使っています。まず envelope の動きを理解するためのページです。
-            特に <strong>D2R は下がっていく速さ</strong>、<strong>SL はどこまで下がるか</strong>、
-            という読み方をすると分かりやすいです。
-          </p>
+          <div data-lang="en" class="is-visible">
+            <h2>What to learn here</h2>
+            <p>
+              This page uses one audible operator so you can study the envelope first before moving to
+              more complex FM setups.
+            </p>
+            <ul>
+              <li><strong>TL</strong>: how loud this operator is.</li>
+              <li><strong>AR</strong>: how fast the sound rises after key on.</li>
+              <li><strong>D1R</strong>: how fast it falls from the attack peak.</li>
+              <li><strong>D2R</strong>: how fast it keeps falling during the later stage.</li>
+              <li><strong>SL</strong>: the target level for that later falling stage.</li>
+              <li><strong>RR</strong>: how fast it fades after key off.</li>
+            </ul>
+            <p>
+              A useful way to read <strong>D2R</strong> and <strong>SL</strong> together is:
+              <strong>D2R = speed</strong>, <strong>SL = destination</strong>.
+            </p>
+          </div>
+          <div data-lang="ja">
+            <h2>このページで見ること</h2>
+            <p>
+              ここでは audible な operator を 1 個だけ使っています。まずは複雑な FM に入る前に、
+              1 operator の envelope の動きを見るためのページです。
+            </p>
+            <ul>
+              <li><strong>TL</strong>: この operator をどのくらいの大きさで鳴らすか。</li>
+              <li><strong>AR</strong>: key on 後、どのくらいの速さで立ち上がるか。</li>
+              <li><strong>D1R</strong>: attack の peak からどのくらいの速さで下がるか。</li>
+              <li><strong>D2R</strong>: その後の段階でどのくらいの速さで下がり続けるか。</li>
+              <li><strong>SL</strong>: その後の段階で、どこまで下がるか。</li>
+              <li><strong>RR</strong>: key off 後、どのくらいの速さで消えるか。</li>
+            </ul>
+            <p>
+              <strong>D2R は下がっていく速さ</strong>、
+              <strong>SL はどこまで下がるか</strong>
+              と読むと分かりやすいです。
+            </p>
+          </div>
         </section>
 
         <div class="editor-layout">
@@ -374,12 +426,14 @@
                 <div class="control">
                   <label for="d2r">D2R <span class="value" id="d2rValue">4</span></label>
                   <input id="d2r" type="range" min="0" max="31" value="4">
-                  <small>How fast the level keeps falling in the later stage. 日本語: sustain 以降でどれくらいの速さで下がるか。</small>
+                  <small data-lang="en" class="is-visible">How fast the level keeps falling in the later stage.</small>
+                  <small data-lang="ja">sustain 以降で、どれくらいの速さで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="sl">SL <span class="value" id="slValue">4</span></label>
                   <input id="sl" type="range" min="0" max="15" value="4">
-                  <small>The target level for that later stage. 日本語: sustain 付近でどこまで下がるか。</small>
+                  <small data-lang="en" class="is-visible">The target level for that later stage.</small>
+                  <small data-lang="ja">sustain 付近で、どこまで下がるか。</small>
                 </div>
                 <div class="control">
                   <label for="rr">RR <span class="value" id="rrValue">15</span></label>
@@ -451,6 +505,8 @@
 
       const playButton = document.getElementById("playButton");
       const stopButton = document.getElementById("stopButton");
+      const langEnButton = document.getElementById("langEnButton");
+      const langJaButton = document.getElementById("langJaButton");
       const status = document.getElementById("status");
       const summaryOutput = document.getElementById("summaryOutput");
       const waveCanvas = document.getElementById("waveCanvas");
@@ -473,6 +529,7 @@
       let isHolding = false;
       let releaseRequested = false;
       let releaseStartedAt = 0;
+      let currentLanguage = "en";
       let activeSources = [];
       let lastOutputEnvelope = null;
       let lastInternalEnvelope = null;
@@ -483,6 +540,15 @@
       const CHUNK_FRAMES = 2048;
       const SCHEDULE_AHEAD_SECONDS = 0.12;
       const CLICK_FADE_SECONDS = 0.008;
+
+      function updateLanguageUI() {
+        document.querySelectorAll("[data-lang]").forEach((element) => {
+          element.classList.toggle("is-visible", element.dataset.lang === currentLanguage);
+        });
+        langEnButton.classList.toggle("is-active", currentLanguage === "en");
+        langJaButton.classList.toggle("is-active", currentLanguage === "ja");
+      }
+
       function setStatus(message) {
         status.textContent = message;
       }
@@ -1076,12 +1142,21 @@
       stopButton.addEventListener("click", () => {
         forceStopPlayback();
       });
+      langEnButton.addEventListener("click", () => {
+        currentLanguage = "en";
+        updateLanguageUI();
+      });
+      langJaButton.addEventListener("click", () => {
+        currentLanguage = "ja";
+        updateLanguageUI();
+      });
       window.addEventListener("pointerup", () => {
         if (isHolding) {
           requestRelease();
         }
       });
 
+      updateLanguageUI();
       updateLabelsAndSummary();
       drawIdleAudioVisuals();
     </script>
