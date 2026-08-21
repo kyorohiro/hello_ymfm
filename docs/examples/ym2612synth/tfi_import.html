@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YM2612Synth TFI Import Demo</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      h1,
+      h2 {
+        margin: 0 0 12px;
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+      }
+
+      h2 {
+        margin-top: 28px;
+        font-size: 1.35rem;
+      }
+
+      p,
+      li {
+        line-height: 1.6;
+      }
+
+      pre,
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      pre {
+        margin: 0;
+        padding: 16px 18px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 24px 0 18px;
+        align-items: center;
+      }
+
+      button,
+      .link-button,
+      input[type="file"]::file-selector-button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      input[type="file"] {
+        font: inherit;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .status,
+      .summary {
+        min-height: 1.5em;
+        font-weight: 600;
+      }
+
+      .summary {
+        margin-bottom: 12px;
+      }
+
+      .meta {
+        margin: 0 0 16px;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>YM2612Synth TFI Import Demo</h1>
+
+        <p>
+          Load a 42-byte TFI patch, convert it into a
+          <code>YM2612Synth</code> preset, and play one test note through the
+          direct YM2612 WASM path.
+        </p>
+
+        <p class="meta">
+          Source:
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/tfi.js">web/tfi.js</a>
+          |
+          <a href="https://github.com/kyorohiro/hello_ymfm_wasm/blob/main/web/ym2612synth.js">web/ym2612synth.js</a>
+        </p>
+
+        <div class="actions">
+          <input id="tfiFile" type="file" accept=".tfi,application/octet-stream">
+          <button id="playButton" type="button" disabled>Play Test Note</button>
+          <button id="stopButton" type="button" disabled>Stop</button>
+          <a class="link-button" href="../../index.html">Back</a>
+        </div>
+
+        <div id="status" class="status">Load a TFI file.</div>
+
+        <h2>Summary</h2>
+        <div id="summary" class="summary">No TFI loaded.</div>
+
+        <h2>Converted Preset</h2>
+        <pre id="presetJson">{}</pre>
+      </section>
+    </main>
+
+    <script type="module" src="./tfi_import.js"></script>
+  </body>
+</html>

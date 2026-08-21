@@ -3,6 +3,10 @@ import {
   MEGADRIVE_FM_PRESET_ORDER,
 } from "../js/megasynth.js";
 import {
+  createTfiFromPreset,
+  parseTfi,
+} from "../js/tfi.js";
+import {
   buildKeyboard as buildKeyboardView,
   createFretboardLayout,
   createFretboardState,
@@ -71,6 +75,14 @@ const operatorHeaderRoot =
   document.getElementById("operatorHeader");
 const presetSelect =
   document.getElementById("presetSelect");
+const tfiFileInput =
+  document.getElementById("tfiFile");
+const exportTfiButton =
+  document.getElementById(
+    "exportTfiButton"
+  );
+const tfiSummary =
+  document.getElementById("tfiSummary");
 const envelopeCanvas =
   document.getElementById("envelopeCanvas");
 const envelopeContext =
@@ -127,47 +139,56 @@ const commonState = {
 
 let currentPresetName =
   "one-op-basic";
+let importedTfiName = "";
 
 const operatorStates = {
   1: {
     dt: 0,
     multi: 1,
     tl: 127,
+    rs: 0,
     ar: 31,
     d1r: 0,
     d2r: 0,
     sl: 0,
     rr: 15,
+    ssg: 0,
   },
   2: {
     dt: 0,
     multi: 1,
     tl: 127,
+    rs: 0,
     ar: 31,
     d1r: 0,
     d2r: 0,
     sl: 0,
     rr: 15,
+    ssg: 0,
   },
   3: {
     dt: 0,
     multi: 1,
     tl: 127,
+    rs: 0,
     ar: 31,
     d1r: 0,
     d2r: 0,
     sl: 0,
     rr: 15,
+    ssg: 0,
   },
   4: {
     dt: 0,
     multi: 1,
     tl: 8,
+    rs: 0,
     ar: 22,
     d1r: 6,
     d2r: 3,
     sl: 3,
     rr: 8,
+    ssg: 0,
   },
 };
 
@@ -348,6 +369,21 @@ function syncControlsFromState() {
   }
 }
 
+function updateTfiSummary() {
+  if (!tfiSummary) {
+    return;
+  }
+
+  if (!importedTfiName) {
+    tfiSummary.textContent =
+      "No TFI loaded.";
+    return;
+  }
+
+  tfiSummary.textContent =
+    `TFI: ${importedTfiName} -> Custom`;
+}
+
 function applyPresetState(
   presetName
 ) {
@@ -362,6 +398,7 @@ function applyPresetState(
 
   currentPresetName =
     presetName;
+  importedTfiName = "";
   commonState.algorithm =
     preset.algorithm ?? 7;
   commonState.feedback =
@@ -379,12 +416,76 @@ function applyPresetState(
   }
 
   syncControlsFromState();
+  updateTfiSummary();
   renderAlgorithmDiagram();
   drawEnvelopeGuide();
 
   if (synth) {
     applyPatchToVoices();
   }
+}
+
+function applyImportedTfiPreset(
+  fileName,
+  preset
+) {
+  currentPresetName =
+    "custom";
+  importedTfiName = fileName;
+  commonState.algorithm =
+    preset.algorithm ?? 7;
+  commonState.feedback =
+    preset.feedback ?? 0;
+
+  for (const operator of OPERATOR_NUMBERS) {
+    const nextOperator =
+      preset.operators?.[operator] ||
+      {};
+
+    operatorStates[operator] = {
+      ...operatorStates[operator],
+      ...nextOperator,
+    };
+  }
+
+  syncControlsFromState();
+  updateTfiSummary();
+  renderAlgorithmDiagram();
+  drawEnvelopeGuide();
+
+  if (synth) {
+    applyPatchToVoices();
+  }
+}
+
+function buildCurrentPresetState() {
+  const preset = {
+    algorithm:
+      commonState.algorithm,
+    feedback:
+      commonState.feedback,
+    operators: {},
+  };
+
+  for (const operator of OPERATOR_NUMBERS) {
+    preset.operators[operator] = {
+      ...operatorStates[operator],
+    };
+  }
+
+  return preset;
+}
+
+function createTfiExportName() {
+  const baseName =
+    importedTfiName
+      ? importedTfiName.replace(/\.tfi$/i, "")
+      : currentPresetName ===
+          "custom"
+        ? "ym2612-custom"
+        : currentPresetName;
+
+  return `${baseName}.tfi`;
 }
 
 function renderAlgorithmDiagram() {
@@ -755,6 +856,104 @@ function buildPresetSelect() {
     currentPresetName;
 }
 
+function buildTfiLoader() {
+  if (!tfiFileInput) {
+    return;
+  }
+
+  tfiFileInput.addEventListener(
+    "change",
+    async (event) => {
+      const [file] =
+        event.target.files || [];
+
+      if (!file) {
+        return;
+      }
+
+      try {
+        const arrayBuffer =
+          await file.arrayBuffer();
+        const preset =
+          parseTfi(
+            new Uint8Array(
+              arrayBuffer
+            )
+          );
+
+        stopAllNotes();
+        applyImportedTfiPreset(
+          file.name,
+          preset
+        );
+        setStatus(
+          `Loaded TFI ${file.name}.`
+        );
+      } catch (error) {
+        importedTfiName = "";
+        updateTfiSummary();
+        setStatus(
+          `Failed to load TFI: ${error.message}`
+        );
+      } finally {
+        tfiFileInput.value = "";
+      }
+    }
+  );
+
+  updateTfiSummary();
+}
+
+function buildTfiExporter() {
+  if (!exportTfiButton) {
+    return;
+  }
+
+  exportTfiButton.addEventListener(
+    "click",
+    () => {
+      try {
+        const preset =
+          buildCurrentPresetState();
+        const bytes =
+          createTfiFromPreset(
+            preset
+          );
+        const blob =
+          new Blob([bytes], {
+            type: "application/octet-stream",
+          });
+        const url =
+          URL.createObjectURL(
+            blob
+          );
+        const anchor =
+          document.createElement(
+            "a"
+          );
+        anchor.href = url;
+        anchor.download =
+          createTfiExportName();
+        document.body.appendChild(
+          anchor
+        );
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(
+          url
+        );
+        setStatus(
+          `Exported ${anchor.download}.`
+        );
+      } catch (error) {
+        setStatus(
+          `Failed to export TFI: ${error.message}`
+        );
+      }
+    }
+  );
+}
+
 inputController =
   createSynthInputController({
     getKeyLayout: () =>
@@ -806,6 +1005,8 @@ buildCommonControls();
 buildOperatorHeader();
 buildOperatorControls();
 buildPresetSelect();
+buildTfiLoader();
+buildTfiExporter();
 renderFretboardUi();
 buildKeyboard();
 applyPresetState(currentPresetName);

@@ -50,11 +50,13 @@ const DEFAULT_OPERATOR_STATE = Object.freeze({
   dt: 0,
   multi: 1,
   tl: 0x7f,
+  rs: 0,
   ar: 0,
   d1r: 0,
   d2r: 0,
   sl: 0,
   rr: 15,
+  ssg: 0,
 });
 
 const DEFAULT_CHANNEL_STATE = Object.freeze({
@@ -215,11 +217,14 @@ export class YM2612Synth {
    *   dt?: number,
    *   multi?: number,
    *   tl?: number,
+   *   rs?: number,
    *   ar?: number,
    *   d1r?: number,
+   *   sr?: number,
    *   d2r?: number,
    *   sl?: number,
    *   rr?: number,
+   *   ssg?: number,
    * }} params
    * @returns {void}
    */
@@ -253,12 +258,15 @@ export class YM2612Synth {
       this._write(port, 0x40 + channelOffset + slotOffset, state.tl);
     }
 
-    if (params.ar !== undefined) {
-      state.ar = validateRange("ar", params.ar, 0, 31);
+    if (params.rs !== undefined || params.ar !== undefined) {
+      const rs = params.rs !== undefined ? validateRange("rs", params.rs, 0, 3) : state.rs;
+      const ar = params.ar !== undefined ? validateRange("ar", params.ar, 0, 31) : state.ar;
+      state.rs = rs;
+      state.ar = ar;
 
-      // Attack Rate
+      // Rate Scaling / Attack Rate
       // base 0x50
-      this._write(port, 0x50 + channelOffset + slotOffset, state.ar);
+      this._write(port, 0x50 + channelOffset + slotOffset, (rs << 6) | ar);
     }
 
     if (params.d1r !== undefined) {
@@ -269,11 +277,17 @@ export class YM2612Synth {
       this._write(port, 0x60 + channelOffset + slotOffset, state.d1r);
     }
 
-    if (params.d2r !== undefined) {
-      state.d2r = validateRange("d2r", params.d2r, 0, 31);
+    if (params.sr !== undefined || params.d2r !== undefined) {
+      const sustainRate =
+        params.sr !== undefined
+          ? validateRange("sr", params.sr, 0, 31)
+          : validateRange("d2r", params.d2r, 0, 31);
+      state.d2r = sustainRate;
 
-      // Secondary Decay Rate
-      // base 0x70
+      // Sustain Rate / "D2R"
+      // YM2612 register 0x70 is the sustain rate register.
+      // This synth keeps `d2r` for the current learning/demo naming,
+      // but also accepts `sr` so TFI import can map to the same place.
       this._write(port, 0x70 + channelOffset + slotOffset, state.d2r);
     }
 
@@ -286,6 +300,14 @@ export class YM2612Synth {
       // Sustain Level / Release Rate
       // base 0x80
       this._write(port, 0x80 + channelOffset + slotOffset, (sl << 4) | rr);
+    }
+
+    if (params.ssg !== undefined) {
+      state.ssg = validateRange("ssg", params.ssg, 0, 15);
+
+      // SSG-EG
+      // base 0x90
+      this._write(port, 0x90 + channelOffset + slotOffset, state.ssg);
     }
   }
 

@@ -218,6 +218,31 @@
         line-height: 1.2;
       }
 
+      .tfi-file {
+        max-width: 220px;
+        font: inherit;
+        font-size: 0.74rem;
+      }
+
+      .tfi-file::file-selector-button {
+        margin-right: 8px;
+        padding: 4px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .tfi-summary {
+        margin: 0 0 8px;
+        font-size: 0.72rem;
+        color: rgba(31, 27, 22, 0.78);
+      }
+
       .operator-stack {
         display: grid;
         gap: 10px;
@@ -663,7 +688,11 @@
               <div class="preset-row">
                 <label for="presetSelect">Preset</label>
                 <select id="presetSelect"></select>
+                <label for="tfiFile">TFI</label>
+                <input id="tfiFile" class="tfi-file" type="file" accept=".tfi,application/octet-stream">
+                <button id="exportTfiButton" class="toolbar-button" type="button">Export TFI</button>
               </div>
+              <div id="tfiSummary" class="tfi-summary">No TFI loaded.</div>
               <div class="operator-stack">
                 <div class="operator-header-row">
                   <div class="operator-header-spacer"></div>
