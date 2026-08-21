@@ -42,6 +42,8 @@ See `LICENSE` for the license text included with this repository.
   - http://retropc.net/cisc/m88/
 - `ymfm` examples:
   - https://github.com/aaronsgiles/ymfm/tree/main/examples
+- `libymfm.wasm`:
+  - https://github.com/h1romas4/libymfm.wasm
 - `ymfm` source for YM2612 registers and behavior:
   - `src/ymfm_opn.h`
   - `src/ymfm_opn.cpp`
@@ -55,6 +57,8 @@ See `LICENSE` for the license text included with this repository.
   - https://chipmusic.org/music#s=ym2612
 - GENajam:
   - https://github.com/jamatarmusic/GENajam
+- megatoy:
+  - https://github.com/ulalume/megatoy
 - VGM specification:
   - https://vgmrips.net/wiki/VGM_Specification
 - SMS Power:
