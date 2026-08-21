@@ -12,6 +12,22 @@ SOURCE_HTML="${ROOT_DIR}/docs/synth/index.html"
 SOURCE_JS="${ROOT_DIR}/docs/synth/synth.js"
 SOURCE_JS_DIR="${ROOT_DIR}/docs/js"
 SOURCE_GENERATED_DIR="${ROOT_DIR}/docs/generated"
+SYNTH_SUPPORT_DIR="${ROOT_DIR}/docs/synth"
+SYNTH_FILES="
+synth.js
+synth_controls.js
+synth_envelope.js
+synth_input.js
+synth_keyboard.js
+synth_runtime.js
+"
+RUNTIME_FILES="
+megasynth.js
+megadrive-fm-presets.js
+ym2612.js
+ym2612synth.js
+ym2612-worklet.js
+"
 
 if [ ! -f "${SOURCE_HTML}" ]; then
   echo "error: missing file: ${SOURCE_HTML}" >&2
@@ -45,18 +61,38 @@ rm -f "${ZIP_PATH}"
 mkdir -p "${STAGE_DIR}/js" "${STAGE_DIR}/generated"
 
 cp "${SOURCE_HTML}" "${STAGE_DIR}/index.html"
-cp "${SOURCE_JS}" "${STAGE_DIR}/synth.js"
-cp "${SOURCE_JS_DIR}/megasynth.js" "${STAGE_DIR}/js/megasynth.js"
-cp "${SOURCE_JS_DIR}/megadrive-fm-presets.js" "${STAGE_DIR}/js/megadrive-fm-presets.js"
-cp "${SOURCE_JS_DIR}/ym2612.js" "${STAGE_DIR}/js/ym2612.js"
-cp "${SOURCE_JS_DIR}/ym2612synth.js" "${STAGE_DIR}/js/ym2612synth.js"
-cp "${SOURCE_JS_DIR}/ym2612-worklet.js" "${STAGE_DIR}/js/ym2612-worklet.js"
+
+for file in ${SYNTH_FILES}; do
+  src="${SYNTH_SUPPORT_DIR}/${file}"
+  dst="${STAGE_DIR}/${file}"
+
+  if [ ! -f "${src}" ]; then
+    echo "error: missing synth file: ${src}" >&2
+    exit 1
+  fi
+
+  cp "${src}" "${dst}"
+done
+
+for file in ${RUNTIME_FILES}; do
+  src="${SOURCE_JS_DIR}/${file}"
+  dst="${STAGE_DIR}/js/${file}"
+
+  if [ ! -f "${src}" ]; then
+    echo "error: missing runtime file: ${src}" >&2
+    exit 1
+  fi
+
+  cp "${src}" "${dst}"
+done
+
 cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.js" "${STAGE_DIR}/generated/ym2612_wasm.js"
 cp "${SOURCE_GENERATED_DIR}/ym2612_wasm.wasm" "${STAGE_DIR}/generated/ym2612_wasm.wasm"
 
 perl -0pi -e 's#import "\\./synth\\.js";#import "./synth.js";#g' "${STAGE_DIR}/index.html"
 perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g; s#\.\./js/ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\.\./generated/#./generated/#g' "${STAGE_DIR}/synth.js"
-perl -0pi -e 's#\\./ym2612-worklet\\.js#./js/ym2612-worklet.js#g; s#\\./generated/ym2612_wasm\\.wasm#./generated/ym2612_wasm.wasm#g' "${STAGE_DIR}/js/megasynth.js"
+perl -0pi -e 's#\.\./js/megasynth\.js#./js/megasynth.js#g#' "${STAGE_DIR}/synth_runtime.js"
+perl -0pi -e 's#\./ym2612-worklet\.js#./js/ym2612-worklet.js#g; s#\./generated/ym2612_wasm\.wasm#./generated/ym2612_wasm.wasm#g' "${STAGE_DIR}/js/megasynth.js"
 perl -0pi -e 's#import ym2612ModuleFactory from "\\.\\./generated/ym2612_wasm\\.js";#import ym2612ModuleFactory from "../generated/ym2612_wasm.js";#g' "${STAGE_DIR}/js/ym2612-worklet.js"
 
 (
