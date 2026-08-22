@@ -443,6 +443,12 @@ export class YM2612Synth {
       this.transport.write(command);
     }
   }
+
+  getState() {
+    return structuredCloneCompat({
+      channels: this.channels,
+    });
+  }
 }
 
 function createDefaultChannelState() {
@@ -486,4 +492,12 @@ function validateRange(name, value, min, max) {
     throw new Error(`${name} must be an integer in range ${min}..${max}, got ${value}`);
   }
   return value;
+}
+
+function structuredCloneCompat(value) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value));
 }

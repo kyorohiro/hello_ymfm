@@ -219,6 +219,34 @@ const looperStateRoot =
   document.getElementById(
     "looperState"
   );
+const eventRecordStartButton =
+  document.getElementById(
+    "eventRecordStartButton"
+  );
+const eventRecordStopButton =
+  document.getElementById(
+    "eventRecordStopButton"
+  );
+const eventRecordPlayButton =
+  document.getElementById(
+    "eventRecordPlayButton"
+  );
+const eventRecordExportButton =
+  document.getElementById(
+    "eventRecordExportButton"
+  );
+const eventRecordImportInput =
+  document.getElementById(
+    "eventRecordImportInput"
+  );
+const eventRecordIgnoreOperators =
+  document.getElementById(
+    "eventRecordIgnoreOperators"
+  );
+const eventRecordStateRoot =
+  document.getElementById(
+    "eventRecordState"
+  );
 
 const ALGORITHM_DESCRIPTIONS = [
   'ALGO 0 <span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span> -> <span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span> -> OUT',
@@ -256,6 +284,8 @@ const OUTPUT_ENVELOPE_SLOW_SCALE =
   0.12;
 let audioInitStarted = false;
 let looper = null;
+let eventRecordSessionActive =
+  false;
 
 const voices =
   createVoices(VOICE_COUNT);
@@ -386,6 +416,95 @@ function updateLooperUi() {
   );
 }
 
+function updateEventRecordUi() {
+  const recordingSource =
+    megaSynth;
+  const recording =
+    recordingSource?.exportRecording?.() ??
+    null;
+  const isRecording =
+    recordingSource?.isRecording?.() ??
+    false;
+  const isPlaying =
+    recordingSource?.isRecordingPlaybackActive?.() ??
+    false;
+  const commandCount =
+    recording?.commands?.length ?? 0;
+
+  if (eventRecordStartButton) {
+    eventRecordStartButton.disabled =
+      false;
+    eventRecordStartButton.textContent =
+      eventRecordSessionActive
+        ? "Event Rec Stop"
+        : "Event Rec Start";
+  }
+
+  if (eventRecordStopButton) {
+    eventRecordStopButton.hidden =
+      !eventRecordSessionActive;
+    eventRecordStopButton.disabled =
+      !eventRecordSessionActive;
+    eventRecordStopButton.textContent =
+      isRecording
+        ? "Stop"
+        : "Record";
+  }
+
+  if (eventRecordPlayButton) {
+    eventRecordPlayButton.disabled =
+      !megaSynth ||
+      isRecording ||
+      commandCount === 0;
+    eventRecordPlayButton.textContent =
+      isPlaying
+        ? "Stop Play"
+        : "Play";
+  }
+
+  if (eventRecordExportButton) {
+    eventRecordExportButton.disabled =
+      !megaSynth ||
+      isRecording ||
+      commandCount === 0;
+  }
+
+  if (eventRecordStateRoot) {
+    if (isRecording) {
+      eventRecordStateRoot.textContent =
+        `Event: REC ${commandCount}`;
+    } else if (
+      eventRecordSessionActive
+    ) {
+      eventRecordStateRoot.textContent =
+        commandCount > 0
+          ? `Event: ready ${commandCount}`
+          : "Event: ready";
+    } else if (commandCount > 0) {
+      eventRecordStateRoot.textContent =
+        isPlaying
+          ? `Event: LOOP ${commandCount}`
+          : `Event: ${commandCount} cmds`;
+    } else {
+      eventRecordStateRoot.textContent =
+        "Event: none";
+    }
+  }
+}
+
+function buildEventPlaybackOptions() {
+  const ignoreOperators =
+    eventRecordIgnoreOperators?.checked ===
+    true;
+
+  return {
+    loop: true,
+    ignoreOperators,
+    ignorePatch: ignoreOperators,
+    reset: !ignoreOperators,
+  };
+}
+
 function handleLooperStateChange(
   detail
 ) {
@@ -429,6 +548,189 @@ function handleLooperStateChange(
     setStatus(
       "Recording canceled."
     );
+  }
+}
+
+async function toggleEventRecordSession() {
+  await ensureAudioReady();
+
+  if (!megaSynth) {
+    return;
+  }
+
+  if (eventRecordSessionActive) {
+    if (megaSynth.isRecording()) {
+      const recording =
+        megaSynth.stopRecord();
+      if (
+        recording?.commands?.length
+      ) {
+        megaSynth.playRecording(
+          recording,
+          buildEventPlaybackOptions()
+        );
+      }
+    }
+
+    eventRecordSessionActive =
+      false;
+    updateEventRecordUi();
+    setStatus(
+      "Event record mode stopped."
+    );
+    return;
+  }
+
+  eventRecordSessionActive = true;
+  updateEventRecordUi();
+  setStatus(
+    "Event record mode ready. Press Record or Space."
+  );
+}
+
+async function toggleEventTakeRecording() {
+  await ensureAudioReady();
+
+  if (
+    !megaSynth ||
+    !eventRecordSessionActive
+  ) {
+    setStatus(
+      "Start Event Rec first."
+    );
+    return;
+  }
+
+  if (megaSynth.isRecording()) {
+    const recording =
+      megaSynth.stopRecord();
+    if (
+      recording?.commands?.length
+    ) {
+      megaSynth.playRecording(
+        recording,
+        buildEventPlaybackOptions()
+      );
+    }
+    updateEventRecordUi();
+    setStatus(
+      `Event recording stopped. ${recording?.commands?.length ?? 0} commands looping.`
+    );
+    return;
+  }
+
+  megaSynth.startRecord();
+  updateEventRecordUi();
+  setStatus(
+    "Event recording started."
+  );
+}
+
+async function playEventRecording() {
+  await ensureAudioReady();
+
+  if (!megaSynth) {
+    return;
+  }
+
+  if (
+    megaSynth.isRecordingPlaybackActive()
+  ) {
+    megaSynth.stopRecordingPlayback();
+    updateEventRecordUi();
+    setStatus(
+      "Event playback stopped."
+    );
+    return;
+  }
+
+  const recording =
+    megaSynth.playRecording(
+      null,
+      buildEventPlaybackOptions()
+    );
+  updateEventRecordUi();
+  setStatus(
+    `Playing recorded event stream (${recording?.commands?.length ?? 0} commands) in a loop.`
+  );
+}
+
+function exportEventRecording() {
+  if (!megaSynth) {
+    return;
+  }
+
+  const recording =
+    megaSynth.exportRecording();
+
+  if (!recording) {
+    setStatus(
+      "No event recording to export."
+    );
+    return;
+  }
+
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          recording,
+          null,
+          2
+        ),
+      ],
+      {
+        type: "application/json",
+      }
+    );
+  const url =
+    URL.createObjectURL(blob);
+  const anchor =
+    document.createElement("a");
+  anchor.href = url;
+  anchor.download =
+    "megasynth-recording.json";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  setStatus(
+    `Exported ${recording.commands?.length ?? 0} event commands.`
+  );
+}
+
+async function importEventRecording(
+  event
+) {
+  const [file] =
+    event.target.files || [];
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    await ensureAudioReady();
+    const text =
+      await file.text();
+    const recording =
+      JSON.parse(text);
+    megaSynth?.importRecording(
+      recording
+    );
+    updateEventRecordUi();
+    setStatus(
+      `Imported event recording: ${file.name}.`
+    );
+  } catch (error) {
+    setStatus(
+      `Failed to import event recording: ${error.message}`
+    );
+  } finally {
+    if (eventRecordImportInput) {
+      eventRecordImportInput.value =
+        "";
+    }
   }
 }
 
@@ -1378,6 +1680,15 @@ function clearLooper() {
   });
 }
 
+function togglePrimaryRecordAction() {
+  if (eventRecordSessionActive) {
+    void toggleEventTakeRecording();
+    return;
+  }
+
+  void toggleLooperRecord();
+}
+
 async function initializeDirectAudio() {
   updateKeyboardAvailability();
 
@@ -1467,6 +1778,7 @@ async function initializeDirectAudio() {
     `Audio ready. YM2612 via MegaDriveSynth at ${audioContext.sampleRate} Hz.`
   );
   updateLooperUi();
+  updateEventRecordUi();
 }
 
 async function ensureAudioReady() {
@@ -1734,7 +2046,7 @@ inputController =
       renderFretboardUi();
     },
     onToggleRecord: () => {
-      void toggleLooperRecord();
+      togglePrimaryRecordAction();
     },
   });
 
@@ -1756,7 +2068,7 @@ looperStartButton?.addEventListener(
 looperRecordButton?.addEventListener(
   "click",
   () => {
-    void toggleLooperRecord();
+    togglePrimaryRecordAction();
   }
 );
 looperStopButton?.addEventListener(
@@ -1771,8 +2083,41 @@ looperClearButton?.addEventListener(
     clearLooper();
   }
 );
+eventRecordStartButton?.addEventListener(
+  "click",
+  () => {
+    void toggleEventRecordSession();
+  }
+);
+eventRecordStopButton?.addEventListener(
+  "click",
+  () => {
+    void toggleEventTakeRecording();
+  }
+);
+eventRecordPlayButton?.addEventListener(
+  "click",
+  () => {
+    void playEventRecording();
+  }
+);
+eventRecordExportButton?.addEventListener(
+  "click",
+  () => {
+    exportEventRecording();
+  }
+);
+eventRecordImportInput?.addEventListener(
+  "change",
+  (event) => {
+    void importEventRecording(
+      event
+    );
+  }
+);
 renderFretboardUi();
 buildKeyboard();
 applyPresetState(currentPresetName);
 updateKeyboardAvailability();
 updateLooperUi();
+updateEventRecordUi();

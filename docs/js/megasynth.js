@@ -1,4 +1,7 @@
 import {
+  MegaSynthRecordingManager,
+} from "./megasynth_recording.js";
+import {
   YM2612Synth,
   YM2612WorkletTransport,
 } from "./ym2612synth.js";
@@ -45,6 +48,9 @@ export class MegaSynth {
       options.outputNode ?? null;
 
     this.node = null;
+    this.recordingManager = null;
+    this._recordingHooksInstalled =
+      false;
 
     /**
      * YM2612Synth instance.
@@ -107,6 +113,55 @@ export class MegaSynth {
 
   reset() {
     this.fm?.reset();
+  }
+
+  startRecord() {
+    this.#ensureRecordingManager();
+    return this.recordingManager.start();
+  }
+
+  stopRecord() {
+    this.#ensureRecordingManager();
+    return this.recordingManager.stop();
+  }
+
+  exportRecording() {
+    this.#ensureRecordingManager();
+    return this.recordingManager.exportRecording();
+  }
+
+  importRecording(recording) {
+    this.#ensureRecordingManager();
+    return this.recordingManager.importRecording(
+      recording
+    );
+  }
+
+  playRecording(recording = null, options = {}) {
+    this.#ensureRecordingManager();
+    return this.recordingManager.play(
+      recording,
+      options
+    );
+  }
+
+  stopRecordingPlayback() {
+    this.#ensureRecordingManager();
+    this.recordingManager.stopPlayback();
+  }
+
+  isRecording() {
+    return (
+      this.recordingManager?.isRecording() ??
+      false
+    );
+  }
+
+  isRecordingPlaybackActive() {
+    return (
+      this.recordingManager?.isPlaying() ??
+      false
+    );
   }
 
   async close() {
@@ -202,6 +257,8 @@ export class MegaSynth {
       new YM2612Synth({
         transport,
       });
+    this.#ensureRecordingManager();
+    this.#installRecordingHooks();
   }
 
   #waitForWorkletReady() {
@@ -241,6 +298,120 @@ export class MegaSynth {
 
       this.node.port.start();
     });
+  }
+
+  #ensureRecordingManager() {
+    if (!this.recordingManager) {
+      this.recordingManager =
+        new MegaSynthRecordingManager({
+          synth: this.fm,
+          now: () =>
+            this.audioContext
+              ? this.audioContext.currentTime
+              : performance.now() /
+                  1000,
+        });
+      return;
+    }
+
+    if (this.fm) {
+      this.recordingManager.attachSynth(
+        this.fm
+      );
+    }
+  }
+
+  #installRecordingHooks() {
+    if (
+      this._recordingHooksInstalled ||
+      !this.fm
+    ) {
+      return;
+    }
+
+    this.#wrapFmMethod(
+      "reset",
+      () => ({
+        type: "reset",
+      })
+    );
+    this.#wrapFmMethod(
+      "setOperator",
+      (channel, operator, params) => ({
+        type: "setOperator",
+        channel,
+        operator,
+        params,
+      })
+    );
+    this.#wrapFmMethod(
+      "setAlgo",
+      (
+        channel,
+        algorithm,
+        feedback = 0
+      ) => ({
+        type: "setAlgo",
+        channel,
+        algorithm,
+        feedback,
+      })
+    );
+    this.#wrapFmMethod(
+      "setPan",
+      (channel, left, right) => ({
+        type: "setPan",
+        channel,
+        left,
+        right,
+      })
+    );
+    this.#wrapFmMethod(
+      "noteOn",
+      (channel, block, fnum) => ({
+        type: "noteOn",
+        channel,
+        block,
+        fnum,
+      })
+    );
+    this.#wrapFmMethod(
+      "noteOff",
+      (channel) => ({
+        type: "noteOff",
+        channel,
+      })
+    );
+
+    this._recordingHooksInstalled =
+      true;
+  }
+
+  #wrapFmMethod(
+    methodName,
+    toCommand
+  ) {
+    const originalMethod =
+      this.fm?.[methodName];
+
+    if (typeof originalMethod !== "function") {
+      return;
+    }
+
+    this.fm[methodName] = (
+      ...args
+    ) => {
+      const result =
+        originalMethod.apply(
+          this.fm,
+          args
+        );
+
+      this.recordingManager?.recordCommand(
+        toCommand(...args)
+      );
+      return result;
+    };
   }
 }
 

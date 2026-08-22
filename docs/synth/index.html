@@ -121,6 +121,36 @@
         color: rgba(31, 27, 22, 0.82);
       }
 
+      .event-record-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 0 0 8px;
+        padding: 6px 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(110, 122, 146, 0.18);
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .toolbar-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 24px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(110, 122, 146, 0.36);
+        background: rgba(255, 255, 255, 0.45);
+        font-size: 0.68rem;
+        line-height: 1.2;
+        color: rgba(31, 27, 22, 0.82);
+      }
+
+      .toolbar-check input {
+        margin: 0;
+      }
+
       .layout {
         display: grid;
         grid-template-columns: 1fr;
@@ -755,6 +785,19 @@
               <button id="looperStopButton" class="toolbar-button" type="button" disabled>Undo</button>
               <button id="looperClearButton" class="toolbar-button" type="button" disabled>Clear</button>
               <div id="looperState" class="looper-state">Looper idle.</div>
+            </div>
+            <div class="event-record-row">
+              <button id="eventRecordStartButton" class="toolbar-button" type="button">Event Rec Start</button>
+              <button id="eventRecordStopButton" class="toolbar-button" type="button" hidden disabled>Record</button>
+              <button id="eventRecordPlayButton" class="toolbar-button" type="button" disabled>Play</button>
+              <button id="eventRecordExportButton" class="toolbar-button" type="button" disabled>Export</button>
+              <label for="eventRecordImportInput" class="toolbar-button">Import</label>
+              <input id="eventRecordImportInput" type="file" accept=".json,application/json" hidden>
+              <label class="toolbar-check" for="eventRecordIgnoreOperators">
+                <input id="eventRecordIgnoreOperators" type="checkbox">
+                Ignore Op
+              </label>
+              <div id="eventRecordState" class="looper-state">Event: none</div>
             </div>
             <div class="status" id="status">Press any key or click a pad to start audio.</div>
 
