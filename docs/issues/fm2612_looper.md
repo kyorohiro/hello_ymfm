@@ -6,9 +6,9 @@ Last updated: 2026-08-22
 
 - Add a simple looper inspired by BOSS-style loopers to Tetorica FM2612.
 - Play YM2612 from PC keyboard or similar input.
-- Record the performed events and turn them into a loop.
-- Do not record rendered audio first.
-- Record play events so the sound can still be edited later.
+- Record the performed result as loop audio for stable playback.
+- Keep performed events as optional metadata for export and later analysis.
+- Prefer a practical looper first, then keep the event log for VGM/MML-related future work.
 
 ## Planned files
 
@@ -19,6 +19,7 @@ Current direction:
 
 - keep `MegaSynth` as the browser/runtime wrapper
 - add looper behavior in a separate file instead of growing `megasynth.js` too much
+- keep loop playback separate from live YM2612 voice allocation
 
 Recommended export:
 
@@ -63,9 +64,59 @@ YM2612
 In short:
 
 - `MegaSynth` = runtime / playback environment
-- `MegaSynthLooper` = musical event recording / looping layer
+- `MegaSynthLooper` = loop recording / metadata / export-oriented layer
 
-## Basic concept
+## New playback concept
+
+The original event-replay looper was attractive for editability, but it still had a hard practical problem:
+
+- YM2612 has only 6 FM channels.
+- Even with separate live/playback synth instances, event-replay units can still fight over channel usage.
+- That means overdub playback can cut notes unexpectedly.
+
+Observed in practice on `docs/synth`:
+
+- unit 1 is mostly stable
+- unit 2 and later can still sound corrupted
+- notes can cut out partway through playback
+- improving scheduling helps a little, but does not remove the core instability
+
+So the new direction is:
+
+```txt
+During recording:
+  play live YM2612
+  record audio result for the new unit
+  also record note/preset metadata as optional side data
+
+During playback:
+  replay recorded audio units
+  do not regenerate every old unit through YM2612 each time
+```
+
+This is much closer to a BOSS-style looper and should be much more stable.
+
+## Why audio-first loop playback
+
+Advantages:
+
+- avoids FM channel conflicts between units
+- easier overdub playback
+- lighter CPU/runtime behavior during loop playback
+- simpler mental model for users
+
+Trade-offs:
+
+- changing preset later does not rewrite already-recorded sound
+- loop playback is no longer "fully live YM2612 regeneration"
+- export needs the side metadata, not the recorded audio alone
+
+That trade-off is acceptable here.
+
+The looper should behave as a musical tool first.
+Export/edit metadata can stay as an optional parallel record.
+
+## Basic operation
 
 The operation should stay as simple as possible.
 
@@ -82,7 +133,7 @@ Loop Playback starts
 Space
   ↓
 Record Unit 2
-Unit 1 keeps playing
+Unit 1 audio keeps playing
 Space
   ↓
 Stop Recording Unit 2
@@ -92,13 +143,6 @@ Record Unit 3
 ...
 Looper Stop
 ```
-
-`Space` should mean only:
-
-- `Record ON`
-- `Record OFF`
-
-Looper start / stop should stay separate.
 
 ## Unit
 
@@ -237,6 +281,105 @@ loopLength === null
 ```
 
 ## Unit data structure
+
+The structure should now separate:
+
+- audio used for practical playback
+- event metadata kept for export or analysis
+
+Candidate shape:
+
+```js
+{
+  id: "unit-1",
+  muted: false,
+  audioBuffer: AudioBuffer | null,
+  audioDuration: 0,
+  patch: { ... } | null,
+  events: [
+    { time: 0.00, type: "noteOn", channel: 0, block: 4, fnum: 553 },
+    { time: 0.22, type: "noteOff", channel: 0 },
+  ],
+}
+```
+
+`audioBuffer` is the main playback source.
+
+`events` and `patch` are side information for:
+
+- export
+- analysis
+- future transform tools
+
+## Runtime split
+
+The synth demo already uses separate runtime paths for:
+
+- live synth
+- loop synth
+
+The next practical audio-looper step is slightly different:
+
+- live synth output
+- loop audio playback
+
+So the output graph should move toward:
+
+```txt
+Live YM2612 -> liveOutputBus -> destination
+                        └----> liveCaptureNode
+
+Loop AudioBufferSource -> destination
+```
+
+Important detail:
+
+- record only the live bus for the new unit
+- do not re-record already-playing loop audio into the next unit unless an intentional "bounce" mode is added later
+
+## Near-term implementation plan
+
+1. Keep event recording for now.
+2. Add audio capture from the live output bus.
+3. When a unit recording ends:
+   - finalize captured audio
+   - store it as the unit's playback source
+4. Change loop playback to prefer unit audio instead of event replay.
+5. Keep event replay only as a debug / fallback path if needed.
+
+## Important current conclusion
+
+At this point, the event-replay looper should no longer be treated as the main practical path for overdub looping.
+
+It is still useful for:
+
+- metadata capture
+- export-related experiments
+- understanding timing / patch changes
+
+But for a user-facing looper experience, the main playback path should become:
+
+- record live output audio
+- replay recorded audio units
+
+That is the direction to prioritize next.
+
+## Notes on export
+
+The recorded audio should not become the export source for YM2612/VGM-like formats.
+
+Instead:
+
+- `events`
+- `patch`
+- later maybe register-write history
+
+should remain the source for export.
+
+So the looper becomes:
+
+- practical playback tool by audio
+- export helper by metadata
 
 Concept:
 

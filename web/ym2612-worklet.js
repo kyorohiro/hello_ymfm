@@ -10,6 +10,11 @@ class YM2612Processor extends AudioWorkletProcessor {
     this.envelopeRmsBuckets = [];
     this.envelopeBucketSize = 512;
     this.envelopeMessageSize = 16;
+    this.captureActive = false;
+    this.captureId = null;
+    this.captureLeftChunks = [];
+    this.captureRightChunks = [];
+    this.captureFrameCount = 0;
 
     this.port.onmessage = (event) => {
       const command = event.data;
@@ -68,6 +73,30 @@ class YM2612Processor extends AudioWorkletProcessor {
 
     if (command.type === "reset") {
       this.ym2612.reset();
+      return;
+    }
+
+    if (command.type === "start-capture") {
+      this.captureActive = true;
+      this.captureId =
+        command.captureId ?? null;
+      this.captureLeftChunks = [];
+      this.captureRightChunks = [];
+      this.captureFrameCount = 0;
+      return;
+    }
+
+    if (command.type === "stop-capture") {
+      this.flushCapture();
+      return;
+    }
+
+    if (command.type === "discard-capture") {
+      this.captureActive = false;
+      this.captureId = null;
+      this.captureLeftChunks = [];
+      this.captureRightChunks = [];
+      this.captureFrameCount = 0;
     }
   }
 
@@ -92,6 +121,7 @@ class YM2612Processor extends AudioWorkletProcessor {
 
     leftOut.set(left);
     rightOut.set(right);
+    this.capturePcm(left, right);
     this.captureOutputEnvelope(
       left,
       right
@@ -172,6 +202,67 @@ class YM2612Processor extends AudioWorkletProcessor {
         this.envelopeMessageSize
       );
     }
+  }
+
+  capturePcm(left, right) {
+    if (!this.captureActive) {
+      return;
+    }
+
+    this.captureLeftChunks.push(
+      new Float32Array(left)
+    );
+    this.captureRightChunks.push(
+      new Float32Array(right)
+    );
+    this.captureFrameCount +=
+      Math.min(
+        left.length,
+        right.length
+      );
+  }
+
+  flushCapture() {
+    const captureId =
+      this.captureId;
+    const frameCount =
+      this.captureFrameCount;
+    const leftData =
+      new Float32Array(frameCount);
+    const rightData =
+      new Float32Array(frameCount);
+
+    let writeOffset = 0;
+    for (const chunk of this.captureLeftChunks) {
+      leftData.set(chunk, writeOffset);
+      writeOffset += chunk.length;
+    }
+
+    writeOffset = 0;
+    for (const chunk of this.captureRightChunks) {
+      rightData.set(chunk, writeOffset);
+      writeOffset += chunk.length;
+    }
+
+    this.captureActive = false;
+    this.captureId = null;
+    this.captureLeftChunks = [];
+    this.captureRightChunks = [];
+    this.captureFrameCount = 0;
+
+    this.port.postMessage(
+      {
+        type: "capture-stopped",
+        captureId,
+        frameCount,
+        left: leftData,
+        right: rightData,
+      },
+      [
+        leftData.buffer,
+        rightData.buffer,
+      ]
+    );
   }
 }
 
