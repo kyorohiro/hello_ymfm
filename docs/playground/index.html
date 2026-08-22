@@ -1,262 +1,282 @@
 <!doctype html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <title>YM2612Synth Wasm Playground</title>
-
+    <title>Tetorica FM2612 Playground</title>
     <style>
-        :root {
-            color-scheme: light;
-            --bg: #f4efe4;
-            --panel: #fffaf0;
-            --ink: #1f1b16;
-            --accent: #b4572f;
-            --accent-dark: #7e381c;
-            --line: #d7c8ac;
-            --code: #2b241d;
-            --code-ink: #f6ead7;
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: #fffaf0;
+        --ink: #1f1b16;
+        --accent: #b4572f;
+        --accent-dark: #7e381c;
+        --line: #d7c8ac;
+        --code: #2b241d;
+        --code-ink: #f6ead7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, #fff8df 0, transparent 28%),
+          radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
+          linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
+      }
+
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 28px 16px 40px;
+      }
+
+      .panel {
+        background: color-mix(in srgb, var(--panel) 90%, white 10%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 1.08;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        font-size: clamp(1.8rem, 4vw, 3rem);
+      }
+
+      h2 {
+        font-size: 0.92rem;
+        margin-bottom: 8px;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .subtext {
+        max-width: 720px;
+        color: rgba(31, 27, 22, 0.8);
+        font-size: 0.92rem;
+      }
+
+      .link-button,
+      button,
+      select {
+        font: inherit;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      button,
+      .link-button,
+      select {
+        min-height: 34px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(126, 56, 28, 0.16);
+      }
+
+      button,
+      .link-button {
+        appearance: none;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.72;
+      }
+
+      select {
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--ink);
+      }
+
+      .status {
+        min-height: 1.3em;
+        margin-bottom: 12px;
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.38);
+      }
+
+      textarea,
+      pre,
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 420px;
+        resize: vertical;
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(43, 36, 29, 0.12);
+        background: var(--code);
+        color: var(--code-ink);
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      pre {
+        margin: 0;
+        min-height: 188px;
+        padding: 14px;
+        border-radius: 16px;
+        background: var(--code);
+        color: var(--code-ink);
+        font-size: 0.82rem;
+        line-height: 1.45;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      li {
+        margin-bottom: 6px;
+        line-height: 1.5;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(110, 122, 146, 0.3);
+        background: rgba(255, 255, 255, 0.45);
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: rgba(31, 27, 22, 0.8);
+      }
+
+      .helper-list code {
+        color: #7e381c;
+        background: rgba(255, 255, 255, 0.5);
+        padding: 1px 5px;
+        border-radius: 999px;
+      }
+
+      @media (max-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr;
         }
 
-        * {
-            box-sizing: border-box;
+        textarea {
+          min-height: 320px;
         }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at top left, #fff8df 0, transparent 28%),
-                radial-gradient(circle at bottom right, #f0d8ba 0, transparent 24%),
-                linear-gradient(160deg, var(--bg), #eadfc9 60%, #e0cfb5);
-        }
-
-        main {
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 48px 20px 64px;
-        }
-
-        .panel {
-            background: color-mix(in srgb, var(--panel) 90%, white 10%);
-            border: 1px solid var(--line);
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 18px 40px rgba(90, 62, 30, 0.12);
-        }
-
-        h1,
-        h2 {
-            margin: 0 0 12px;
-            line-height: 1.15;
-            letter-spacing: -0.04em;
-        }
-
-        h1 {
-            font-size: clamp(2rem, 4vw, 3.2rem);
-        }
-
-        h2 {
-            margin-top: 28px;
-            font-size: 1.35rem;
-        }
-
-        p,
-        li {
-            line-height: 1.6;
-        }
-
-        ul {
-            margin: 0 0 16px 20px;
-        }
-
-        pre,
-        code {
-            font-family: "SFMono-Regular", Menlo, Consolas, monospace;
-        }
-
-        pre {
-            margin: 0 0 16px;
-            padding: 16px 18px;
-            border-radius: 16px;
-            background: var(--code);
-            color: var(--code-ink);
-            overflow-x: auto;
-            white-space: pre-wrap;
-        }
-
-        .actions {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin: 24px 0 18px;
-        }
-
-        button,
-        .link-button {
-            appearance: none;
-            border: 0;
-            border-radius: 999px;
-            padding: 12px 18px;
-            font: inherit;
-            font-weight: 700;
-            color: white;
-            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        button:disabled {
-            cursor: wait;
-            opacity: 0.7;
-        }
-
-        .status {
-            min-height: 1.5em;
-            font-weight: 600;
-        }
-
-        .meta {
-            margin: 0 0 16px;
-            font-size: 0.95rem;
-        }
+      }
     </style>
-</head>
-
-<body>
+  </head>
+  <body>
     <main>
-        <section class="panel">
-            <h1>YM2612Synth Wasm Playground</h1>
-            <div class="actions">
-                <button id="playButton" type="button">Play</button>
-                <a class="link-button" href="../index.html">Back</a>
-            </div>
-            <div class="status" id="status">Ready.</div>
-        </section>
+      <section class="panel">
+        <div class="topbar">
+          <div>
+            <h1>Tetorica FM2612 Playground</h1>
+            <p class="subtext">
+              Write a few lines of JavaScript, run them in the browser, then
+              drop down to raw YM2612 control when you want to.
+            </p>
+          </div>
+          <a class="link-button" href="../index.html">Back</a>
+        </div>
+
+        <div class="toolbar">
+          <button id="runButton" type="button">Run</button>
+          <button id="stopButton" type="button">Stop</button>
+          <select id="exampleSelect" aria-label="Example">
+            <option value="single">Single Note</option>
+            <option value="random">Random Pentatonic</option>
+            <option value="fm-direct">Direct FM Control</option>
+          </select>
+          <button id="loadExampleButton" type="button">Load Example</button>
+          <span id="runtimeState" class="pill">Audio idle</span>
+        </div>
+
+        <div class="status" id="status">Ready.</div>
+
+        <div class="layout">
+          <section class="card">
+            <h2>Code</h2>
+            <textarea id="editor" spellcheck="false"></textarea>
+          </section>
+
+          <section class="card">
+            <h2>Console</h2>
+            <pre id="consoleOutput"></pre>
+
+            <h2>Helpers</h2>
+            <ul class="helper-list">
+              <li><code>await play("C4")</code> plays one note</li>
+              <li><code>await sleep(0.25)</code> waits in seconds</li>
+              <li><code>scale("Eb2", "majorPentatonic", 2)</code> builds note arrays</li>
+              <li><code>choose(array)</code>, <code>rand()</code>, <code>randInt(0, 7)</code></li>
+              <li><code>fm</code> is the raw <code>YM2612Synth</code> layer</li>
+              <li><code>stopAll()</code> sends key-off to all 6 channels</li>
+            </ul>
+
+            <h2>Note</h2>
+            <p class="subtext">
+              This first version is a small runnable foundation. It does not
+              implement <code>liveLoop()</code> or hot reload yet.
+            </p>
+          </section>
+        </div>
+      </section>
     </main>
 
-    <script type="module">
-        import {
-            MegaDriveSynth,
-        } from "../../js/megasynth.js";
-
-        const playButton =
-            document.getElementById("playButton");
-
-        const status =
-            document.getElementById("status");
-
-        const megaDrive =
-            new MegaDriveSynth({
-                workletUrl: "../../js/ym2612-worklet.js",
-                ym2612WasmUrl: "../../generated/ym2612_wasm.wasm",
-            });
-
-        let synth = null;
-
-        function setStatus(message) {
-            status.textContent = message;
-        }
-
-        async function ensureReady() {
-            if (synth) {
-                await megaDrive.resume();
-                return;
-            }
-
-            setStatus(
-                "Loading Mega Drive audio..."
-            );
-
-            await megaDrive.start();
-
-            synth = megaDrive.fm;
-
-            setStatus("Audio ready.");
-        }
-
-        function configureSynth() {
-            synth.reset();
-
-            // Use operator 4 only.
-            synth.setOperator(0, 1, {
-                tl: 0x7f,
-            });
-
-            synth.setOperator(0, 2, {
-                tl: 0x7f,
-            });
-
-            synth.setOperator(0, 3, {
-                tl: 0x7f,
-            });
-
-            synth.setOperator(0, 4, {
-                dt: 0,
-                multi: 1,
-                tl: 8,
-                ar: 22,
-                d1r: 6,
-                d2r: 3,
-                sl: 3,
-                rr: 8,
-            });
-
-            synth.setAlgo(
-                0,
-                7,
-                0
-            );
-
-            synth.setPan(
-                0,
-                true,
-                true
-            );
-        }
-
-        async function play() {
-            playButton.disabled = true;
-
-            try {
-                await ensureReady();
-
-                configureSynth();
-
-                synth.noteOn(
-                    0,
-                    4,
-                    553
-                );
-
-                setStatus("Playing...");
-
-                setTimeout(() => {
-                    synth.noteOff(0);
-                    setStatus("Ready.");
-                }, 1000);
-            } catch (error) {
-                console.error(error);
-
-                setStatus(
-                    `Error: ${error.message}`
-                );
-            } finally {
-                playButton.disabled = false;
-            }
-        }
-
-        playButton.addEventListener(
-            "click",
-            () => {
-                void play();
-            }
-        );
-    </script>
-</body>
-
+    <script type="module" src="./playground.js"></script>
+  </body>
 </html>
