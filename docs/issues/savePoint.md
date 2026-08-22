@@ -2,6 +2,89 @@
 
 Last updated: 2026-08-22
 
+## Playground status
+
+- `docs/playground/index.html`
+  now exists as a small browser-side JavaScript playground entry point.
+- `docs/playground/playground.js`
+  now has a first working runtime for:
+  - `play(note, { channel, duration, preset })`
+  - `sleep(seconds)`
+  - `scale()`
+  - `choose()`
+  - `rand()` / `randInt()`
+  - `setBpm()`
+  - `beat()`
+  - `nextBeat()`
+  - `liveLoop(name, async () => {})`
+  - `stopLoop(name)`
+  - `stopAllLoops()`
+  - raw `fm` access through `YM2612Synth`
+
+## Important Playground interpretation
+
+- The Playground is not only a demo page.
+- It is meant to be the "this looks easy enough to try" entry point.
+- That is why `docs/index.html` now links to:
+  - `Playground`
+  - above the normal `Demos` section
+- The intent is:
+  - show JavaScript first
+  - make YM2612 feel approachable
+  - then let people drop down into raw `fm` control later
+
+## Current Playground sample state
+
+- The default sample is now the `live-loop` example.
+- It uses:
+  - one bass loop
+  - one lead loop
+  - shared BPM / beat timing
+- The original example bug:
+  - sample code used `MEGADRIVE_FM_PRESETS["2op-bell"]`
+  - but the actual preset key is `MEGADRIVE_FM_PRESETS["two-op-bell"]`
+- This was fixed in:
+  - `docs/playground/playground.js`
+
+## Important note about `nextBeat()`
+
+- `await nextBeat()` inside every `liveLoop()` cycle makes the loop re-attach to the next integer beat each time.
+- Because of that, shortening:
+  - `duration`
+  - `beat(...)`
+  may not feel effective if `nextBeat()` is still called every cycle.
+- For faster lead patterns, removing per-cycle `nextBeat()` is currently more illustrative.
+
+## Files to read first next time
+
+1. `docs/playground/playground.js`
+   - runtime behavior
+   - helper API
+   - sample examples
+2. `docs/playground/index.html`
+   - Playground page structure
+   - helper list text
+3. `docs/index.html`
+   - top-level entry positioning
+   - Playground is intentionally shown before Demos
+4. `docs/issues/playground.md`
+   - longer-term design notes
+   - why JavaScript / why `liveLoop`
+
+## Likely next Playground steps
+
+1. Make the default `live-loop` sample feel musically better.
+2. Decide whether `nextBeat()` should be:
+   - a manual helper only, or
+   - also have a "first loop only" convenience pattern.
+3. Add safer live coding behavior:
+   - replacing loops
+   - stopping loops
+   - handling broken user code
+4. Continue toward the original direction:
+   - Sonic Pi style `liveLoop`
+   - but with YM2612 / Mega Drive specificity still visible.
+
 ## Looper direction changed
 
 - The first `MegaSynthLooper` implementation used event replay:
