@@ -42,7 +42,7 @@ await play("E4", { channel: 0, duration: 0.35 });
 await sleep(0.12);
 await play("G4", { channel: 0, duration: 0.5 });
 `,
-  random: `fm.setPreset(0, MEGADRIVE_FM_PRESETS["2op-bell"]);
+  random: `fm.setPreset(0, MEGADRIVE_FM_PRESETS["two-op-bell"]);
 const notes = scale("Eb2", "majorPentatonic", 2);
 
 for (let step = 0; step < 16; step += 1) {
@@ -52,6 +52,33 @@ for (let step = 0; step < 16; step += 1) {
   });
   await sleep(0.08);
 }
+`,
+  "live-loop": `setBpm(120);
+
+fm.setPreset(0, MEGADRIVE_FM_PRESETS["one-op-basic"]);
+fm.setPreset(1, MEGADRIVE_FM_PRESETS["two-op-bell"]);
+
+liveLoop("bass", async () => {
+  await nextBeat();
+  await play("E2", { channel: 0, duration: 0.14 });
+  await beat(1);
+  await play("E2", { channel: 0, duration: 0.14 });
+  await beat(1);
+  await play("G2", { channel: 0, duration: 0.14 });
+  await beat(1);
+  await play("A2", { channel: 0, duration: 0.14 });
+  await beat(1);
+});
+
+liveLoop("lead", async () => {
+  const notes = scale("E4", "minorPentatonic", 2);
+  //await nextBeat();
+  await play(choose(notes), {
+    channel: 1,
+    duration: 0.08,
+  });
+  await beat(0.125);
+});
 `,
   "fm-direct": `fm.reset();
 fm.setPreset(0, MEGADRIVE_FM_PRESETS["one-op-basic"]);
@@ -110,6 +137,12 @@ const megaDrive =
 let synth = null;
 let currentRunToken = 0;
 let activeNotes = new Set();
+let currentLoopContext = null;
+const playgroundRuntime = {
+  bpm: 120,
+  clockStartTime: null,
+  liveLoops: new Map(),
+};
 
 function setStatus(message) {
   status.textContent = message;
@@ -127,6 +160,49 @@ function logLine(message) {
 
 function clearConsole() {
   consoleOutput.textContent = "";
+}
+
+function nowSeconds() {
+  if (megaDrive.audioContext) {
+    return megaDrive.audioContext.currentTime;
+  }
+
+  return performance.now() / 1000;
+}
+
+function ensureMusicClock() {
+  if (
+    playgroundRuntime.clockStartTime ===
+    null
+  ) {
+    playgroundRuntime.clockStartTime =
+      nowSeconds();
+  }
+}
+
+function beatsToSeconds(beats) {
+  return (
+    beats * 60 /
+    playgroundRuntime.bpm
+  );
+}
+
+function currentBeat() {
+  ensureMusicClock();
+  return (
+    (nowSeconds() -
+      playgroundRuntime.clockStartTime) /
+    beatsToSeconds(1)
+  );
+}
+
+function resolveWithLoopContext(
+  resolve,
+  value,
+  loopState = null
+) {
+  currentLoopContext = loopState;
+  resolve(value);
 }
 
 async function ensureReady() {
@@ -208,16 +284,145 @@ function toPitch(noteOrMidi) {
 }
 
 async function sleep(seconds, runToken = currentRunToken) {
+  const loopState =
+    currentLoopContext;
+  const effectiveToken =
+    loopState?.runToken ?? runToken;
   const waitMs =
     Math.max(0, seconds * 1000);
 
   await new Promise((resolve) => {
-    window.setTimeout(resolve, waitMs);
+    window.setTimeout(() => {
+      resolveWithLoopContext(
+        resolve,
+        undefined,
+        loopState
+      );
+    }, waitMs);
   });
 
-  if (runToken !== currentRunToken) {
+  if (
+    loopState?.stopped ||
+    effectiveToken !==
+      (loopState?.runToken ??
+        currentRunToken)
+  ) {
     throw new Error("Run stopped");
   }
+}
+
+async function waitForBeat(
+  targetBeat,
+  runToken = currentRunToken,
+  loopState = currentLoopContext
+) {
+  ensureMusicClock();
+  const effectiveToken =
+    loopState?.runToken ?? runToken;
+  const targetTime =
+    playgroundRuntime.clockStartTime +
+    beatsToSeconds(targetBeat);
+  const waitMs =
+    Math.max(
+      0,
+      (targetTime - nowSeconds()) *
+        1000
+    );
+
+  await new Promise((resolve) => {
+    window.setTimeout(() => {
+      resolveWithLoopContext(
+        resolve,
+        undefined,
+        loopState
+      );
+    }, waitMs);
+  });
+
+  if (
+    loopState?.stopped ||
+    effectiveToken !==
+      (loopState?.runToken ??
+        currentRunToken)
+  ) {
+    throw new Error("Run stopped");
+  }
+}
+
+async function beat(
+  beats = 1
+) {
+  const loopState =
+    currentLoopContext;
+
+  if (!loopState) {
+    await sleep(
+      beatsToSeconds(beats)
+    );
+    return;
+  }
+
+  const baseBeat =
+    Math.max(
+      loopState.cursorBeat,
+      currentBeat()
+    );
+  loopState.cursorBeat =
+    baseBeat + beats;
+  await waitForBeat(
+    loopState.cursorBeat,
+    currentRunToken,
+    loopState
+  );
+}
+
+async function nextBeat() {
+  const loopState =
+    currentLoopContext;
+
+  if (!loopState) {
+    const next =
+      Math.floor(
+        currentBeat() + 0.000001
+      ) + 1;
+    await waitForBeat(next);
+    return;
+  }
+
+  const baseBeat =
+    Math.max(
+      loopState.cursorBeat,
+      currentBeat()
+    );
+  loopState.cursorBeat =
+    Math.floor(baseBeat + 0.000001) +
+    1;
+  await waitForBeat(
+    loopState.cursorBeat,
+    currentRunToken,
+    loopState
+  );
+}
+
+function setBpm(bpm) {
+  const nextBpm =
+    Number(bpm);
+
+  if (
+    !Number.isFinite(nextBpm) ||
+    nextBpm <= 0
+  ) {
+    throw new Error(
+      `Invalid BPM: ${bpm}`
+    );
+  }
+
+  const beatPosition =
+    currentBeat();
+  playgroundRuntime.bpm = nextBpm;
+  playgroundRuntime.clockStartTime =
+    nowSeconds() -
+    beatsToSeconds(beatPosition);
 }
 
 async function play(
@@ -268,6 +473,130 @@ async function play(
 
   synth.noteOff(channel);
   activeNotes.delete(channel);
+}
+
+function liveLoop(name, fn, evaluationState) {
+  if (
+    typeof name !== "string" ||
+    name.length === 0
+  ) {
+    throw new Error(
+      "liveLoop(name, fn) requires a non-empty string name"
+    );
+  }
+
+  if (typeof fn !== "function") {
+    throw new Error(
+      "liveLoop(name, fn) requires a callback"
+    );
+  }
+
+  evaluationState.loopDefinitions.set(
+    name,
+    fn
+  );
+}
+
+function stopLoop(name) {
+  const state =
+    playgroundRuntime.liveLoops.get(
+      name
+    );
+
+  if (!state) {
+    return;
+  }
+
+  state.stopped = true;
+  state.runToken += 1;
+}
+
+function stopAllLoops() {
+  for (const state of playgroundRuntime.liveLoops.values()) {
+    state.stopped = true;
+    state.runToken += 1;
+  }
+}
+
+async function runLiveLoop(state) {
+  try {
+    while (!state.stopped) {
+      state.currentFn = state.nextFn;
+      state.cursorBeat = Math.max(
+        state.cursorBeat,
+        currentBeat()
+      );
+      currentLoopContext = state;
+      await state.currentFn();
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Run stopped"
+    ) {
+      // no-op
+    } else {
+      console.error(error);
+      logLine(
+        `[liveLoop:${state.name}] ${error?.stack ?? String(error)}`
+      );
+      setStatus(
+        `Loop error: ${state.name}`
+      );
+    }
+  } finally {
+    if (
+      playgroundRuntime.liveLoops.get(
+        state.name
+      ) === state
+    ) {
+      playgroundRuntime.liveLoops.delete(
+        state.name
+      );
+    }
+
+    currentLoopContext = null;
+  }
+}
+
+function commitLiveLoops(
+  loopDefinitions
+) {
+  const activeNames = new Set(
+    loopDefinitions.keys()
+  );
+
+  for (const [name, state] of playgroundRuntime.liveLoops.entries()) {
+    if (!activeNames.has(name)) {
+      stopLoop(name);
+    }
+  }
+
+  for (const [name, fn] of loopDefinitions.entries()) {
+    const existing =
+      playgroundRuntime.liveLoops.get(
+        name
+      );
+
+    if (existing) {
+      existing.nextFn = fn;
+      continue;
+    }
+
+    const state = {
+      name,
+      currentFn: fn,
+      nextFn: fn,
+      stopped: false,
+      runToken: 1,
+      cursorBeat: currentBeat(),
+    };
+    playgroundRuntime.liveLoops.set(
+      name,
+      state
+    );
+    void runLiveLoop(state);
+  }
 }
 
 function scale(
@@ -367,9 +696,11 @@ async function runCode() {
 
   try {
     await ensureReady();
-    stopAll();
     setStatus("Running...");
     setRuntimeState("Running");
+    const evaluationState = {
+      loopDefinitions: new Map(),
+    };
 
     const api = {
       fm: synth,
@@ -377,6 +708,17 @@ async function runCode() {
         play(note, options),
       sleep: (seconds) =>
         sleep(seconds, runToken),
+      beat,
+      nextBeat,
+      setBpm,
+      liveLoop: (name, fn) =>
+        liveLoop(
+          name,
+          fn,
+          evaluationState
+        ),
+      stopLoop,
+      stopAllLoops,
       stopAll,
       choose,
       rand,
@@ -409,9 +751,16 @@ async function runCode() {
     await userFunction(
       ...Object.values(api)
     );
+    commitLiveLoops(
+      evaluationState.loopDefinitions
+    );
 
     if (runToken === currentRunToken) {
-      setStatus("Done.");
+      setStatus(
+        evaluationState.loopDefinitions.size > 0
+          ? `Running ${evaluationState.loopDefinitions.size} live loop(s).`
+          : "Done."
+      );
       setRuntimeState("Audio ready");
     }
   } catch (error) {
@@ -440,6 +789,7 @@ async function runCode() {
 
 function stopRun() {
   currentRunToken += 1;
+  stopAllLoops();
   stopAll();
   megaDrive.stopRecordingPlayback?.();
   setStatus("Stopped.");
@@ -479,6 +829,7 @@ loadExampleButton.addEventListener(
   }
 );
 
-editor.value = EXAMPLES.single;
+exampleSelect.value = "live-loop";
+editor.value = EXAMPLES["live-loop"];
 clearConsole();
 setRuntimeState("Audio idle");

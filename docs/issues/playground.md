@@ -1,5 +1,41 @@
 Tetorica FM2612 Playground
 
+Current status
+
+2026-08-22 時点で、最初の小さな Playground は動き始めている。
+
+すでに入っているもの:
+
+* `play(note, { channel, duration, preset })`
+* `sleep(seconds)`
+* `scale()`
+* `choose()`
+* `rand()` / `randInt()`
+* `setBpm()`
+* `beat()`
+* `nextBeat()`
+* `liveLoop(name, async () => {})`
+* `fm` として `YM2612Synth` へ直接降りる入口
+
+つまり、
+
+* 少ないコードで鳴らす
+* BPM と beat を共有する
+* 複数 `liveLoop()` を走らせる
+* 必要なら `fm.setOperator()` などで YM2612 を直接触る
+
+ところまでは、最初の形ができた。
+
+未解決:
+
+* hot reload をもっと安全にする
+* `liveLoop()` が yield しないコードへの防御
+* live coding 向けの stop / replace の洗練
+* 今後の `with_fx` 的な層をどうするか
+* markdown ベースの書き方や tutorial との接続
+
+この文書の以下は、その先の設計メモとして残す。
+
 Overview
 
 Tetorica FM2612 に JavaScript ベースの Playground を追加する。

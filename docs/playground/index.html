@@ -239,6 +239,7 @@
           <select id="exampleSelect" aria-label="Example">
             <option value="single">Single Note</option>
             <option value="random">Random Pentatonic</option>
+            <option value="live-loop" selected>Live Loop</option>
             <option value="fm-direct">Direct FM Control</option>
           </select>
           <button id="loadExampleButton" type="button">Load Example</button>
@@ -261,16 +262,20 @@
             <ul class="helper-list">
               <li><code>await play("C4")</code> plays one note</li>
               <li><code>await sleep(0.25)</code> waits in seconds</li>
+              <li><code>liveLoop("bass", async () =&gt; {})</code> keeps a named loop alive</li>
+              <li><code>setBpm(120)</code>, <code>await beat(1)</code>, <code>await nextBeat()</code></li>
               <li><code>scale("Eb2", "majorPentatonic", 2)</code> builds note arrays</li>
               <li><code>choose(array)</code>, <code>rand()</code>, <code>randInt(0, 7)</code></li>
               <li><code>fm</code> is the raw <code>YM2612Synth</code> layer</li>
-              <li><code>stopAll()</code> sends key-off to all 6 channels</li>
+              <li><code>stopLoop(name)</code>, <code>stopAllLoops()</code>, <code>stopAll()</code></li>
             </ul>
 
             <h2>Note</h2>
             <p class="subtext">
-              This first version is a small runnable foundation. It does not
-              implement <code>liveLoop()</code> or hot reload yet.
+              This first version already includes a small <code>liveLoop()</code>
+              runtime with shared BPM/beat timing. It is enough to start trying
+              Sonic Pi style loop ideas on top of YM2612, though hot reload and
+              safer live coding behavior still need more work.
             </p>
           </section>
         </div>
