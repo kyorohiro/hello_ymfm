@@ -12,6 +12,7 @@ DOCS_JS_DIR="${ROOT_DIR}/docs/js"
 SYNC_FILES="
 genesisaudioengine.js
 megasynth.js
+megasynth_looper.js
 megadrive-fm-presets.js
 segapsg.js
 tfi.js
