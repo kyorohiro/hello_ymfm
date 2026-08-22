@@ -15,6 +15,7 @@ export function createSynthInputController({
   stopAllNotes,
   onShiftFret,
   onShiftStringWindow,
+  onToggleRecord,
 }) {
   async function pressKey(key) {
     heldKeys.add(key);
@@ -229,6 +230,15 @@ export function createSynthInputController({
     if (event.key === "ArrowDown") {
       event.preventDefault();
       onShiftStringWindow?.(-1);
+      return;
+    }
+
+    if (event.code === "Space") {
+      event.preventDefault();
+      if (event.repeat) {
+        return;
+      }
+      onToggleRecord?.();
       return;
     }
 

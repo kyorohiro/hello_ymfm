@@ -97,6 +97,26 @@
         font-size: 0.95rem;
       }
 
+      .looper-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: -4px 0 14px;
+      }
+
+      .looper-state {
+        min-height: 24px;
+        display: inline-flex;
+        align-items: center;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--pill-border);
+        background: rgba(255, 255, 255, 0.45);
+        font-size: 0.68rem;
+        color: rgba(31, 27, 22, 0.82);
+      }
+
       .layout {
         display: grid;
         grid-template-columns: 1fr;
@@ -728,6 +748,13 @@
               </div>
             </div>
         <div class="status" id="status">Press any key or click a pad to start audio.</div>
+        <div class="looper-row">
+          <button id="looperStartButton" class="toolbar-button" type="button">Looper Start</button>
+          <button id="looperRecordButton" class="toolbar-button" type="button">Record</button>
+          <button id="looperStopButton" class="toolbar-button" type="button">Looper Stop</button>
+          <button id="looperClearButton" class="toolbar-button" type="button">Clear</button>
+          <div id="looperState" class="looper-state">Looper idle.</div>
+        </div>
 
             <div class="control-section">
               <h2>Keyboard</h2>

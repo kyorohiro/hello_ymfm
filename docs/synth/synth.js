@@ -1,6 +1,7 @@
 import {
   MEGADRIVE_FM_PRESETS,
   MEGADRIVE_FM_PRESET_ORDER,
+  MegaSynthLooper,
 } from "../js/megasynth.js";
 import {
   createTfiFromPreset,
@@ -198,6 +199,26 @@ const envelopeDescription =
   document.getElementById(
     "envelopeDescription"
   );
+const looperStartButton =
+  document.getElementById(
+    "looperStartButton"
+  );
+const looperRecordButton =
+  document.getElementById(
+    "looperRecordButton"
+  );
+const looperStopButton =
+  document.getElementById(
+    "looperStopButton"
+  );
+const looperClearButton =
+  document.getElementById(
+    "looperClearButton"
+  );
+const looperStateRoot =
+  document.getElementById(
+    "looperState"
+  );
 
 const ALGORITHM_DESCRIPTIONS = [
   'ALGO 0 <span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span> -> <span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span> -> OUT',
@@ -224,6 +245,7 @@ const OUTPUT_ENVELOPE_SILENCE_FLOOR =
 const OUTPUT_ENVELOPE_SLOW_SCALE =
   0.12;
 let audioInitStarted = false;
+let looper = null;
 
 const voices =
   createVoices(VOICE_COUNT);
@@ -233,6 +255,41 @@ let inputController = null;
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+function updateLooperUi() {
+  if (!looper) {
+    if (looperStateRoot) {
+      looperStateRoot.textContent =
+        "Looper idle.";
+    }
+    looperRecordButton?.classList.remove(
+      "is-selected"
+    );
+    return;
+  }
+
+  const state = looper.getState();
+  const loopText =
+    state.loopLength === null
+      ? "loop not fixed"
+      : `loop ${state.loopLength.toFixed(2)}s`;
+  const recordText =
+    state.recording
+      ? "recording"
+      : "not recording";
+
+  if (looperStateRoot) {
+    looperStateRoot.textContent =
+      state.running
+        ? `Looper running, ${recordText}, units ${state.unitCount}, ${loopText}.`
+        : `Looper idle, units ${state.unitCount}, ${loopText}.`;
+  }
+
+  looperRecordButton?.classList.toggle(
+    "is-selected",
+    state.recording
+  );
 }
 
 function updateKeyboardAvailability() {
@@ -701,6 +758,104 @@ function stopAllNotes() {
   });
 }
 
+function getPlayableSynth() {
+  if (looper?.running) {
+    return looper;
+  }
+
+  return synth;
+}
+
+async function ensureLooper() {
+  await ensureAudioReady();
+
+  if (!megaSynth) {
+    return null;
+  }
+
+  if (!looper) {
+    looper = new MegaSynthLooper({
+      synth: megaSynth,
+    });
+  }
+
+  updateLooperUi();
+  return looper;
+}
+
+async function startLooper() {
+  const currentLooper =
+    await ensureLooper();
+
+  if (!currentLooper) {
+    return;
+  }
+
+  await currentLooper.start();
+  updateLooperUi();
+  setStatus(
+    "Looper started. Press Space or Record to capture a unit."
+  );
+}
+
+async function toggleLooperRecord() {
+  const currentLooper =
+    await ensureLooper();
+
+  if (!currentLooper) {
+    return;
+  }
+
+  if (!currentLooper.running) {
+    await currentLooper.start();
+  }
+
+  const wasRecording =
+    currentLooper.recording;
+  const completedUnit =
+    currentLooper.toggleRecord();
+
+  updateLooperUi();
+
+  if (wasRecording) {
+    if (completedUnit) {
+      setStatus(
+        `Recorded ${completedUnit.id}.`
+      );
+    } else {
+      setStatus(
+        "Recording finished."
+      );
+    }
+  } else {
+    setStatus(
+      "Recording new loop unit..."
+    );
+  }
+}
+
+function stopLooper() {
+  if (!looper) {
+    return;
+  }
+
+  looper.stop();
+  updateLooperUi();
+  stopAllNotes();
+  setStatus("Looper stopped.");
+}
+
+function clearLooper() {
+  if (!looper) {
+    return;
+  }
+
+  looper.clear();
+  updateLooperUi();
+  stopAllNotes();
+  setStatus("Looper cleared.");
+}
+
 async function initializeDirectAudio() {
   updateKeyboardAvailability();
 
@@ -716,6 +871,9 @@ async function initializeDirectAudio() {
 
   megaSynth = runtime.megaSynth;
   synth = runtime.synth;
+  looper = new MegaSynthLooper({
+    synth: megaSynth,
+  });
 
   attachOutputEnvelopeTap({
     megaSynth,
@@ -731,6 +889,7 @@ async function initializeDirectAudio() {
   setStatus(
     `Audio ready. YM2612 via MegaDriveSynth at ${audioContext.sampleRate} Hz.`
   );
+  updateLooperUi();
 }
 
 async function ensureAudioReady() {
@@ -966,7 +1125,8 @@ inputController =
     voices,
     getAudioReadyPromise:
       () => audioReadyPromise,
-    getSynth: () => synth,
+    getSynth: () =>
+      getPlayableSynth(),
     ensureAudioReady,
     chooseVoice,
     updateKeyboardVisuals,
@@ -996,6 +1156,9 @@ inputController =
       updateKeyboardVisuals();
       renderFretboardUi();
     },
+    onToggleRecord: () => {
+      void toggleLooperRecord();
+    },
   });
 
 inputController.attachWindowInput();
@@ -1007,7 +1170,32 @@ buildOperatorControls();
 buildPresetSelect();
 buildTfiLoader();
 buildTfiExporter();
+looperStartButton?.addEventListener(
+  "click",
+  () => {
+    void startLooper();
+  }
+);
+looperRecordButton?.addEventListener(
+  "click",
+  () => {
+    void toggleLooperRecord();
+  }
+);
+looperStopButton?.addEventListener(
+  "click",
+  () => {
+    stopLooper();
+  }
+);
+looperClearButton?.addEventListener(
+  "click",
+  () => {
+    clearLooper();
+  }
+);
 renderFretboardUi();
 buildKeyboard();
 applyPresetState(currentPresetName);
 updateKeyboardAvailability();
+updateLooperUi();

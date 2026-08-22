@@ -176,6 +176,8 @@ export class MegaSynthLooper {
       events: currentUnit.events.slice(),
     };
 
+    this.units.push(recordedUnit);
+
     if (this.loopLength === null) {
       this.loopLength = Math.max(
         MIN_LOOP_LENGTH_SECONDS,
@@ -188,7 +190,6 @@ export class MegaSynthLooper {
       }
     }
 
-    this.units.push(recordedUnit);
     this.currentUnit = null;
     this.recording = false;
 
