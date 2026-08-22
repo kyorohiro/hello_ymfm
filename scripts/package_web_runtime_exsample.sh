@@ -26,8 +26,10 @@ ym2612synth_audioworklet.html
 
 JS_FILES="
 genesisaudioengine.js
+looper.js
 megadrive-fm-presets.js
 megasynth.js
+megasynth_recording.js
 segapsg.js
 tfi.js
 vgmplayer.js

@@ -22,7 +22,9 @@ synth_keyboard.js
 synth_runtime.js
 "
 RUNTIME_FILES="
+looper.js
 megasynth.js
+megasynth_recording.js
 megadrive-fm-presets.js
 tfi.js
 ym2612.js
