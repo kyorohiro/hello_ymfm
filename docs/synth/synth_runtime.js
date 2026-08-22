@@ -161,6 +161,7 @@ export async function initializeDirectAudio({
   audioContext,
   workletUrl,
   ym2612WasmUrl,
+  outputNode,
   setStatus,
 }) {
   setStatus(
@@ -172,6 +173,7 @@ export async function initializeDirectAudio({
       audioContext,
       workletUrl,
       ym2612WasmUrl,
+      outputNode,
     });
 
   await megaSynth.start();

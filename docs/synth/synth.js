@@ -1,6 +1,7 @@
 import {
   MEGADRIVE_FM_PRESETS,
   MEGADRIVE_FM_PRESET_ORDER,
+  MegaSynthLooper,
 } from "../js/megasynth.js";
 import {
   createTfiFromPreset,
@@ -198,6 +199,26 @@ const envelopeDescription =
   document.getElementById(
     "envelopeDescription"
   );
+const looperStartButton =
+  document.getElementById(
+    "looperStartButton"
+  );
+const looperRecordButton =
+  document.getElementById(
+    "looperRecordButton"
+  );
+const looperStopButton =
+  document.getElementById(
+    "looperStopButton"
+  );
+const looperClearButton =
+  document.getElementById(
+    "looperClearButton"
+  );
+const looperStateRoot =
+  document.getElementById(
+    "looperState"
+  );
 
 const ALGORITHM_DESCRIPTIONS = [
   'ALGO 0 <span class="op-color-1">OP1</span> -> <span class="op-color-2">OP2</span> -> <span class="op-color-3">OP3</span> -> <span class="op-color-4">OP4</span> -> OUT',
@@ -214,6 +235,16 @@ let audioContext = null;
 let audioReadyPromise = null;
 let megaSynth = null;
 let synth = null;
+let loopMegaSynth = null;
+let loopSynth = null;
+let liveOutputBus = null;
+let loopOutputBus = null;
+let looperCaptureTapNode = null;
+let looperCaptureSilentGain = null;
+let currentLooperCapture = null;
+let nextLooperCaptureId = 1;
+const activeLoopAudioSources =
+  new Map();
 let visualFrame = 0;
 let outputEnvelopeHistory = [];
 let outputEnvelopeHeldVoicePeak = 1;
@@ -224,6 +255,7 @@ const OUTPUT_ENVELOPE_SILENCE_FLOOR =
 const OUTPUT_ENVELOPE_SLOW_SCALE =
   0.12;
 let audioInitStarted = false;
+let looper = null;
 
 const voices =
   createVoices(VOICE_COUNT);
@@ -233,6 +265,424 @@ let inputController = null;
 
 function setStatus(message) {
   status.textContent = message;
+}
+
+function formatLooperProgress(
+  state
+) {
+  if (
+    !state.running ||
+    state.loopLength === null ||
+    !audioContext
+  ) {
+    return null;
+  }
+
+  const elapsed =
+    audioContext.currentTime -
+    (state.loopStartedAt ?? 0);
+  const wrapped =
+    ((elapsed % state.loopLength) +
+      state.loopLength) %
+    state.loopLength;
+  const percent =
+    Math.floor(
+      (wrapped / state.loopLength) * 100
+    );
+  const unitLabel =
+    `Loop(${state.unitCount})`;
+
+  return `${unitLabel} ${state.loopLength.toFixed(2)}s ${percent}%`;
+}
+
+function updateLooperUi() {
+  if (!looper) {
+    if (looperStateRoot) {
+      looperStateRoot.textContent =
+        "Looper idle.";
+    }
+    if (looperStartButton) {
+      looperStartButton.textContent =
+        "Looper Start";
+    }
+    if (looperRecordButton) {
+      looperRecordButton.hidden =
+        true;
+      looperRecordButton.textContent =
+        "Record";
+    }
+    if (looperStopButton) {
+      looperStopButton.textContent =
+        "Undo";
+      looperStopButton.disabled =
+        true;
+    }
+    looperClearButton &&
+      (looperClearButton.disabled =
+        true);
+    looperRecordButton?.classList.remove(
+      "is-selected"
+    );
+    return;
+  }
+
+  const state = looper.getState();
+  const progressText =
+    formatLooperProgress(state);
+
+  if (looperStateRoot) {
+    if (state.recording) {
+      looperStateRoot.textContent =
+        progressText
+          ? `${progressText} REC`
+          : state.loopLength === null
+            ? "Recording first loop..."
+            : "Recording...";
+    } else if (progressText) {
+      looperStateRoot.textContent =
+        progressText;
+    } else if (state.running) {
+      looperStateRoot.textContent =
+        state.loopLength === null
+          ? "Loop pending..."
+          : `Loop ${state.loopLength.toFixed(2)}s`;
+    } else {
+      looperStateRoot.textContent =
+        state.unitCount > 0
+          ? `Loop ${state.loopLength?.toFixed(2) ?? "0.00"}s`
+          : "Looper idle.";
+    }
+  }
+
+  if (looperStartButton) {
+    looperStartButton.textContent =
+      state.running
+        ? "Looper Stop"
+        : "Looper Start";
+  }
+  if (looperRecordButton) {
+    looperRecordButton.hidden =
+      !state.running;
+    looperRecordButton.textContent =
+      state.recording
+        ? "Stop"
+        : "Record";
+  }
+  if (looperStopButton) {
+    looperStopButton.textContent =
+      "Undo";
+    looperStopButton.disabled =
+      !state.canUndo &&
+      !state.recording;
+  }
+  looperClearButton &&
+    (looperClearButton.disabled =
+      state.unitCount === 0 &&
+      !state.recording);
+
+  looperRecordButton?.classList.toggle(
+    "is-selected",
+    state.recording
+  );
+}
+
+function handleLooperStateChange(
+  detail
+) {
+  updateLooperUi();
+
+  if (
+    detail.reason ===
+      "record-finish" &&
+    detail.auto
+  ) {
+    setStatus(
+      `${detail.unit?.id ?? "Unit"} reached the loop end and stopped automatically.`
+    );
+    return;
+  }
+
+  if (
+    detail.reason ===
+    "record-empty"
+  ) {
+    setStatus(
+      "No notes were played. Empty loop unit was discarded."
+    );
+    return;
+  }
+
+  if (
+    detail.reason ===
+    "record-carry"
+  ) {
+    setStatus(
+      "No notes yet. Recording continues into the next loop."
+    );
+    return;
+  }
+
+  if (
+    detail.reason ===
+    "record-cancel"
+  ) {
+    setStatus(
+      "Recording canceled."
+    );
+  }
+}
+
+async function startLooperAudioCapture() {
+  if (!audioContext) {
+    return;
+  }
+
+  if (currentLooperCapture) {
+    return;
+  }
+
+  const captureId =
+    `capture-${nextLooperCaptureId}`;
+  nextLooperCaptureId += 1;
+  const capture = {
+    captureId,
+    leftChunks: [],
+    rightChunks: [],
+    frameCount: 0,
+  };
+  currentLooperCapture = capture;
+}
+
+function copyLooperCaptureChunk(
+  capture,
+  inputBuffer
+) {
+  if (!capture) {
+    return;
+  }
+
+  const channelCount =
+    Math.min(
+      2,
+      inputBuffer.numberOfChannels
+    );
+
+  if (channelCount <= 0) {
+    return;
+  }
+
+  const left =
+    new Float32Array(
+      inputBuffer.getChannelData(0)
+    );
+  const right =
+    channelCount >= 2
+      ? new Float32Array(
+          inputBuffer.getChannelData(1)
+        )
+      : new Float32Array(left);
+
+  capture.leftChunks.push(left);
+  capture.rightChunks.push(right);
+  capture.frameCount +=
+    Math.min(
+      left.length,
+      right.length
+    );
+}
+
+function buildLooperCaptureAudioResult(
+  capture
+) {
+  if (
+    !audioContext ||
+    !capture ||
+    capture.frameCount <= 0
+  ) {
+    return null;
+  }
+
+  const audio =
+    audioContext.createBuffer(
+      2,
+      capture.frameCount,
+      audioContext.sampleRate
+    );
+  const leftData =
+    audio.getChannelData(0);
+  const rightData =
+    audio.getChannelData(1);
+
+  let writeOffset = 0;
+  for (const chunk of capture.leftChunks) {
+    leftData.set(chunk, writeOffset);
+    writeOffset += chunk.length;
+  }
+
+  writeOffset = 0;
+  for (const chunk of capture.rightChunks) {
+    rightData.set(chunk, writeOffset);
+    writeOffset += chunk.length;
+  }
+
+  return {
+    audio,
+    audioDuration:
+      audio.duration,
+  };
+}
+
+async function stopLooperAudioCapture() {
+  if (!currentLooperCapture) {
+    return null;
+  }
+
+  const capture =
+    currentLooperCapture;
+  currentLooperCapture = null;
+  return buildLooperCaptureAudioResult(
+    capture
+  );
+}
+
+function scheduleLooperAudioPlayback(
+  unit,
+  startTime
+) {
+  if (
+    !audioContext ||
+    !loopOutputBus ||
+    !unit.audio
+  ) {
+    return;
+  }
+
+  const source =
+    audioContext.createBufferSource();
+  source.buffer = unit.audio;
+  source.connect(loopOutputBus);
+  const unitId =
+    unit.id ?? "__unknown__";
+  const unitSources =
+    activeLoopAudioSources.get(
+      unitId
+    ) ?? new Set();
+
+  source.addEventListener(
+    "ended",
+    () => {
+      unitSources.delete(source);
+      if (unitSources.size === 0) {
+        activeLoopAudioSources.delete(
+          unitId
+        );
+      }
+      source.disconnect();
+    }
+  );
+
+  unitSources.add(source);
+  activeLoopAudioSources.set(
+    unitId,
+    unitSources
+  );
+  const scheduledTime =
+    Math.max(
+      audioContext.currentTime +
+        0.01,
+      startTime
+    );
+  source.start(scheduledTime);
+}
+
+function stopLooperAudioPlayback(
+  unit = null
+) {
+  const unitId =
+    typeof unit === "string"
+      ? unit
+      : unit?.id ?? null;
+
+  if (unitId !== null) {
+    const unitSources =
+      activeLoopAudioSources.get(
+        unitId
+      );
+
+    if (!unitSources) {
+      return;
+    }
+
+    for (const source of unitSources) {
+      try {
+        source.stop();
+      } catch (_error) {
+        // no-op
+      }
+      source.disconnect();
+    }
+
+    activeLoopAudioSources.delete(
+      unitId
+    );
+    return;
+  }
+
+  for (const unitSources of activeLoopAudioSources.values()) {
+    for (const source of unitSources) {
+      try {
+        source.stop();
+      } catch (_error) {
+        // no-op
+      }
+      source.disconnect();
+    }
+  }
+
+  activeLoopAudioSources.clear();
+}
+
+function setupLooperCaptureTap() {
+  if (
+    !audioContext ||
+    !liveOutputBus ||
+    looperCaptureTapNode
+  ) {
+    return;
+  }
+
+  looperCaptureTapNode =
+    audioContext.createScriptProcessor(
+      2048,
+      2,
+      2
+    );
+  looperCaptureSilentGain =
+    audioContext.createGain();
+  looperCaptureSilentGain.gain.value =
+    0;
+
+  looperCaptureTapNode.onaudioprocess =
+    (event) => {
+      if (!currentLooperCapture) {
+        return;
+      }
+
+      copyLooperCaptureChunk(
+        currentLooperCapture,
+        event.inputBuffer
+      );
+    };
+
+  liveOutputBus.connect(
+    looperCaptureTapNode
+  );
+  looperCaptureTapNode.connect(
+    looperCaptureSilentGain
+  );
+  looperCaptureSilentGain.connect(
+    audioContext.destination
+  );
 }
 
 function updateKeyboardAvailability() {
@@ -376,7 +826,7 @@ function updateTfiSummary() {
 
   if (!importedTfiName) {
     tfiSummary.textContent =
-      "No TFI loaded.";
+      "TFI: none";
     return;
   }
 
@@ -476,6 +926,67 @@ function buildCurrentPresetState() {
   return preset;
 }
 
+function buildLooperPatchSnapshot() {
+  return {
+    algorithm:
+      commonState.algorithm,
+    feedback:
+      commonState.feedback,
+    left: true,
+    right: true,
+    operators: {
+      1: {
+        ...operatorStates[1],
+      },
+      2: {
+        ...operatorStates[2],
+      },
+      3: {
+        ...operatorStates[3],
+      },
+      4: {
+        ...operatorStates[4],
+      },
+    },
+  };
+}
+
+function applyLooperPatchToChannel(
+  patch,
+  channel
+) {
+  if (!loopSynth || !patch) {
+    return;
+  }
+
+  for (const operator of OPERATOR_NUMBERS) {
+    const operatorPatch =
+      patch.operators?.[operator];
+
+    if (!operatorPatch) {
+      continue;
+    }
+
+    loopSynth.setOperator(
+      channel,
+      operator,
+      operatorPatch
+    );
+  }
+
+  loopSynth.setAlgo(
+    channel,
+    patch.algorithm ?? 7,
+    patch.feedback ?? 0
+  );
+
+  loopSynth.setPan(
+    channel,
+    patch.left ?? true,
+    patch.right ?? true
+  );
+}
+
 function createTfiExportName() {
   const baseName =
     importedTfiName
@@ -531,6 +1042,9 @@ function drawEnvelopeGuide() {
 
 function updateVisuals() {
   drawEnvelopeGuide();
+  if (looper?.running) {
+    updateLooperUi();
+  }
   visualFrame =
     requestAnimationFrame(
       updateVisuals
@@ -701,8 +1215,177 @@ function stopAllNotes() {
   });
 }
 
+function getPlayableSynth() {
+  if (looper?.running) {
+    return looper;
+  }
+
+  return synth;
+}
+
+async function ensureLooper() {
+  await ensureAudioReady();
+
+  if (!megaSynth || !loopMegaSynth) {
+    return null;
+  }
+
+  if (!looper) {
+    looper = new MegaSynthLooper({
+      synth: loopMegaSynth,
+      now: () =>
+        audioContext.currentTime,
+      liveTarget: synth,
+      playbackTarget: loopSynth,
+      getPatch:
+        buildLooperPatchSnapshot,
+      applyPatch: (
+        patch,
+        channel
+      ) => {
+        applyLooperPatchToChannel(
+          patch,
+          channel
+        );
+      },
+      startAudioCapture:
+        startLooperAudioCapture,
+      stopAudioCapture:
+        stopLooperAudioCapture,
+      scheduleAudioPlayback:
+        scheduleLooperAudioPlayback,
+      stopAudioPlayback:
+        stopLooperAudioPlayback,
+      onStateChange:
+        handleLooperStateChange,
+    });
+  }
+
+  updateLooperUi();
+  return looper;
+}
+
+async function toggleLooperStart() {
+  const currentLooper =
+    await ensureLooper();
+
+  if (!currentLooper) {
+    return;
+  }
+
+  if (currentLooper.running) {
+    updateLooperUi();
+    setStatus("Stopping looper...");
+    await currentLooper.stop();
+    updateLooperUi();
+    stopAllNotes();
+    setStatus("Looper stopped.");
+    return;
+  }
+
+  await currentLooper.start();
+  updateLooperUi();
+  setStatus(
+    "Looper started. Press Space or Record to capture a unit."
+  );
+}
+
+async function toggleLooperRecord() {
+  const currentLooper =
+    await ensureLooper();
+
+  if (!currentLooper) {
+    return;
+  }
+
+  if (!currentLooper.running) {
+    setStatus(
+      "Start the looper first."
+    );
+    return;
+  }
+
+  const wasRecording =
+    currentLooper.recording;
+  const pendingToggle =
+    currentLooper.toggleRecord();
+  updateLooperUi();
+  setStatus(
+    wasRecording
+      ? "Finalizing take..."
+      : "Recording started."
+  );
+  const completedUnit =
+    await pendingToggle;
+  updateLooperUi();
+
+  if (wasRecording) {
+    if (completedUnit) {
+      setStatus(
+        `Recorded ${completedUnit.id}.`
+      );
+    } else {
+      setStatus(
+        "Recording finished."
+      );
+    }
+  } else {
+    setStatus(
+      "Recording started."
+    );
+  }
+}
+
+async function undoLooper() {
+  if (!looper) {
+    return;
+  }
+
+  updateLooperUi();
+  setStatus(
+    looper.recording
+      ? "Canceling recording..."
+      : "Undoing last unit..."
+  );
+  const undoneUnit =
+    await looper.undo();
+  updateLooperUi();
+
+  if (!undoneUnit) {
+    setStatus(
+      "Nothing to undo."
+    );
+    return;
+  }
+
+  setStatus(
+    undoneUnit.type ===
+      "record-cancel"
+      ? "Recording canceled."
+      : `Undid ${undoneUnit.id}.`
+  );
+}
+
+function clearLooper() {
+  if (!looper) {
+    return;
+  }
+
+  void looper.clear().then(() => {
+    updateLooperUi();
+    stopAllNotes();
+    setStatus("Looper cleared.");
+  });
+}
+
 async function initializeDirectAudio() {
   updateKeyboardAvailability();
+
+  liveOutputBus =
+    audioContext.createGain();
+  liveOutputBus.connect(
+    audioContext.destination
+  );
 
   const runtime =
     await initializeDirectAudioRuntime({
@@ -711,11 +1394,63 @@ async function initializeDirectAudio() {
         "../js/ym2612-worklet.js",
       ym2612WasmUrl:
         "../generated/ym2612_wasm.wasm",
+      outputNode:
+        liveOutputBus,
       setStatus,
     });
 
   megaSynth = runtime.megaSynth;
   synth = runtime.synth;
+  setupLooperCaptureTap();
+  loopOutputBus =
+    audioContext.createGain();
+  loopOutputBus.connect(
+    audioContext.destination
+  );
+  const loopRuntime =
+    await initializeDirectAudioRuntime({
+      audioContext,
+      workletUrl:
+        "../js/ym2612-worklet.js",
+      ym2612WasmUrl:
+        "../generated/ym2612_wasm.wasm",
+      outputNode:
+        loopOutputBus,
+      setStatus,
+    });
+
+  loopMegaSynth =
+    loopRuntime.megaSynth;
+  loopSynth =
+    loopRuntime.synth;
+  looper = new MegaSynthLooper({
+    synth: loopMegaSynth,
+    now: () =>
+      audioContext.currentTime,
+    liveTarget: synth,
+    playbackTarget: loopSynth,
+    getPatch:
+      buildLooperPatchSnapshot,
+    applyPatch: (
+      patch,
+      channel
+    ) => {
+      applyLooperPatchToChannel(
+        patch,
+        channel
+      );
+    },
+    startAudioCapture:
+      startLooperAudioCapture,
+    stopAudioCapture:
+      stopLooperAudioCapture,
+    scheduleAudioPlayback:
+      scheduleLooperAudioPlayback,
+    stopAudioPlayback:
+      stopLooperAudioPlayback,
+    onStateChange:
+      handleLooperStateChange,
+  });
 
   attachOutputEnvelopeTap({
     megaSynth,
@@ -731,6 +1466,7 @@ async function initializeDirectAudio() {
   setStatus(
     `Audio ready. YM2612 via MegaDriveSynth at ${audioContext.sampleRate} Hz.`
   );
+  updateLooperUi();
 }
 
 async function ensureAudioReady() {
@@ -966,7 +1702,8 @@ inputController =
     voices,
     getAudioReadyPromise:
       () => audioReadyPromise,
-    getSynth: () => synth,
+    getSynth: () =>
+      getPlayableSynth(),
     ensureAudioReady,
     chooseVoice,
     updateKeyboardVisuals,
@@ -996,6 +1733,9 @@ inputController =
       updateKeyboardVisuals();
       renderFretboardUi();
     },
+    onToggleRecord: () => {
+      void toggleLooperRecord();
+    },
   });
 
 inputController.attachWindowInput();
@@ -1007,7 +1747,32 @@ buildOperatorControls();
 buildPresetSelect();
 buildTfiLoader();
 buildTfiExporter();
+looperStartButton?.addEventListener(
+  "click",
+  () => {
+    void toggleLooperStart();
+  }
+);
+looperRecordButton?.addEventListener(
+  "click",
+  () => {
+    void toggleLooperRecord();
+  }
+);
+looperStopButton?.addEventListener(
+  "click",
+  () => {
+    void undoLooper();
+  }
+);
+looperClearButton?.addEventListener(
+  "click",
+  () => {
+    clearLooper();
+  }
+);
 renderFretboardUi();
 buildKeyboard();
 applyPresetState(currentPresetName);
 updateKeyboardAvailability();
+updateLooperUi();

@@ -1,6 +1,73 @@
 # Save Point
 
-Last updated: 2026-08-17
+Last updated: 2026-08-22
+
+## Looper direction changed
+
+- The first `MegaSynthLooper` implementation used event replay:
+  - record `noteOn` / `noteOff`
+  - replay those events through YM2612 later
+- That worked conceptually but still hit practical note cut problems.
+  - YM2612 only has 6 FM channels.
+  - Even after splitting live and loop synth instances, overdub units could still interfere.
+- Current decision:
+  - use recorded audio as the main looper playback source
+  - keep events / patch snapshots as side metadata for export and analysis
+
+## Latest looper observation
+
+- Even after:
+  - splitting live and playback synth instances
+  - remapping playback channels per unit
+  - scheduling new units into the current loop cycle immediately
+- `unit 2` and later can still break up during playback.
+- The audible result is:
+  - notes sometimes cut partway through
+  - overdub playback is not stable enough for the main user-facing looper path
+
+Interpretation:
+
+- this is no longer just a small scheduling bug
+- it is strong evidence that the event-replay approach is the wrong primary looper playback model here
+
+## Current looper-related code state
+
+- `web/megasynth_looper.js`
+  still contains the event-based looper implementation.
+- `docs/js/megasynth_looper.js`
+  is synced with the same event-based structure.
+- `scripts/verify_megasynth_looper.mjs`
+  now includes a 2-unit replay check and passes.
+  This verifies the current event-looper channel remap behavior, but that is no longer the final target.
+
+## Output bus preparation added to synth demo
+
+- `docs/synth/synth_runtime.js`
+  now accepts `outputNode` and passes it into `MegaDriveSynth`.
+- `docs/synth/synth.js`
+  now creates:
+  - `liveOutputBus`
+  - `loopOutputBus`
+  - `liveCaptureNode`
+
+Current graph direction:
+
+- live YM2612 runtime
+  - outputs to `liveOutputBus`
+  - `liveOutputBus` goes to destination
+  - `liveOutputBus` also goes to `liveCaptureNode`
+- loop YM2612 runtime
+  - outputs to `loopOutputBus`
+  - `loopOutputBus` goes to destination
+
+This was added so the next looper implementation can record only the live bus.
+
+## Next likely steps for looper
+
+1. Add audio recording for one unit from `liveCaptureNode`.
+2. Store that result as unit audio.
+3. Switch loop playback from event replay to audio replay.
+4. Keep event log and patch snapshot as export-oriented metadata.
 
 ## Current UI / YM2612 learning demo status
 

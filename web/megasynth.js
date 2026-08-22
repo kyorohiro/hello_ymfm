@@ -2,6 +2,7 @@ import {
   YM2612Synth,
   YM2612WorkletTransport,
 } from "./ym2612synth.js";
+export { MegaSynthLooper } from "./looper.js";
 export {
   MEGADRIVE_FM_PRESETS,
   MEGADRIVE_FM_PRESET_ORDER,

@@ -91,10 +91,34 @@
       }
 
       .status {
-        margin: 10px 0 16px;
-        min-height: 1.5em;
+        margin: 6px 0 10px;
+        min-height: 1.2em;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.84rem;
+      }
+
+      .looper-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin: 0 0 8px;
+        padding: 6px 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(110, 122, 146, 0.22);
+        background: rgba(255, 255, 255, 0.24);
+      }
+
+      .looper-state {
+        min-height: 24px;
+        display: inline-flex;
+        align-items: center;
+        padding: 1px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--pill-border);
+        background: rgba(255, 255, 255, 0.45);
+        font-size: 0.68rem;
+        color: rgba(31, 27, 22, 0.82);
       }
 
       .layout {
@@ -195,7 +219,7 @@
         align-items: center;
         gap: 6px;
         flex-wrap: wrap;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
 
       .preset-row label {
@@ -238,9 +262,16 @@
       }
 
       .tfi-summary {
-        margin: 0 0 8px;
-        font-size: 0.72rem;
-        color: rgba(31, 27, 22, 0.78);
+        margin: 0;
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(110, 122, 146, 0.36);
+        background: rgba(255, 255, 255, 0.5);
+        font-size: 0.64rem;
+        color: rgba(31, 27, 22, 0.76);
       }
 
       .operator-stack {
@@ -459,21 +490,14 @@
       }
 
       .visual-card {
-        padding: 12px;
-      }
-
-      .visual-card h2 {
-        margin-bottom: 8px;
-      }
-
-      .visual-card p {
-        margin: 0 0 10px;
-        font-size: 0.82rem;
-        line-height: 1.45;
+        padding: 10px;
       }
 
       .algo-inline {
         font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        margin: 0 0 6px;
+        font-size: 0.72rem;
+        line-height: 1.3;
       }
 
       .op-color-1 {
@@ -499,7 +523,7 @@
       canvas {
         display: block;
         width: 100%;
-        height: 220px;
+        height: 160px;
         border-radius: 14px;
         background: #241d16;
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -696,21 +720,19 @@
         <div class="layout">
           <section class="controls-stack">
             <div class="card visual-card">
-              <h2>Envelope / Output</h2>
               <p id="envelopeDescription"></p>
-              <canvas id="envelopeCanvas" width="720" height="220"></canvas>
+              <canvas id="envelopeCanvas" width="720" height="160"></canvas>
             </div>
 
             <div class="control-section">
-              <h2>YM2612 Knobs</h2>
               <div class="preset-row">
                 <label for="presetSelect">Preset</label>
                 <select id="presetSelect"></select>
                 <label for="tfiFile">TFI</label>
                 <input id="tfiFile" class="tfi-file" type="file" accept=".tfi,application/octet-stream">
+                <div id="tfiSummary" class="tfi-summary">No TFI loaded.</div>
                 <button id="exportTfiButton" class="toolbar-button" type="button">Export TFI</button>
               </div>
-              <div id="tfiSummary" class="tfi-summary">No TFI loaded.</div>
               <div class="operator-stack">
                 <div class="operator-header-row">
                   <div class="operator-header-spacer"></div>
@@ -727,10 +749,16 @@
                 <div id="operatorControls" class="operator-stack"></div>
               </div>
             </div>
-        <div class="status" id="status">Press any key or click a pad to start audio.</div>
+            <div class="looper-row">
+              <button id="looperStartButton" class="toolbar-button" type="button">Looper Start</button>
+              <button id="looperRecordButton" class="toolbar-button" type="button" hidden>Record</button>
+              <button id="looperStopButton" class="toolbar-button" type="button" disabled>Undo</button>
+              <button id="looperClearButton" class="toolbar-button" type="button" disabled>Clear</button>
+              <div id="looperState" class="looper-state">Looper idle.</div>
+            </div>
+            <div class="status" id="status">Press any key or click a pad to start audio.</div>
 
             <div class="control-section">
-              <h2>Keyboard</h2>
               <div class="fretboard-toolbar">
                 <div class="fretboard-row fretboard-summary">
                   <div class="fret-display" id="fretDisplay">Fret: 0</div>
